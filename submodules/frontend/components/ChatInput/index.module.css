@@ -1,3 +1,4 @@
+/* Main container */
 .container {
   position: relative;
   width: 100%;
@@ -6,68 +7,43 @@
 }
 
 .flexContainer {
-  margin-top: 0.5rem;
-  padding-left: 0.25rem;
-  padding-right: 0.25rem;
-  background-color: transparent;
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 0.25rem;
 }
 
-.inputGroup {
-  margin-bottom: 0.2rem;
+/* Input styling */
+.inputWrapper {
+  width: 100%;
   border-radius: 8px;
-  background-color: #333;
+  background-color: #111;
+  overflow: hidden;
+}
+
+/* Text area container */
+.textareaContainer {
   width: 100%;
-  max-width: 100%;
-}
-
-@media (min-width: 640px) {
-  .inputGroup {
-    max-width: 800px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-}
-
-.fileAddon {
-  background-color: transparent !important;
-  border: none !important;
-  color: #59f886 !important;
-  cursor: pointer;
-  padding: 8px !important;
   display: flex;
   align-items: center;
-}
-
-.fileAddon button {
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  padding: 0 !important;
-}
-
-.hiddenInput {
-  display: none;
-}
-
-.disabledIcon {
-  color: #6c6c6c !important;
+  padding: 12px 16px;
 }
 
 .messageInput {
+  flex: 1;
   border: none !important;
+  background-color: transparent !important;
   color: white;
   width: 100%;
-  font-size: 16px !important; /* Ensure this is at least 16px to prevent zoom */
-  margin-top: 0.15rem;
-  -webkit-text-size-adjust: 100%; /* Prevent iOS from adjusting text size */
-  /* Add the following to prevent zoom */
+  font-size: 16px !important;
+  -webkit-text-size-adjust: 100%;
   touch-action: manipulation;
-}
-@media (min-width: 640px) {
-  .messageInput {
-    font-size: 14px;
-  }
+  resize: none;
+  min-height: 24px !important;
+  padding: 0 !important;
+  outline: none !important;
 }
 
 .messageInput:focus {
@@ -75,27 +51,102 @@
   box-shadow: none !important;
 }
 
-.rightAddon {
-  background-color: transparent !important;
-  border: none !important;
-}
-
+/* Send button */
 .sendButton {
   background-color: transparent !important;
   color: #59f886 !important;
-}
-
-@media (max-width: 768px) {
-  .sendButton {
-    padding: 0.25rem;
-  }
+  padding: 6px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  margin-left: 8px;
 }
 
 .sendButton:hover {
   background-color: transparent !important;
 }
 
-/* New styles for file preview */
+/* Action buttons container */
+.actionsContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px 12px;
+  width: 100%;
+}
+
+.leftActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rightActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.actionButton {
+  background-color: #27292c !important;
+  color: #ddd !important;
+  border-radius: 20px !important;
+  font-size: 12px !important;
+  height: auto !important;
+  padding: 6px 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  border: none !important;
+  font-weight: 400 !important;
+}
+
+.actionIcon {
+  background-color: #27292c !important;
+  color: #fff !important;
+  border-radius: 50% !important;
+  padding: 6px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  border: none !important;
+}
+
+.toolsButton {
+  background-color: #27292c !important;
+  color: #fff !important;
+  border-radius: 50% !important;
+  padding: 6px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  border: none !important;
+  margin-right: 3px; /* Align closer to the send button above */
+}
+
+.actionButton:hover,
+.actionIcon:hover,
+.toolsButton:hover {
+  background-color: #343639 !important;
+}
+
+.activeButton {
+  background-color: #2f854f !important;
+  color: white !important;
+}
+
+.activeButton:hover {
+  background-color: #286c42 !important;
+}
+
+/* Hidden file input */
+.hiddenInput {
+  display: none;
+}
+
+/* Disabled styles */
+.disabledIcon {
+  color: #6c6c6c !important;
+}
+
+/* File preview styles */
 .filePreview {
   margin: 0 auto;
   padding: 0.5rem;
@@ -110,11 +161,6 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem;
-}
-
-.fileIcon {
-  font-size: 1.5rem;
-  margin-right: 0.75rem;
 }
 
 .fileName {
@@ -147,4 +193,11 @@
   text-align: center;
   color: #a0a0a0;
   font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .actionButton {
+    padding: 4px 8px !important;
+    font-size: 13px !important;
+  }
 }

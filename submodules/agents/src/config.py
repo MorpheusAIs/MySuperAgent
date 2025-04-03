@@ -102,6 +102,8 @@ def load_agent_config(agent_name: str) -> Optional[Dict[str, Any]]:
         ):
             config_dict: Dict[str, Any] = module.Config.agent_config.model_dump()
             config_dict["name"] = agent_name
+            if hasattr(module.Config, "tools"):
+                config_dict["tools"] = module.Config.tools
             logger.info(f"Successfully loaded config for {agent_name}")
             return config_dict
         else:
@@ -148,10 +150,42 @@ class AppConfig:
     LLM_DELEGATOR_MODEL = "llama-3.3-70b"  # Cerebras
 
 
-# Get environment
-env = os.environ.get("ENV", "dev")
+# Check if API keys are available
+has_together_api_key = False
+has_cerebras_api_key = False
 
-if env == "dev":
+try:
+    together_api_key = get_secret("TogetherApiKey")
+    has_together_api_key = together_api_key is not None and together_api_key != ""
+except Exception as e:
+    logger.warning(f"Failed to get TogetherApiKey: {str(e)}")
+
+try:
+    cerebras_api_key = get_secret("CerebrasApiKey")
+    has_cerebras_api_key = cerebras_api_key is not None and cerebras_api_key != ""
+except Exception as e:
+    logger.warning(f"Failed to get CerebrasApiKey: {str(e)}")
+
+# Use cloud models if API keys are available, otherwise use local Ollama
+if has_together_api_key and has_cerebras_api_key:
+    logger.info("Using cloud LLM providers (Together AI and Cerebras)")
+    LLM_AGENT = ChatTogether(
+        api_key=together_api_key,
+        model=AppConfig.LLM_AGENT_MODEL,
+        temperature=0.7,
+    )
+
+    LLM_DELEGATOR = ChatCerebras(
+        api_key=cerebras_api_key,
+        model=AppConfig.LLM_DELEGATOR_MODEL,
+    )
+
+    embeddings = TogetherEmbeddings(
+        model_name="togethercomputer/m2-bert-80M-8k-retrieval",
+        api_key=together_api_key,
+    )
+else:
+    logger.info("Using local Ollama models")
     LLM_AGENT = ChatOllama(
         model=AppConfig.OLLAMA_MODEL,
         base_url=AppConfig.OLLAMA_URL,
@@ -166,22 +200,6 @@ if env == "dev":
     embeddings = OllamaEmbeddings(
         model=AppConfig.OLLAMA_EMBEDDING_MODEL,
         base_url=AppConfig.OLLAMA_URL,
-    )
-else:
-    LLM_AGENT = ChatTogether(
-        api_key=get_secret("TogetherApiKey"),
-        model=AppConfig.LLM_AGENT_MODEL,
-        temperature=0.7,
-    )
-
-    LLM_DELEGATOR = ChatCerebras(
-        api_key=get_secret("CerebrasApiKey"),
-        model=AppConfig.LLM_DELEGATOR_MODEL,
-    )
-
-    embeddings = TogetherEmbeddings(
-        model_name="togethercomputer/m2-bert-80M-8k-retrieval",
-        api_key=get_secret("TogetherApiKey"),
     )
 
 # Vector store path for persistence

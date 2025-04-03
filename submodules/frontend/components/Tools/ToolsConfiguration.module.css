@@ -1,0 +1,333 @@
+/* ToolsConfiguration.module.css */
+
+/* Modal Styles */
+.overlay {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.modalContent {
+  background-color: #0d0d0d !important;
+  color: white !important;
+  border-radius: 8px !important;
+  max-width: 480px !important;
+  max-height: 80vh !important;
+  overflow-y: auto !important;
+  margin: auto !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+/* Modal Header - FIXED to be left-aligned */
+.modalHeader {
+  font-size: 1.2rem !important;
+  font-weight: 500 !important;
+  color: #59f886 !important;
+  border-bottom: 1px solid #2a2a2a !important;
+  padding-bottom: 1rem !important;
+  text-align: left !important;
+  position: relative !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+/* Back Button Styles - FIXED to be on the right */
+.backButton {
+  background-color: transparent !important;
+  color: #ddd !important;
+  font-size: 0.85rem !important;
+  padding: 0.25rem 0.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+  order: 2 !important;
+}
+
+.backButton:hover {
+  background-color: #2a2a2a !important;
+  color: #59f886 !important;
+}
+.modalBody {
+  padding: 1.5rem !important;
+}
+
+.modalFooter {
+  border-top: 1px solid #2a2a2a !important;
+  padding-top: 1rem !important;
+}
+
+.closeButton {
+  color: #ddd !important;
+}
+
+.closeButton:hover {
+  color: white !important;
+  background-color: #2a2a2a !important;
+}
+
+/* Description Text */
+.description {
+  color: #aaa !important;
+  font-size: 0.9rem !important;
+}
+
+/* Agent Cards */
+.agentsContainer {
+  overflow-y: auto !important;
+}
+
+.agentCard {
+  background-color: #1a1a1a !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+  border: 1px solid #333 !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.agentCard:hover {
+  border-color: #444 !important;
+}
+
+.selectedCard {
+  border-color: #59f886 !important;
+  background-color: #1f2d24 !important;
+}
+
+.agentName {
+  font-weight: 400 !important;
+  font-size: 14px !important;
+  color: white !important;
+}
+
+.agentDescription {
+  color: #aaa !important;
+  font-size: 12px !important;
+  max-width: 85% !important;
+}
+
+.checkbox {
+  color: white !important;
+}
+
+.expandButton {
+  background: transparent !important;
+  color: #aaa !important;
+  font-size: 1rem !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-width: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  border-radius: 4px !important;
+}
+
+.expandButton svg {
+  display: block !important;
+  margin: auto !important;
+}
+
+.expandButton:hover {
+  color: white !important;
+  background-color: #2a2a2a !important;
+}
+
+.uploadBadge {
+  background-color: #2f4f4f !important;
+  color: #8bf1ff !important;
+  font-size: 0.7rem !important;
+  border-radius: 4px !important;
+}
+
+.commandBadge {
+  background-color: #383838 !important;
+  color: #ccc !important;
+  font-size: 0.7rem !important;
+  border-radius: 4px !important;
+  font-family: monospace !important;
+}
+
+/* Tools */
+.toolsContainer {
+  background-color: #232323 !important;
+  border-radius: 6px !important;
+  padding: 0.75rem !important;
+  margin-top: 0.5rem !important;
+}
+
+.toolsHeader {
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  color: #ddd !important;
+}
+
+.toolsDivider {
+  border-color: #444 !important;
+  opacity: 0.5 !important;
+}
+
+.toolItem {
+  padding: 0.5rem !important;
+}
+
+.toolName {
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  color: #ddd !important;
+}
+
+.toolDescription {
+  color: #aaa !important;
+  font-size: 12px !important;
+}
+
+.toolTypeBadge {
+  background-color: #3a3a3a !important;
+  color: #bbb !important;
+  font-size: 12px !important;
+  border-radius: 4px !important;
+}
+
+.toolItemDivider {
+  border-color: #333 !important;
+  opacity: 0.5 !important;
+  margin: 0rem 0 !important;
+}
+
+.parameterIndicator {
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  background-color: #383838 !important;
+  color: #aaa !important;
+  padding: 2px 6px !important;
+  border-radius: 12px !important;
+  cursor: help !important;
+}
+
+.noToolsContainer {
+  padding: 1rem !important;
+  text-align: center !important;
+}
+
+.noToolsText {
+  color: #777 !important;
+  font-size: 0.9rem !important;
+  font-style: italic !important;
+}
+
+.noAgentsText {
+  color: #777 !important;
+  font-size: 0.9rem !important;
+  text-align: center !important;
+  padding: 2rem 0 !important;
+}
+
+/* Loading and Error States */
+.loadingContainer {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 3rem 0 !important;
+  color: #aaa !important;
+}
+
+.errorContainer {
+  text-align: center !important;
+  padding: 2rem 0 !important;
+}
+
+/* Buttons */
+.addButton {
+  background-color: #2f4f2f !important;
+  color: #59f886 !important;
+  border-radius: 50% !important;
+}
+
+.addButton:hover {
+  background-color: #385a38 !important;
+}
+
+.saveButton {
+  background-color: #2f854f !important;
+  color: white !important;
+}
+
+.saveButton:hover {
+  background-color: #3a9660 !important;
+}
+
+.cancelButton {
+  border-color: #444 !important;
+  color: #ddd !important;
+}
+
+.cancelButton:hover {
+  background-color: #2a2a2a !important;
+}
+
+.createButton {
+  background-color: #2f854f !important;
+  color: white !important;
+}
+
+.createButton:hover {
+  background-color: #3a9660 !important;
+}
+
+/* Create Agent Form Styles */
+.createAgentDescription {
+  color: #aaa !important;
+  font-size: 0.9rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.formLabel {
+  color: #ddd !important;
+  font-size: 0.9rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.input,
+.textarea {
+  background-color: #1a1a1a !important;
+  border-color: #333 !important;
+  color: white !important;
+}
+
+.inputLeftAddon {
+  background-color: #2a2a2a !important;
+  border-color: #333 !important;
+  color: #aaa !important;
+}
+
+.helperText {
+  color: #888 !important;
+  font-size: 0.8rem !important;
+}
+
+.formDivider {
+  border-color: #333 !important;
+  margin: 1rem 0 !important;
+}
+
+.switch {
+  colorscheme: green !important;
+}
+
+.switchLabel {
+  color: #ddd !important;
+  font-size: 0.9rem !important;
+  margin-left: 0.5rem !important;
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: #59f886 !important;
+  box-shadow: 0 0 0 1px #59f886 !important;
+}

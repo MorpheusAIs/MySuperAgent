@@ -1,21 +1,20 @@
 import React, { FC, useState, useEffect, useRef } from "react";
-import {
-  Textarea,
-  InputGroup,
-  InputLeftAddon,
-  InputRightAddon,
-  IconButton,
-  useMediaQuery,
-} from "@chakra-ui/react";
-import { AttachmentIcon } from "@chakra-ui/icons";
+import { Textarea, IconButton, useMediaQuery, Button } from "@chakra-ui/react";
+import { AddIcon, SearchIcon, LinkIcon } from "@chakra-ui/icons";
 import { SendIcon } from "../CustomIcon/SendIcon";
 import { Command } from "./Commands";
 import { CommandsPortal } from "./CommandsPortal";
+import { ToolsButton } from "@/components/Tools/ToolsButton";
 import styles from "./index.module.css";
 import API_BASE_URL from "../../config";
 
 type ChatInputProps = {
-  onSubmit: (message: string, file: File | null) => Promise<void>;
+  onSubmit: (
+    message: string,
+    file: File | null,
+    useMultiagent: boolean,
+    useRealtimeSearch: boolean
+  ) => Promise<void>;
   disabled: boolean;
   isSidebarOpen: boolean;
 };
@@ -32,9 +31,11 @@ export const ChatInput: FC<ChatInputProps> = ({
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
   const [isMobile] = useMediaQuery("(max-width: 768px)");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [useMultiagent, setUseMultiagent] = useState(false);
+  const [useRealtimeSearch, setUseRealtimeSearch] = useState(false);
 
-  const inputGroupRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Add this useEffect to prevent focus zoom on mobile
   useEffect(() => {
@@ -121,7 +122,9 @@ export const ChatInput: FC<ChatInputProps> = ({
     }
   };
 
-  const agentSupportsFileUploads = !isMobile;
+  const handleFileUpload = () => {
+    fileInputRef.current?.click();
+  };
 
   const handleSubmit = async () => {
     if ((!message && !file) || isSubmitting || disabled) return;
@@ -135,13 +138,26 @@ export const ChatInput: FC<ChatInputProps> = ({
       setMessage("");
       setFile(null);
 
-      // Then submit the message
-      await onSubmit(messageToSend, fileToSend);
+      // Submit the message with all flags
+      await onSubmit(
+        messageToSend,
+        fileToSend,
+        useMultiagent,
+        useRealtimeSearch
+      );
     } catch (error) {
       console.error("Error submitting message:", error);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const toggleMultiagent = () => {
+    setUseMultiagent((prev) => !prev);
+  };
+
+  const toggleRealtimeSearch = () => {
+    setUseRealtimeSearch((prev) => !prev);
   };
 
   return (
@@ -156,50 +172,24 @@ export const ChatInput: FC<ChatInputProps> = ({
       )}
 
       <div className={styles.flexContainer}>
-        <InputGroup ref={inputGroupRef} className={styles.inputGroup}>
-          {agentSupportsFileUploads && (
-            <InputLeftAddon className={styles.fileAddon}>
-              <input
-                type="file"
-                className={styles.hiddenInput}
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                disabled={isSubmitting || disabled}
-              />
-              <IconButton
-                aria-label="Attach file"
-                icon={
-                  <AttachmentIcon
-                    width={isMobile ? "16px" : "20px"}
-                    height={isMobile ? "16px" : "20px"}
-                  />
-                }
-                className={isSubmitting || disabled ? styles.disabledIcon : ""}
-                disabled={isSubmitting || disabled}
-                onClick={() =>
-                  document
-                    .querySelector('input[type="file"]')
-                    ?.dispatchEvent(new MouseEvent("click"))
-                }
-              />
-            </InputLeftAddon>
-          )}
-          <Textarea
-            ref={inputRef}
-            className={styles.messageInput}
-            onKeyDown={handleKeyDown}
-            disabled={isSubmitting || disabled || file !== null}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder={
-              file
-                ? "Click the arrow to process your file"
-                : "Start typing or press / for commands"
-            }
-            rows={1}
-            resize="none"
-            overflow="hidden"
-          />
-          <InputRightAddon className={styles.rightAddon}>
+        <div className={styles.inputWrapper}>
+          {/* Text input area */}
+          <div className={styles.textareaContainer}>
+            <Textarea
+              ref={inputRef}
+              className={styles.messageInput}
+              onKeyDown={handleKeyDown}
+              disabled={isSubmitting || disabled || file !== null}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={
+                file ? "Click the arrow to process your file" : "Ask anything"
+              }
+              rows={1}
+              resize="none"
+              overflow="hidden"
+            />
+
             <IconButton
               className={styles.sendButton}
               disabled={isSubmitting || disabled || (!message && !file)}
@@ -212,8 +202,56 @@ export const ChatInput: FC<ChatInputProps> = ({
                 />
               }
             />
-          </InputRightAddon>
-        </InputGroup>
+          </div>
+
+          {/* Action buttons container */}
+          <div className={styles.actionsContainer}>
+            {/* Left aligned buttons */}
+            <div className={styles.leftActions}>
+              <IconButton
+                aria-label="Add"
+                icon={<AddIcon />}
+                className={styles.actionIcon}
+                size="xs"
+                onClick={handleFileUpload}
+              />
+              <Button
+                leftIcon={<SearchIcon />}
+                size="xs"
+                className={`${styles.actionButton} ${
+                  useRealtimeSearch ? styles.activeButton : ""
+                }`}
+                onClick={toggleRealtimeSearch}
+              >
+                Search
+              </Button>
+              <Button
+                leftIcon={<LinkIcon />}
+                size="xs"
+                className={`${styles.actionButton} ${
+                  useMultiagent ? styles.activeButton : ""
+                }`}
+                onClick={toggleMultiagent}
+              >
+                Multi-Agent
+              </Button>
+            </div>
+
+            {/* Right aligned tools button - replaced with new component */}
+            <div className={styles.rightActions}>
+              <ToolsButton apiBaseUrl={API_BASE_URL} />
+            </div>
+          </div>
+        </div>
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          className={styles.hiddenInput}
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          disabled={isSubmitting || disabled}
+        />
       </div>
     </>
   );

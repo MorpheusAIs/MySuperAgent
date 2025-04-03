@@ -1,7 +1,8 @@
 import logging
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from stores import agent_manager_instance
 
 logger = logging.getLogger(__name__)
@@ -45,3 +46,46 @@ async def get_agent_commands() -> JSONResponse:
         for agent in available_agents
     ]
     return JSONResponse(content={"commands": commands})
+
+
+class CreateAgentRequest(BaseModel):
+    """Request model for creating a new agent"""
+
+    human_readable_name: str
+    command: str
+    description: str
+    delegator_description: str
+    mcp_server_url: str
+    upload_required: bool = False
+    is_enabled: bool = True
+
+
+@router.post("/create")
+async def create_agent(agent_data: CreateAgentRequest) -> JSONResponse:
+    """Create a new MCP agent"""
+    try:
+        # Validate that the command is unique
+        commands = [agent["command"] for agent in agent_manager_instance.get_available_agents()]
+        if agent_data.command in commands:
+            raise HTTPException(status_code=400, detail=f"Command '{agent_data.command}' already exists")
+
+        # Create the agent
+        agent_config = await agent_manager_instance.create_mcp_agent(agent_data.model_dump())
+
+        return JSONResponse(
+            content={
+                "status": "success",
+                "message": f"Agent '{agent_data.human_readable_name}' created successfully",
+                "agent": {
+                    "name": agent_config["name"],
+                    "human_readable_name": agent_config["human_readable_name"],
+                    "command": agent_config["command"],
+                    "description": agent_config["description"],
+                    "tools": [tool["name"] for tool in agent_config.get("tools", [])],
+                },
+            },
+            status_code=201,
+        )
+    except Exception as e:
+        logger.error(f"Error creating agent: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error creating agent: {str(e)}")

@@ -65,7 +65,7 @@ export const MessageList: FC<MessageListProps> = ({
       position="relative"
       display="flex"
       flexDirection="column"
-      height="calc(var(--vh, 1vh) * 100 - 120px)"
+      height="calc(var(--vh, 1vh) * 100 - 185px)"
       width="100%"
     >
       <Box

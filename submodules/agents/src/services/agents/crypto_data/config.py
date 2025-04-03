@@ -50,88 +50,73 @@ class Config:
     # *************
     tools = [
         {
-            "type": "function",
-            "function": {
-                "name": CryptoDataToolType.GET_PRICE.value,
-                "description": "Get the price of a cryptocurrency",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "coin_name": {
-                            "type": "string",
-                            "description": "The name of the coin.",
-                        }
-                    },
-                    "required": ["coin_name"],
+            "name": CryptoDataToolType.GET_PRICE.value,
+            "description": "Get the price of a cryptocurrency",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "coin_name": {
+                        "type": "string",
+                        "description": "The name of the coin.",
+                    }
                 },
+                "required": ["coin_name"],
             },
         },
         {
-            "type": "function",
-            "function": {
-                "name": CryptoDataToolType.GET_FLOOR_PRICE.value,
-                "description": "Get the floor price of an NFT",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "nft_name": {
-                            "type": "string",
-                            "description": "Name of the NFT",
-                        }
-                    },
-                    "required": ["nft_name"],
+            "name": CryptoDataToolType.GET_FLOOR_PRICE.value,
+            "description": "Get the floor price of an NFT",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nft_name": {
+                        "type": "string",
+                        "description": "Name of the NFT",
+                    }
                 },
+                "required": ["nft_name"],
             },
         },
         {
-            "type": "function",
-            "function": {
-                "name": CryptoDataToolType.GET_TOTAL_VALUE_LOCKED.value,
-                "description": "Get the TVL (Total Value Locked) of a protocol.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "protocol_name": {
-                            "type": "string",
-                            "description": "Name of the protocol",
-                        }
-                    },
-                    "required": ["protocol_name"],
+            "name": CryptoDataToolType.GET_TOTAL_VALUE_LOCKED.value,
+            "description": "Get the TVL (Total Value Locked) of a protocol.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "protocol_name": {
+                        "type": "string",
+                        "description": "Name of the protocol",
+                    }
                 },
+                "required": ["protocol_name"],
             },
         },
         {
-            "type": "function",
-            "function": {
-                "name": CryptoDataToolType.GET_FULLY_DILUTED_VALUATION.value,
-                "description": "Get the fdv or fully diluted valuation of a coin",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "coin_name": {
-                            "type": "string",
-                            "description": "Name of the coin",
-                        }
-                    },
-                    "required": ["coin_name"],
+            "name": CryptoDataToolType.GET_FULLY_DILUTED_VALUATION.value,
+            "description": "Get the fdv or fully diluted valuation of a coin",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "coin_name": {
+                        "type": "string",
+                        "description": "Name of the coin",
+                    }
                 },
+                "required": ["coin_name"],
             },
         },
         {
-            "type": "function",
-            "function": {
-                "name": CryptoDataToolType.GET_MARKET_CAP.value,
-                "description": "Get the mc or market cap of a coin",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "coin_name": {
-                            "type": "string",
-                            "description": "Name of the coin",
-                        }
-                    },
-                    "required": ["coin_name"],
+            "name": CryptoDataToolType.GET_MARKET_CAP.value,
+            "description": "Get the mc or market cap of a coin",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "coin_name": {
+                        "type": "string",
+                        "description": "Name of the coin",
+                    }
                 },
+                "required": ["coin_name"],
             },
         },
     ]

@@ -1,8 +1,15 @@
 import importlib
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from config import load_agent_configs, setup_logging
 from langchain_ollama import ChatOllama
+from langchain_together import ChatTogether
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langchain.tools import StructuredTool
+from models.service.agent_config import AgentConfig
+
+from config import LLM_AGENT
 
 logger = setup_logging()
 
@@ -17,9 +24,10 @@ class AgentManager:
         config (Dict): Configuration dictionary for agents
         agents (Dict[str, Any]): Dictionary of loaded agent instances
         llm (ChatOllama): Language model instance
+        mcp_clients (Dict[str, MultiServerMCPClient]): Dictionary of MCP clients
     """
 
-    def __init__(self, config: Dict) -> None:
+    def __init__(self, config: List[Dict]) -> None:
         """
         Initialize the AgentManager.
 
@@ -28,9 +36,9 @@ class AgentManager:
         """
         self.active_agent: Optional[str] = None
         self.selected_agents: List[str] = []
-        self.config = config
+        self.config: List[Dict] = config
         self.agents: Dict[str, Any] = {}
-        self.llm: Optional[ChatOllama] = None
+        self.llm: Optional[ChatOllama | ChatTogether] = LLM_AGENT
 
         # Select first 6 agents by default
         self.set_selected_agents([agent["name"] for agent in config])
@@ -49,7 +57,7 @@ class AgentManager:
         """
         try:
             module = importlib.import_module(agent_config["path"])
-            agent_class = getattr(module, agent_config["class"])
+            agent_class = getattr(module, agent_config["class_name"])
             self.agents[agent_config["name"]] = agent_class(agent_config, self.llm)
             logger.info(f"Loaded agent: {agent_config['name']}")
             return True
@@ -68,6 +76,106 @@ class AgentManager:
         for agent_config in self.get_available_agents():
             self._load_agent(agent_config)
         logger.info(f"Loaded {len(self.agents)} agents")
+
+    async def create_mcp_agent(self, agent_data: Dict) -> Dict:
+        """
+        Create a new MCP agent dynamically.
+
+        Args:
+            agent_data (Dict): Agent configuration data from the UI
+
+        Returns:
+            Dict: The created agent configuration
+        """
+        try:
+            # Create a unique name for the agent
+            agent_name = agent_data["human_readable_name"].replace(" ", "_").lower()
+
+            # Test connection and get tools from the MCP server
+            test_client = MultiServerMCPClient(
+                {
+                    agent_name: {
+                        "url": agent_data["mcp_server_url"],
+                        "transport": "sse",
+                    }
+                }
+            )
+            async with test_client as client:
+                # Get the tools from the MCP server
+                tools: List[StructuredTool] = client.get_tools()
+
+                # Log the tools for debugging
+                logger.info(f"Retrieved {len(tools)} tools from MCP server")
+
+                # Extract tool schemas properly from StructuredTools
+                tool_schemas = []
+                for tool in tools:
+                    try:
+                        logger.info(f"Tool: {tool.name}, Description: {tool.description}")
+
+                        # Extract schema based on tool type
+                        schema_dict = None
+
+                        # For StructuredTool with Pydantic schema
+                        if hasattr(tool, "args_schema") and tool.args_schema is not None:
+                            if hasattr(tool.args_schema, "model_json_schema"):
+                                schema_dict = tool.args_schema.model_json_schema()
+
+                        # Add the tool schema with available information
+                        if schema_dict:
+                            tool_schemas.append(
+                                {
+                                    "name": tool.name,
+                                    "description": tool.description,
+                                    "properties": schema_dict.get("properties", {}),
+                                    "required": schema_dict.get("required", []),
+                                }
+                            )
+                        else:
+                            # Fallback if we can't get schema directly
+                            tool_schemas.append({"name": tool.name, "description": tool.description})
+
+                    except Exception as e:
+                        logger.warning(f"Error processing tool {getattr(tool, 'name', 'unknown')}: {str(e)}")
+                        # Ensure we at least capture the name and description
+                        tool_schemas.append(
+                            {"name": getattr(tool, "name", "unknown"), "description": getattr(tool, "description", "")}
+                        )
+
+                logger.info(f"Tool schemas: {tool_schemas}")
+
+                # Create agent config using the AgentConfig model with tools from MCP
+                agent_config = AgentConfig(
+                    path="services.agents.mcp_agent.agent",
+                    name=agent_name,
+                    class_name="MCPAgent",
+                    description=agent_data["description"],
+                    delegator_description=agent_data["delegator_description"],
+                    human_readable_name=agent_data["human_readable_name"],
+                    command=agent_data["command"],
+                    upload_required=agent_data.get("upload_required", False),
+                    is_enabled=agent_data.get("is_enabled", True),
+                    tools=tool_schemas,
+                    mcp_server_url=agent_data["mcp_server_url"],
+                ).model_dump()
+
+                # Add to config
+                # End of Selection
+                self.config.append(agent_config)
+
+                # Load the agent
+                self._load_agent(agent_config)
+
+                # Add to selected agents
+                if agent_name not in self.selected_agents:
+                    self.selected_agents.append(agent_name)
+
+            logger.info(f"Created new MCP agent: {agent_name}")
+            return agent_config
+
+        except Exception as e:
+            logger.error(f"Failed to create MCP agent: {str(e)}")
+            raise Exception(f"Failed to create MCP agent: {str(e)}")
 
     def get_active_agent(self) -> Optional[str]:
         """

@@ -1,3 +1,4 @@
+from typing import List, Dict, Optional
 from pydantic import BaseModel
 
 
@@ -19,7 +20,10 @@ class AgentConfig(BaseModel):
     class_name: str
     description: str
     delegator_description: str
+    name: Optional[str] = None
     human_readable_name: str
     command: str
     upload_required: bool = False
     is_enabled: bool = True
+    tools: List[Dict] = []
+    mcp_server_url: Optional[str] = None
