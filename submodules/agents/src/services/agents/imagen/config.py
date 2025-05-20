@@ -27,9 +27,11 @@ class Config:
 
     system_message = SystemMessage(
         content=(
-            "You are an image generation assistant. "
+            "You are an image generation assistant using DALL-E. "
             "Help users create images by understanding their prompts "
-            "and generating appropriate images."
+            "and generating high-quality, appropriate images. "
+            "You can create various types of images including realistic photos, "
+            "illustrations, diagrams, infographics, and artistic renderings."
         )
     )
 
@@ -43,8 +45,8 @@ class Config:
     # API CONFIG
     # *************
 
-    CHROME_BINARY = "/usr/bin/chromium"
-    CHROME_DRIVER = "/usr/bin/chromedriver"
-    FLUX_AI_URL = "https://fluxai.pro/fast-flux"
-    PAGE_LOAD_TIMEOUT = 30  # seconds
-    ELEMENT_WAIT_TIMEOUT = 30  # seconds
+    # DALL-E specific settings
+    # Note: The OpenAI API key should be set in the environment variable OPENAI_API_KEY
+    DALLE_SIZE = "1024x1024"  # Default image size
+    DALLE_QUALITY = "standard"  # Options: standard, hd
+    DALLE_MODEL = "dall-e-3"   # Options: dall-e-2, dall-e-3

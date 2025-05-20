@@ -3,10 +3,10 @@ from typing import Any, Dict
 
 from models.service.agent_core import AgentCore
 from models.service.chat_models import AgentResponse, ChatRequest
+from services.orchestrator.registry.tool_registry import ToolRegistry
 
+from services.tools.categories.external.rugcheck.tool_types import RugcheckToolType
 from .config import Config, TokenRegistry
-from .tool_types import RugcheckToolType
-from .tools import fetch_most_viewed, fetch_most_voted, fetch_token_report, resolve_token_identifier
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +16,14 @@ class RugCheckAgent(AgentCore):
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
+        
+        # Get tools from registry
+        self.token_report_tool = ToolRegistry.get("fetch_token_report")
+        self.most_viewed_tool = ToolRegistry.get("fetch_most_viewed_tokens")
+        self.most_voted_tool = ToolRegistry.get("fetch_most_voted_tokens")
+        
+        # For backward compatibility with LLM tools format
         self.tools_provided = Config.tools
-        self.api_base_url = "https://api.rugcheck.xyz/v1"
         self.token_registry = TokenRegistry()
 
     async def _process_request(self, request: ChatRequest) -> AgentResponse:
@@ -40,14 +46,12 @@ class RugCheckAgent(AgentCore):
                     return AgentResponse.error(error_message="Please provide a token name or mint address")
 
                 try:
-                    mint_address = await resolve_token_identifier(self.token_registry, identifier)
-                    if not mint_address:
-                        return AgentResponse.error(error_message=f"Could not resolve token identifier: {identifier}")
-
-                    report_response = await fetch_token_report(self.api_base_url, mint_address)
+                    # Use the new tool directly
+                    result = await self.token_report_tool.execute(identifier=identifier)
+                    
                     return AgentResponse.success(
-                        content=report_response.formatted_response,
-                        metadata=report_response.model_dump(),
+                        content=result.get("formatted_response"),
+                        metadata=result.get("report"),
                         action_type=RugcheckToolType.GET_TOKEN_REPORT.value,
                     )
 
@@ -56,10 +60,12 @@ class RugCheckAgent(AgentCore):
 
             elif func_name == RugcheckToolType.GET_MOST_VIEWED.value:
                 try:
-                    viewed_response = await fetch_most_viewed(self.api_base_url)
+                    # Use the new tool directly
+                    result = await self.most_viewed_tool.execute()
+                    
                     return AgentResponse.success(
-                        content=viewed_response.formatted_response,
-                        metadata=viewed_response.model_dump(),
+                        content=result.get("formatted_response"),
+                        metadata=result.get("viewed_tokens"),
                         action_type=RugcheckToolType.GET_MOST_VIEWED.value,
                     )
 
@@ -68,10 +74,12 @@ class RugCheckAgent(AgentCore):
 
             elif func_name == RugcheckToolType.GET_MOST_VOTED.value:
                 try:
-                    voted_response = await fetch_most_voted(self.api_base_url)
+                    # Use the new tool directly
+                    result = await self.most_voted_tool.execute()
+                    
                     return AgentResponse.success(
-                        content=voted_response.formatted_response,
-                        metadata=voted_response.model_dump(),
+                        content=result.get("formatted_response"),
+                        metadata=result.get("voted_tokens"),
                         action_type=RugcheckToolType.GET_MOST_VOTED.value,
                     )
 

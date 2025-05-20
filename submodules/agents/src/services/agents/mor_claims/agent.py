@@ -4,7 +4,8 @@ from typing import Any, Dict
 from langchain.schema import HumanMessage, SystemMessage
 from models.service.agent_core import AgentCore
 from models.service.chat_models import AgentResponse, ChatRequest
-from services.agents.mor_claims import tools
+from services.orchestrator.registry.tool_registry import ToolRegistry
+from services.tools.categories.blockchain.mor_claims.tool_types import MorClaimsToolType
 from stores.agent_manager import agent_manager_instance
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,18 @@ class MorClaimsAgent(AgentCore):
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.tools_provided = tools.get_tools()
+        
+        # Get tools from registry
+        self.get_reward_tool = ToolRegistry.get("get_current_user_reward")
+        self.prepare_claim_tool = ToolRegistry.get("prepare_claim_transaction")
+        self.get_status_tool = ToolRegistry.get("get_claim_status")
+        
+        # For backward compatibility with LLM tools format
+        self.tools_provided = [
+            self.get_reward_tool.schema,
+            self.prepare_claim_tool.schema,
+            self.get_status_tool.schema
+        ]
 
     async def _process_request(self, request: ChatRequest) -> AgentResponse:
         """Process the validated chat request for MOR claims."""
@@ -27,10 +39,15 @@ class MorClaimsAgent(AgentCore):
             if not chat_history:
                 agent_manager_instance.set_active_agent("mor claims")
 
-                rewards = {
-                    0: tools.get_current_user_reward(wallet_address, 0),
-                    1: tools.get_current_user_reward(wallet_address, 1),
-                }
+                # Get rewards from each pool using the tool
+                rewards = {}
+                for pool_id in [0, 1]:
+                    result = await self.get_reward_tool.execute(
+                        wallet_address=wallet_address, 
+                        pool_id=pool_id
+                    )
+                    rewards[pool_id] = result.get("reward", 0)
+                
                 available_rewards = {pool: amount for pool, amount in rewards.items() if amount > 0}
 
                 if available_rewards:
@@ -94,8 +111,11 @@ class MorClaimsAgent(AgentCore):
 
             for pool_id in available_rewards.keys():
                 try:
-                    tx_data = tools.prepare_claim_transaction(pool_id, receiver_address)
-                    transactions.append({"pool": pool_id, "transaction": tx_data})
+                    result = await self.prepare_claim_tool.execute(
+                        pool_id=pool_id, 
+                        wallet_address=receiver_address
+                    )
+                    transactions.append({"pool": pool_id, "transaction": result.get("transaction")})
                 except Exception as e:
                     return AgentResponse.error(
                         error_message=f"Error preparing transaction for pool {pool_id}: {str(e)}"
@@ -114,9 +134,15 @@ class MorClaimsAgent(AgentCore):
     async def _execute_tool(self, func_name: str, args: Dict[str, Any]) -> AgentResponse:
         """Execute the appropriate MOR claims tool based on function name."""
         try:
-            if func_name == "get_claim_status":
-                status = tools.get_claim_status(args["transaction_hash"])
-                return AgentResponse.success(content=status)
+            if func_name == MorClaimsToolType.GET_CURRENT_USER_REWARD.value:
+                result = await self.get_reward_tool.execute(**args)
+                return AgentResponse.success(content=result.get("message"), metadata=result)
+            elif func_name == MorClaimsToolType.PREPARE_CLAIM_TRANSACTION.value:
+                result = await self.prepare_claim_tool.execute(**args)
+                return AgentResponse.success(content=result.get("message"), metadata=result)
+            elif func_name == MorClaimsToolType.GET_CLAIM_STATUS.value:
+                result = await self.get_status_tool.execute(**args)
+                return AgentResponse.success(content=result.get("message"), metadata=result)
             else:
                 return AgentResponse.error(error_message=f"Unknown tool: {func_name}")
 
