@@ -331,6 +331,7 @@ export const writeMessageStream = async (
     let finalAnswer: string | null = null;
     let subtaskOutputs: any[] = [];
     let contributingAgents: string[] = [];
+    let finalAnswerActions: any[] = [];
     let globalTelemetry = {
       total_processing_time: 0,
       total_token_usage: {
@@ -408,6 +409,20 @@ export const writeMessageStream = async (
 
             // Handle specific event types
             switch (event.type) {
+              case "synthesis_complete":
+                finalAnswer = event.data.final_answer;
+                // Check if final_answer_actions are present in synthesis_complete event
+                if (event.data.final_answer_actions && event.data.final_answer_actions.length > 0) {
+                  console.log("Final answer actions detected in synthesis_complete:", event.data.final_answer_actions);
+                  // Save final_answer_actions for later use in the assistantMessage
+                  finalAnswerActions = event.data.final_answer_actions;
+                }
+                break;
+              case "final_answer_actions":
+                console.log("Final answer actions event received:", event.data.actions);
+                // Save final_answer_actions for later use in the assistantMessage
+                finalAnswerActions = event.data.actions;
+                break;
               case "subtask_dispatch":
               case "subtask_result":
                 // Extract telemetry from event data
@@ -476,25 +491,36 @@ export const writeMessageStream = async (
                 break;
               case "stream_complete":
                 // Create final assistant message with metadata including telemetry
+                const metadata: any = {
+                  collaboration: "orchestrated",
+                  contributing_agents: contributingAgents,
+                  subtask_outputs: subtaskOutputs,
+                  // Add global telemetry in the format CrewResponseMessage expects
+                  token_usage: globalTelemetry.total_token_usage.total > 0 ? {
+                    total_tokens: globalTelemetry.total_token_usage.total,
+                    prompt_tokens: globalTelemetry.total_token_usage.prompt,
+                    completion_tokens: globalTelemetry.total_token_usage.response,
+                  } : undefined,
+                  processing_time: globalTelemetry.total_processing_time > 0 ? {
+                    duration: globalTelemetry.total_processing_time,
+                  } : undefined,
+                };
+                
+                // Add final_answer_actions if present in the event
+                if (finalAnswerActions && finalAnswerActions.length > 0) {
+                  console.log("Final answer actions being added to metadata:", finalAnswerActions);
+                  metadata.final_answer_actions = finalAnswerActions;
+                } else if (event.data.final_answer_actions && event.data.final_answer_actions.length > 0) {
+                  console.log("Final answer actions from stream_complete:", event.data.final_answer_actions);
+                  metadata.final_answer_actions = event.data.final_answer_actions;
+                }
+                
                 const assistantMessage: ChatMessage = {
                   role: "assistant",
                   content: finalAnswer || "Request completed.",
                   timestamp: Date.now(),
                   agentName: "basic_crew",
-                  metadata: {
-                    collaboration: "orchestrated",
-                    contributing_agents: contributingAgents,
-                    subtask_outputs: subtaskOutputs,
-                    // Add global telemetry in the format CrewResponseMessage expects
-                    token_usage: globalTelemetry.total_token_usage.total > 0 ? {
-                      total_tokens: globalTelemetry.total_token_usage.total,
-                      prompt_tokens: globalTelemetry.total_token_usage.prompt,
-                      completion_tokens: globalTelemetry.total_token_usage.response,
-                    } : undefined,
-                    processing_time: globalTelemetry.total_processing_time > 0 ? {
-                      duration: globalTelemetry.total_processing_time,
-                    } : undefined,
-                  },
+                  metadata,
                 };
 
                 // Add to history and notify completion
@@ -503,7 +529,7 @@ export const writeMessageStream = async (
                 // Track research completed event
                 trackEvent('research.completed', {
                   conversationId,
-                  contributingAgents,
+                  agentCount: contributingAgents.length,
                   subtaskCount: subtaskOutputs.length,
                   totalTokens: globalTelemetry.total_token_usage.total,
                   duration: Date.now() - startTime,
@@ -512,7 +538,7 @@ export const writeMessageStream = async (
                 // Track timing
                 trackTiming('research.completed', startTime, {
                   conversationId,
-                  contributingAgents,
+                  agentCount: contributingAgents.length,
                 });
                 
                 onComplete(assistantMessage);

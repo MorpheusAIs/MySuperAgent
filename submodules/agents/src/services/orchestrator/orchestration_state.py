@@ -2,9 +2,11 @@
 # pydantic models for flow state & LLM tool schemas
 # --------------------------------------------------------------------- #
 
-from typing import List
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel
+
+from .actions import FinalAnswerAction
 
 
 class TokenUsage(BaseModel):
@@ -69,3 +71,4 @@ class OrchestrationState(BaseModel):
     assignments: List[Assignment] = []
     subtask_outputs: List[SubtaskOutput] = []
     final_answer: str | None = None
+    final_answer_actions: List[FinalAnswerAction] = []
