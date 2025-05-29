@@ -12,7 +12,6 @@ from crewai import LLM
 from ..helpers.retry_utils import retry_with_backoff
 from ..helpers.utils import parse_llm_structured_output
 from .action_metadata import (
-    AnalysisActionMetadata,
     FinalAnswerAction,
     ImageGenerationActionMetadata,
     SwapActionMetadata,
@@ -22,7 +21,6 @@ from .action_metadata import (
 from .action_types import FinalAnswerActionType
 from .detection import ActionDetectionPlan
 from .request_models import (
-    AnalysisActionRequest,
     ImageGenerationActionRequest,
     SwapActionRequest,
     TransferActionRequest,
