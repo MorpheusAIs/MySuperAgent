@@ -33,8 +33,8 @@ export const getRelayerUrl = (endpoint: string) => {
 export const getSecrets = async () => {
   console.log("[LIT] Getting secrets from environment variables");
   return {
-    LIT_RELAYER_API_KEY: process.env.LIT_RELAYER_API_KEY || "",
-    LIT_PAYER_SECRET_KEY: process.env.LIT_PAYER_SECRET_KEY || "",
+    LIT_RELAYER_API_KEY: process.env.NEXT_PUBLIC_LIT_RELAYER_API_KEY || "",
+    LIT_PAYER_SECRET_KEY: process.env.NEXT_PUBLIC_LIT_PAYER_SECRET_KEY || "",
   };
 };
 

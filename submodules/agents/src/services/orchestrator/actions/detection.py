@@ -11,6 +11,7 @@ from .action_types import FinalAnswerActionType
 
 class ActionDetection(BaseModel):
     """Initial detection of a potential action."""
+
     action_type: FinalAnswerActionType
     description: str
     agent: str
@@ -18,4 +19,5 @@ class ActionDetection(BaseModel):
 
 class ActionDetectionPlan(BaseModel):
     """Structured output for initial action detection."""
+
     actions: List[ActionDetection] = []

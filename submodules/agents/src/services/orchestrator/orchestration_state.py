@@ -2,7 +2,7 @@
 # pydantic models for flow state & LLM tool schemas
 # --------------------------------------------------------------------- #
 
-from typing import Any, Dict, List, Optional, Union
+from typing import List
 
 from pydantic import BaseModel
 

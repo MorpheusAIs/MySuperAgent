@@ -7,6 +7,7 @@ from enum import Enum
 
 class FinalAnswerActionType(str, Enum):
     """Types of actions that can be executed from a final answer."""
+
     TWEET = "tweet"
     SWAP = "swap"
     TRANSFER = "transfer"
