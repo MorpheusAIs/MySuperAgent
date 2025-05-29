@@ -33,8 +33,8 @@ export const getRelayerUrl = (endpoint: string) => {
 export const getSecrets = async () => {
   console.log("[LIT] Getting secrets from environment variables");
   return {
-    LIT_RELAYER_API_KEY: process.env.LIT_RELAYER_API_KEY || "",
-    LIT_PAYER_SECRET_KEY: process.env.LIT_PAYER_SECRET_KEY || "",
+    LIT_RELAYER_API_KEY: process.env.NEXT_PUBLIC_LIT_RELAYER_API_KEY || "",
+    LIT_PAYER_SECRET_KEY: process.env.NEXT_PUBLIC_LIT_PAYER_SECRET_KEY || "",
   };
 };
 
@@ -152,7 +152,7 @@ export const getAccessControlConditions = () => {
       parameters: [":userAddress", "latest"],
       returnValueTest: {
         comparator: ">=" as const,
-        value: "10000000000000", // 0.00001 ETH
+        value: "0", // Any balance >= 0 (should always be true for valid addresses)
       },
     },
   ];

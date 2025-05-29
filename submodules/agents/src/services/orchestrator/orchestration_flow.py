@@ -18,6 +18,7 @@ from crewai import LLM, Crew, Process, Task
 from crewai.flow.flow import Flow, listen, start
 from services.secrets import get_secret
 
+from .actions.handler import extract_final_answer_actions
 from .helpers.context_optimization import optimize_context_block
 from .helpers.context_utils import create_focused_task_description, summarize_previous_outputs, truncate_text
 from .helpers.retry_utils import retry_with_backoff
@@ -33,6 +34,7 @@ from .orchestration_state import (
     TokenUsage,
 )
 from .progress_listener import (
+    emit_final_answer_actions,
     emit_final_complete,
     emit_flow_end,
     emit_flow_start,
@@ -407,20 +409,37 @@ class OrchestrationFlow(Flow[OrchestrationState]):
         try:
             resp = synthesize_final_answer()
             self.state.final_answer = resp.strip()
+
+            # Identify and extract potential final answer actions
+            self.state.final_answer_actions = await extract_final_answer_actions(
+                chat_prompt=self.state.chat_prompt,
+                final_answer=self.state.final_answer,
+                standard_model=self.standard_model,
+                efficient_model=self.efficient_model,
+                standard_model_api_key=self.standard_model_api_key,
+            )
+
         except Exception as e:
             logger.error(f"Failed to synthesize final answer: {e}")
             # Fallback: concatenate subtask outputs
             self.state.final_answer = "\n\n".join(
                 f"{i+1}. {output.subtask}\n{output.output}" for i, output in enumerate(self.state.subtask_outputs)
             )
+            self.state.final_answer_actions = []
 
-        # Emit synthesis complete and final complete events if streaming
+        # Emit synthesis complete, final answer actions, and final complete events if streaming
         if self.request_id:
-            await emit_synthesis_complete(self.request_id, self.state.final_answer)
+            await emit_synthesis_complete(self.request_id, self.state.final_answer, self.state.final_answer_actions)
+
+            # Emit final answer actions if any were identified
+            if self.state.final_answer_actions:
+                await emit_final_answer_actions(self.request_id, self.state.final_answer_actions)
+
             await emit_flow_end(self.request_id)
-            await emit_final_complete(self.request_id)
+            await emit_final_complete(self.request_id, self.state.final_answer_actions)
 
         return {
             "final_answer": self.state.final_answer,
             "subtask_outputs": self.state.subtask_outputs,
+            "final_answer_actions": self.state.final_answer_actions,
         }

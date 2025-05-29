@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Box,
   Text,
@@ -14,6 +14,7 @@ import {
   Badge,
   Tooltip,
   Collapse,
+  useToast,
 } from "@chakra-ui/react";
 import ReactMarkdown from "react-markdown";
 import {
@@ -33,7 +34,12 @@ import {
 } from "react-icons/fa";
 import { AiOutlineDeploymentUnit } from "react-icons/ai";
 import { RiTeamLine, RiFlowChart } from "react-icons/ri";
-import { CrewResponseMetadata } from "@/components/Agents/Crew/CrewResponseMessage.types";
+import {
+  CrewResponseMetadata,
+} from "@/components/Agents/Crew/CrewResponseMessage.types";
+import { FinalAnswerAction } from "@/components/Agents/Crew/FinalAnswerAction.types";
+import FinalAnswerActions from "./FinalAnswerActions";
+import { Tweet } from "@/components/Agents/Tweet/CustomMessages/TweetMessage";
 import styles from "./CrewResponseMessage.module.css";
 
 interface CrewResponseMessageProps {
@@ -193,26 +199,26 @@ const CompactTaskOutput: React.FC<{
       </Collapse>
 
       <Collapse in={isExpanded} animateOpacity>
-        <Box 
-          p={3} 
-          bg="gray.825" 
-          borderRadius="md" 
+        <Box
+          p={3}
+          bg="gray.825"
+          borderRadius="md"
           mt={2}
           maxH="400px"
           overflowY="auto"
           sx={{
-            '&::-webkit-scrollbar': {
-              width: '8px',
+            "&::-webkit-scrollbar": {
+              width: "8px",
             },
-            '&::-webkit-scrollbar-track': {
-              background: 'transparent',
+            "&::-webkit-scrollbar-track": {
+              background: "transparent",
             },
-            '&::-webkit-scrollbar-thumb': {
-              background: 'rgba(96, 165, 250, 0.3)',
-              borderRadius: '4px',
+            "&::-webkit-scrollbar-thumb": {
+              background: "rgba(96, 165, 250, 0.3)",
+              borderRadius: "4px",
             },
-            '&::-webkit-scrollbar-thumb:hover': {
-              background: 'rgba(96, 165, 250, 0.5)',
+            "&::-webkit-scrollbar-thumb:hover": {
+              background: "rgba(96, 165, 250, 0.5)",
             },
           }}
         >
@@ -239,39 +245,150 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
   const [isFlowExpanded, setIsFlowExpanded] = useState(true);
   const [displayedContent, setDisplayedContent] = useState("");
   const [isTyping, setIsTyping] = useState(true);
+  const toast = useToast();
 
-  // Typing animation effect
+  // Function to determine what content should be displayed in the main markdown
+  const getFilteredContent = (
+    content: string,
+    metadata?: CrewResponseMetadata
+  ) => {
+    if (!metadata?.final_answer_actions?.length) {
+      return content;
+    }
+
+    // If there's only a tweet action, don't show any content in the main markdown
+    const onlyTweetAction =
+      metadata.final_answer_actions.length === 1 &&
+      metadata.final_answer_actions[0].action_type === "tweet" &&
+      metadata.final_answer_actions[0].metadata.agent === "tweet_sizzler";
+
+    if (onlyTweetAction) {
+      return "";
+    }
+
+    return content;
+  };
+
+  // Store a reference to the current animation interval
+  const animationIntervalRef = useRef<number | null>(null);
+  const contentRef = useRef<string>(content);
+
+  // Update contentRef when content changes
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
+
+  // Stop any running animation
+  const stopAnimation = useCallback(() => {
+    if (animationIntervalRef.current !== null) {
+      clearInterval(animationIntervalRef.current);
+      animationIntervalRef.current = null;
+    }
+  }, []);
+
+  // Track whether this component has already performed an animation
+  const hasAnimatedRef = useRef<boolean>(false);
+
+  // Typing animation effect - only runs ONCE per component instance
   useEffect(() => {
     if (!content) return;
-
+    
+    // If we've already animated this message, just show the full content
+    if (hasAnimatedRef.current) {
+      const filteredContent = getFilteredContent(content, metadata);
+      setDisplayedContent(filteredContent);
+      setIsTyping(false);
+      return;
+    }
+    
+    // First time animation - mark that we've animated
+    hasAnimatedRef.current = true;
+    
     // Reset displayed content when content changes
     setDisplayedContent("");
     setIsTyping(true);
 
-    const totalLength = content.length;
-    let currentLength = 0;
+    const filteredContent = getFilteredContent(content, metadata);
+    const totalLength = filteredContent.length;
+
+    // If there's no content to display after filtering, skip the animation
+    if (!totalLength) {
+      setDisplayedContent("");
+      setIsTyping(false);
+      return;
+    }
+
+    // For very short content, just display it immediately
+    if (totalLength < 20) {
+      setDisplayedContent(filteredContent);
+      setIsTyping(false);
+      return;
+    }
 
     // Calculate typing speed to complete in ~0.8-1.2 seconds
-    const typingDuration = Math.min(1000, Math.max(800, totalLength * 3)); // Dynamic duration based on length
+    const typingDuration = Math.min(1000, Math.max(800, totalLength * 3)); 
     const charsPerInterval = Math.max(
       1,
       Math.ceil(totalLength / (typingDuration / 16))
-    ); // 60fps
-
-    const interval = setInterval(() => {
+    ); 
+    
+    let currentLength = 0;
+    
+    // Use window.setInterval for better browser compatibility
+    animationIntervalRef.current = window.setInterval(() => {
       currentLength += charsPerInterval;
 
       if (currentLength >= totalLength) {
-        setDisplayedContent(content);
+        setDisplayedContent(filteredContent);
         setIsTyping(false);
-        clearInterval(interval);
+        stopAnimation();
       } else {
-        setDisplayedContent(content.substring(0, currentLength));
+        setDisplayedContent(filteredContent.substring(0, currentLength));
       }
-    }, 16); // 60fps
+    }, 16);
 
-    return () => clearInterval(interval);
-  }, [content]);
+    // Cleanup: stop animation when component unmounts or content changes
+    return () => {
+      stopAnimation();
+    };
+  }, [content, metadata, stopAnimation]);
+
+  // Add cursor back in
+  useEffect(() => {
+    return () => {
+      hasAnimatedRef.current = false;
+    };
+  }, []);
+
+  // Handle execution of final answer actions
+  const handleActionExecute = async (action: FinalAnswerAction) => {
+    try {
+      // Implement the API call to execute the action
+      // This will depend on the action type
+      console.log("Executing action:", action);
+
+      // For now, just show a toast notification
+      toast({
+        title: "Action executed",
+        description: `Successfully executed ${action.action_type} action`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+
+      // In a real implementation, you would call the appropriate API endpoint
+      // based on the action type and metadata
+    } catch (error) {
+      console.error("Error executing action:", error);
+      toast({
+        title: "Action failed",
+        description: `Failed to execute ${action.action_type} action`,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
 
   if (!metadata) {
     return (
@@ -293,19 +410,21 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
 
   const totalAgents =
     metadata.subtask_outputs?.reduce(
-      (acc, task) => acc + (task.agents?.length || 0),
+      (acc: number, task) => acc + (task.agents?.length || 0),
       0
     ) || 0;
 
   const totalTime =
     metadata.subtask_outputs?.reduce(
-      (acc, task) => acc + (task.telemetry?.processing_time?.duration || 0),
+      (acc: number, task) =>
+        acc + (task.telemetry?.processing_time?.duration || 0),
       0
     ) || 0;
 
   const totalTokens =
     metadata.subtask_outputs?.reduce(
-      (acc, task) => acc + (task.telemetry?.token_usage?.total_tokens || 0),
+      (acc: number, task) =>
+        acc + (task.telemetry?.token_usage?.total_tokens || 0),
       0
     ) || 0;
 
@@ -330,6 +449,46 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
           {displayedContent}
         </ReactMarkdown>
         {isTyping && <span className={styles.typingCursor} />}
+
+        {/* Final Answer Actions - embedded within main response */}
+        {metadata.final_answer_actions &&
+          metadata.final_answer_actions.length > 0 && (
+            <Box
+              mt={4}
+              bg="gray.850"
+              borderRadius="md"
+              pl={3}
+              pr={3}
+              borderWidth="1px"
+              borderColor="blue.700"
+            >
+              {metadata.final_answer_actions.map((action, index) => {
+                // Determine which component to render based on action type and agent
+                if (
+                  action.action_type === "tweet" &&
+                  action.metadata.agent === "tweet_sizzler"
+                ) {
+                  // For tweet actions, use the Tweet component directly
+                  // Need to type cast to TweetActionMetadata to access content
+                  const tweetMetadata = action.metadata as import('./FinalAnswerAction.types').TweetActionMetadata;
+                  return (
+                    <Box key={index}>
+                      <Tweet initialContent={tweetMetadata.content} />
+                    </Box>
+                  );
+                }
+
+                // For other action types, use the generic FinalAnswerActions component
+                return (
+                  <FinalAnswerActions
+                    key={index}
+                    actions={[action]}
+                    onActionExecute={handleActionExecute}
+                  />
+                );
+              })}
+            </Box>
+          )}
       </Box>
 
       {/* Orchestration Flow */}

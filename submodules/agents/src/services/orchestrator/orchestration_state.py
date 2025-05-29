@@ -6,6 +6,8 @@ from typing import List
 
 from pydantic import BaseModel
 
+from .actions import FinalAnswerAction
+
 
 class TokenUsage(BaseModel):
     prompt_tokens: int = 0
@@ -69,3 +71,4 @@ class OrchestrationState(BaseModel):
     assignments: List[Assignment] = []
     subtask_outputs: List[SubtaskOutput] = []
     final_answer: str | None = None
+    final_answer_actions: List[FinalAnswerAction] = []

@@ -6,7 +6,9 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
+
+from .actions import FinalAnswerAction
 
 logger = logging.getLogger(__name__)
 
@@ -114,25 +116,57 @@ async def emit_synthesis_start(request_id: str):
         )
 
 
-async def emit_synthesis_complete(request_id: str, final_answer: str):
+async def emit_synthesis_complete(
+    request_id: str, final_answer: str, final_answer_actions: Optional[List[FinalAnswerAction]] = None
+):
     """Emit event when synthesis completes"""
     if request_id:
         queue = get_or_create_queue(request_id)
+        data = {"final_answer": final_answer, "message": "Final answer ready"}
+
+        # Include final_answer_actions if available
+        if final_answer_actions:
+            # Convert FinalAnswerAction objects to dict for serialization
+            data["final_answer_actions"] = [action.dict() for action in final_answer_actions]
+
         await queue.put(
             {
                 "type": "synthesis_complete",
                 "timestamp": datetime.now().isoformat(),
-                "data": {"final_answer": final_answer, "message": "Final answer ready"},
+                "data": data,
             }
         )
 
 
-async def emit_final_complete(request_id: str):
+async def emit_final_complete(request_id: str, final_answer_actions: Optional[List[FinalAnswerAction]] = None):
     """Emit final completion event"""
     if request_id:
         queue = get_or_create_queue(request_id)
+        data = {"message": "Stream complete"}
+
+        # Include final_answer_actions if available
+        if final_answer_actions:
+            # Convert FinalAnswerAction objects to dict for serialization
+            data["final_answer_actions"] = [action.dict() for action in final_answer_actions]
+
+        await queue.put({"type": "stream_complete", "timestamp": datetime.now().isoformat(), "data": data})
+
+
+async def emit_final_answer_actions(request_id: str, final_answer_actions: List[FinalAnswerAction]):
+    """Emit event for final answer actions"""
+    if request_id:
+        queue = get_or_create_queue(request_id)
+        # Convert FinalAnswerAction objects to dict for serialization
+        actions_data = [action.dict() for action in final_answer_actions]
         await queue.put(
-            {"type": "stream_complete", "timestamp": datetime.now().isoformat(), "data": {"message": "Stream complete"}}
+            {
+                "type": "final_answer_actions",
+                "timestamp": datetime.now().isoformat(),
+                "data": {
+                    "actions": actions_data,
+                    "message": f"Identified {len(final_answer_actions)} action(s) to perform",
+                },
+            }
         )
 
 
