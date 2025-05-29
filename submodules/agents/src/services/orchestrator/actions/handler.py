@@ -20,12 +20,7 @@ from .action_metadata import (
 )
 from .action_types import FinalAnswerActionType
 from .detection import ActionDetectionPlan
-from .request_models import (
-    ImageGenerationActionRequest,
-    SwapActionRequest,
-    TransferActionRequest,
-    TweetActionRequest,
-)
+from .request_models import ImageGenerationActionRequest, SwapActionRequest, TransferActionRequest, TweetActionRequest
 
 logger = logging.getLogger(__name__)
 
