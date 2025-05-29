@@ -152,7 +152,7 @@ export const getAccessControlConditions = () => {
       parameters: [":userAddress", "latest"],
       returnValueTest: {
         comparator: ">=" as const,
-        value: "10000000000000", // 0.00001 ETH
+        value: "0", // Any balance >= 0 (should always be true for valid addresses)
       },
     },
   ];
