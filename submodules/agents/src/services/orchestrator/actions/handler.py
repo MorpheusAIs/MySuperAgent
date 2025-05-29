@@ -252,46 +252,6 @@ async def extract_final_answer_actions(
 
                 final_answer_actions.append(final_action)
 
-            elif action_type == FinalAnswerActionType.ANALYSIS:
-                # Extract analysis metadata
-                analysis_prompt = (
-                    "Extract analysis details from this final answer. The user wants to analyze data.\n\n"
-                    f"User request: {chat_prompt}\n\n"
-                    f"Final answer: {final_answer}\n\n"
-                    "Extract:\n"
-                    "- type: Type of analysis (token, wallet, etc.) (required)\n"
-                    "- subject: Subject of analysis (required)\n"
-                    "- parameters: Optional analysis parameters object which can include "
-                    "time_range, include_tokens, include_nfts, limit, sort_by, order, filter\n"
-                )
-
-                analysis_extractor = LLM(
-                    model=efficient_model,
-                    response_format=AnalysisActionRequest,
-                    api_key=standard_model_api_key,
-                )
-                analysis_response = analysis_extractor.call(analysis_prompt)
-                analysis_data = parse_llm_structured_output(
-                    analysis_response, AnalysisActionRequest, logger, "AnalysisActionRequest"
-                )
-
-                analysis_metadata = AnalysisActionMetadata(
-                    agent="codex",
-                    action_id=str(uuid.uuid4()),
-                    timestamp=timestamp,
-                    type=analysis_data.type,
-                    subject=analysis_data.subject,
-                    parameters=analysis_data.parameters,
-                )
-
-                final_action = FinalAnswerAction(
-                    action_type=FinalAnswerActionType.ANALYSIS,
-                    metadata=analysis_metadata,
-                    description=description,
-                )
-
-                final_answer_actions.append(final_action)
-
         logger.info(f"Identified and extracted {len(final_answer_actions)} final answer actions")
         return final_answer_actions
 
