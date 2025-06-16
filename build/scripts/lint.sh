@@ -63,9 +63,9 @@ LINT_ISSUES=$(mktemp)
 # Change to the project root directory to match GitHub Actions behavior
 cd "$PROJECT_ROOT"
 
-# Run Black with diff output
-print_header "Running Black with diff output"
-if ! black --diff --line-length=120 . 2>&1 | tee -a "$LINT_ISSUES"; then
+# Run Black
+print_header "Running Black"
+if ! black --line-length=120 . 2>&1 | tee -a "$LINT_ISSUES"; then
     BLACK_DIFF_ISSUES=1
 fi
 
@@ -75,9 +75,9 @@ if ! black --check --line-length=120 . 2>&1 | tee -a "$LINT_ISSUES"; then
     BLACK_CHECK_ISSUES=1
 fi
 
-# Run isort with diff output
-print_header "Running isort with diff output"
-if ! isort --profile black --line-length 120 --diff . 2>&1 | tee -a "$LINT_ISSUES"; then
+# Run isort
+print_header "Running isort"
+if ! isort --profile black --line-length 120 . 2>&1 | tee -a "$LINT_ISSUES"; then
     ISORT_DIFF_ISSUES=1
 fi
 
