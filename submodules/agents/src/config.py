@@ -1,6 +1,6 @@
 import importlib.util
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from crewai import LLM
 from fastapi import APIRouter
@@ -11,6 +11,7 @@ from logs import setup_logging
 from services.secrets import get_secret
 from services.vectorstore.together_embeddings import TogetherEmbeddings
 from services.vectorstore.vector_store_service import VectorStoreService
+from services.api_gateway.mor_llm import MORLLM
 from together import Together
 
 logger = setup_logging()
@@ -150,6 +151,10 @@ class AppConfig:
     # LLM Configurations
     LLM_AGENT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo"  # Together AI
     LLM_DELEGATOR_MODEL = "llama-3.3-70b"  # Cerebras
+    
+    # MOR API Configuration
+    MOR_API_KEY = "sk-MOC63G.ac75f74343013115d31781f641857db2282ee62f90abe6cee7ab4ae0da82fae6"
+    MOR_API_ENDPOINT = "https://api.mor.org/api/v1/chat/completions"
 
 
 # Check if API keys are available
@@ -259,6 +264,44 @@ else:
     )
 
     TOGETHER_CLIENT = None
+
+
+def create_morllm(model: str = "default", temperature: float = 0.7) -> MORLLM:
+    """
+    Factory function to create MORLLM instances with user-selected models.
+    
+    Args:
+        model: The model ID to use (default: "default")
+        temperature: Sampling temperature (default: 0.7)
+        
+    Returns:
+        MORLLM instance configured with the specified model
+    """
+    return MORLLM(
+        model=model,
+        api_key=AppConfig.MOR_API_KEY,
+        endpoint=AppConfig.MOR_API_ENDPOINT,
+        temperature=temperature
+    )
+
+
+def get_llm_for_request(selected_model: Optional[str] = None) -> Union[LLM, MORLLM]:
+    """
+    Get the appropriate LLM instance based on user selection.
+    
+    Args:
+        selected_model: User-selected model ID for MOR API, or None for default LLM
+        
+    Returns:
+        LLM instance (either MORLLM or default LLM_AGENT)
+    """
+    if selected_model and selected_model != "default":
+        logger.info(f"Using MOR API with model: {selected_model}")
+        return create_morllm(selected_model)
+    else:
+        logger.info("Using default LLM configuration")
+        return LLM_AGENT
+
 
 # Vector store path for persistence
 VECTOR_STORE_PATH = os.path.join(os.getcwd(), "data", "vector_store")

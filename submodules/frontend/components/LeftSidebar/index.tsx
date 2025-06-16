@@ -12,6 +12,7 @@ import {
   PopoverBody,
   PopoverArrow,
   PopoverTrigger,
+  Spinner,
 } from "@chakra-ui/react";
 import {
   IconChevronLeft,
@@ -34,6 +35,8 @@ import {
   updateConversationTitle,
 } from "@/contexts/chat";
 import { Conversation } from "@/services/types";
+import { getAvailableModels, getSelectedModel, setSelectedModel, ModelInfo } from "@/services/models";
+import { getHttpClient } from "@/services/constants";
 
 export type LeftSidebarProps = {
   isSidebarOpen: boolean;
@@ -56,14 +59,15 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("llama3.2:3b");
+  const [selectedModel, setSelectedModelState] = useState<string>(getSelectedModel());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [modelOptions, setModelOptions] = useState<ModelInfo[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const ToggleIcon = isSidebarOpen ? IconChevronLeft : IconChevronRight;
-
-  const modelOptions = [{ value: "llama3.3:70b", label: "Llama 3.3 (70B)" }];
 
   const fetchConversations = () => {
     try {
@@ -76,6 +80,60 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
     } catch (error) {
       console.error("Failed to fetch conversations:", error);
     }
+  };
+
+  const fetchModels = async () => {
+    setIsLoadingModels(true);
+    setModelsError(null);
+    try {
+      const backendClient = getHttpClient();
+      const response = await getAvailableModels(backendClient);
+      
+      if (response && response.data && response.data.length > 0) {
+        setModelOptions(response.data);
+        
+        // Set initial selected model
+        const savedModel = getSelectedModel();
+        if (savedModel && response.data.find(m => m.value === savedModel)) {
+          setSelectedModelState(savedModel);
+        } else if (response.data.length > 0) {
+          // Select the first available model if no saved selection
+          const firstModel = response.data[0].value;
+          setSelectedModelState(firstModel);
+          setSelectedModel(firstModel);
+        }
+      } else {
+        // Fallback to default options if API returns empty
+        const fallbackOptions = [
+          { value: "default", label: "Default MOR Model", id: "default" }
+        ];
+        setModelOptions(fallbackOptions);
+        setSelectedModelState("default");
+        setSelectedModel("default");
+      }
+    } catch (error) {
+      console.error("Failed to fetch models:", error);
+      setModelsError("Failed to load models");
+      
+      // Set fallback options on error
+      const fallbackOptions = [
+        { value: "default", label: "Default MOR Model", id: "default" }
+      ];
+      setModelOptions(fallbackOptions);
+      
+      // Use saved model or default
+      const savedModel = getSelectedModel();
+      setSelectedModelState(savedModel || "default");
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
+
+  const handleModelChange = (modelId: string) => {
+    setSelectedModelState(modelId);
+    setSelectedModel(modelId);
+    
+    console.log("Model changed to:", modelId);
   };
 
   const handleCreateNewConversation = async () => {
@@ -143,6 +201,11 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
 
     return () => clearInterval(intervalId);
   }, [refreshMessages]);
+
+  // Fetch models on component mount
+  useEffect(() => {
+    fetchModels();
+  }, []);
 
   const filteredConversations = conversations.filter(
     (conv) =>
@@ -256,17 +319,29 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
               <Box width="100%">
                 <Box className={styles.modelSelection}>
                   <Text className={styles.modelLabel}>Model:</Text>
-                  <Select
-                    value={selectedModel}
-                    onChange={(e) => setSelectedModel(e.target.value)}
-                    className={styles.modelSelect}
-                  >
-                    {modelOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
+                  {isLoadingModels ? (
+                    <Box display="flex" alignItems="center" justifyContent="center" height="32px">
+                      <Spinner size="sm" />
+                    </Box>
+                  ) : (
+                    <Select
+                      value={selectedModel}
+                      onChange={(e) => handleModelChange(e.target.value)}
+                      className={styles.modelSelect}
+                      isDisabled={modelOptions.length === 0}
+                    >
+                      {modelOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                  {modelsError && (
+                    <Text fontSize="xs" color="red.500" mt={1}>
+                      {modelsError}
+                    </Text>
+                  )}
                 </Box>
                 <div className={styles.comingSoonContainer}>
                   <Text className={styles.costInfo}>Coming soon</Text>

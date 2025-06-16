@@ -13,7 +13,7 @@ import logging
 from asyncio import TimeoutError, wait_for
 from typing import Any, Dict, List, Optional
 
-from config import LLM_DELEGATOR
+from config import LLM_DELEGATOR, get_llm_for_request
 from crewai import LLM, Crew, Process, Task
 from crewai.flow.flow import Flow, listen, start
 from services.secrets import get_secret
@@ -57,14 +57,23 @@ DEFAULT_TASK_OUTPUT = "Unable to complete this task within the allowed constrain
 # Flow implementation
 # --------------------------------------------------------------------- #
 class OrchestrationFlow(Flow[OrchestrationState]):
-    def __init__(self, standard_model: str = "gemini/gemini-2.5-flash-preview-04-17", request_id: Optional[str] = None):
+    def __init__(
+        self, 
+        standard_model: str = "gemini/gemini-2.5-flash-preview-04-17", 
+        request_id: Optional[str] = None,
+        user_selected_model: Optional[str] = None
+    ):
         super().__init__()
         self.request_id = request_id
         self.standard_model = standard_model
         self.standard_model_api_key = get_secret("GeminiApiKey")
+        self.user_selected_model = user_selected_model
 
         # Use a more efficient model for simple tasks
         self.efficient_model = "gemini/gemini-1.5-flash"
+        
+        # Set up LLM instance based on user selection
+        self.llm_instance = get_llm_for_request(user_selected_model)
 
     # 1️⃣  Summarise recent chat -----------------------------------------
     @start()
