@@ -102,8 +102,8 @@ class MORLLM(BaseLLM):
             return self.response_format.model_validate_json(content)
         except Exception as e:
             try:
-                import re
                 import json
+                import re
 
                 # Try to extract JSON from markdown code blocks first
                 markdown_json_match = re.search(r"```(?:json)?\s*(\{.*?\}|\[.*?\])\s*```", content, re.DOTALL)
