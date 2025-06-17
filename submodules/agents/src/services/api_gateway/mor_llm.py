@@ -103,12 +103,26 @@ class MORLLM(BaseLLM):
         except Exception as e:
             try:
                 import re
+                import json
                 
                 # Try to extract JSON from markdown code blocks first
                 markdown_json_match = re.search(r"```(?:json)?\s*(\{.*?\}|\[.*?\])\s*```", content, re.DOTALL)
                 if markdown_json_match:
                     json_content = markdown_json_match.group(1)
                     logger.info(f"Extracted JSON from markdown: {json_content}")
+                    
+                    # Special handling for AssignmentPlan - if we get an array, wrap it
+                    if hasattr(self.response_format, '__name__') and self.response_format.__name__ == 'AssignmentPlan':
+                        try:
+                            parsed = json.loads(json_content)
+                            if isinstance(parsed, list):
+                                # Convert array to AssignmentPlan format
+                                wrapped_json = {"assignments": parsed}
+                                logger.info(f"Wrapped array for AssignmentPlan: {wrapped_json}")
+                                return self.response_format.model_validate(wrapped_json)
+                        except:
+                            pass
+                    
                     return self.response_format.model_validate_json(json_content)
                 
                 # Fallback: try to find any JSON object or array
@@ -116,8 +130,22 @@ class MORLLM(BaseLLM):
                 if json_match:
                     json_content = json_match.group(1)
                     logger.info(f"Extracted JSON fallback: {json_content}")
+                    
+                    # Special handling for AssignmentPlan - if we get an array, wrap it
+                    if hasattr(self.response_format, '__name__') and self.response_format.__name__ == 'AssignmentPlan':
+                        try:
+                            parsed = json.loads(json_content)
+                            if isinstance(parsed, list):
+                                # Convert array to AssignmentPlan format
+                                wrapped_json = {"assignments": parsed}
+                                logger.info(f"Wrapped array for AssignmentPlan: {wrapped_json}")
+                                return self.response_format.model_validate(wrapped_json)
+                        except:
+                            pass
+                    
                     return self.response_format.model_validate_json(json_content)
-            except Exception:
+            except Exception as parse_e:
+                logger.warning(f"Failed to parse extracted JSON: {parse_e}")
                 pass
             logger.warning(f"Failed to parse structured output: {e}")
             return content
