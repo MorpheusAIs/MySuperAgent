@@ -55,7 +55,6 @@ export const writeMessage = async (
     selectedAgents,
     researchMode: useResearch,
     messageLength: message.length,
-    selectedModel,
   });
 
   const startTime = Date.now();
@@ -302,7 +301,6 @@ export const writeMessageStream = async (
     conversationId,
     selectedAgents,
     messageLength: message.length,
-    selectedModel,
   });
 
   const startTime = Date.now();

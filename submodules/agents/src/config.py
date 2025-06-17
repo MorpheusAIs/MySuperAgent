@@ -8,10 +8,10 @@ from langchain_ollama import ChatOllama, OllamaEmbeddings
 
 # from langchain_together import ChatTogether
 from logs import setup_logging
+from services.api_gateway.mor_llm import MORLLM
 from services.secrets import get_secret
 from services.vectorstore.together_embeddings import TogetherEmbeddings
 from services.vectorstore.vector_store_service import VectorStoreService
-from services.api_gateway.mor_llm import MORLLM
 from together import Together
 
 logger = setup_logging()
@@ -151,7 +151,7 @@ class AppConfig:
     # LLM Configurations
     LLM_AGENT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo"  # Together AI
     LLM_DELEGATOR_MODEL = "llama-3.3-70b"  # Cerebras
-    
+
     # MOR API Configuration
     MOR_API_KEY = "sk-MOC63G.ac75f74343013115d31781f641857db2282ee62f90abe6cee7ab4ae0da82fae6"
     MOR_API_ENDPOINT = "https://api.mor.org/api/v1/chat/completions"
@@ -269,12 +269,12 @@ else:
 def create_morllm(model: str = "default", temperature: float = 0.7, response_format: Optional[Any] = None) -> MORLLM:
     """
     Factory function to create MORLLM instances with user-selected models.
-    
+
     Args:
         model: The model ID to use (default: "default")
         temperature: Sampling temperature (default: 0.7)
         response_format: Pydantic model for structured output (optional)
-        
+
     Returns:
         MORLLM instance configured with the specified model
     """
@@ -283,17 +283,17 @@ def create_morllm(model: str = "default", temperature: float = 0.7, response_for
         api_key=AppConfig.MOR_API_KEY,
         endpoint=AppConfig.MOR_API_ENDPOINT,
         temperature=temperature,
-        response_format=response_format
+        response_format=response_format,
     )
 
 
 def get_llm_for_request(selected_model: Optional[str] = None) -> Union[LLM, MORLLM]:
     """
     Get the appropriate LLM instance based on user selection.
-    
+
     Args:
         selected_model: User-selected model ID for MOR API, or None for default LLM
-        
+
     Returns:
         LLM instance (either MORLLM or default LLM_AGENT)
     """

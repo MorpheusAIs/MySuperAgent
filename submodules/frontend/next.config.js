@@ -20,6 +20,48 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: false,
   },
+  webpack: (config, { isServer, webpack }) => {
+    // Configure Terser to handle ES modules properly
+    if (config.optimization && config.optimization.minimizer) {
+      config.optimization.minimizer = config.optimization.minimizer.map((plugin) => {
+        if (plugin.constructor.name === 'TerserPlugin') {
+          plugin.options.terserOptions = {
+            ...plugin.options.terserOptions,
+            module: true,
+            parse: {
+              ecma: 2020,
+            },
+            format: {
+              ecma: 2020,
+            },
+          };
+        }
+        return plugin;
+      });
+    }
+
+    // Ignore problematic worker files
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /HeartbeatWorker\.js$/,
+      })
+    );
+
+    // Fallback for modules that might not be available in the browser
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+        stream: false,
+        buffer: false,
+      };
+    }
+
+    return config;
+  },
 };
 
 module.exports = nextConfig;

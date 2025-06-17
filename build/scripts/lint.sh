@@ -29,23 +29,29 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Check for Python and pip
-if command_exists python3; then
+# Check for Python 3.12 specifically, fallback to system python
+if command_exists /opt/homebrew/opt/python@3.12/bin/python3.12; then
+    PYTHON_CMD="/opt/homebrew/opt/python@3.12/bin/python3.12"
+    PIP_CMD="/opt/homebrew/opt/python@3.12/bin/pip3.12"
+elif command_exists python3.12; then
+    PYTHON_CMD="python3.12"
+    PIP_CMD="pip3.12"
+elif command_exists python3; then
     PYTHON_CMD="python3"
+    # Check for pip
+    if command_exists pip3; then
+        PIP_CMD="pip3"
+    elif command_exists pip; then
+        PIP_CMD="pip"
+    else
+        echo -e "${RED}Error: pip is not installed. Please install pip.${NC}"
+        exit 1
+    fi
 elif command_exists python; then
     PYTHON_CMD="python"
-else
-    echo -e "${RED}Error: Python is not installed.${NC}"
-    exit 1
-fi
-
-# Check for pip
-if command_exists pip3; then
-    PIP_CMD="pip3"
-elif command_exists pip; then
     PIP_CMD="pip"
 else
-    echo -e "${RED}Error: pip is not installed. Please install pip.${NC}"
+    echo -e "${RED}Error: Python is not installed.${NC}"
     exit 1
 fi
 
@@ -53,9 +59,19 @@ print_header "Checking/Installing Linting Tools"
 echo "Using Python: $($PYTHON_CMD --version)"
 echo "Using pip: $($PIP_CMD --version)"
 
+# Create virtual environment to avoid externally-managed-environment error
+VENV_DIR="$PROJECT_ROOT/.lint_venv"
+if [ ! -d "$VENV_DIR" ]; then
+    echo "Creating virtual environment for linting..."
+    $PYTHON_CMD -m venv "$VENV_DIR"
+fi
+
+# Activate virtual environment
+source "$VENV_DIR/bin/activate"
+
 # Install linting tools if needed
 echo "Installing linting tools..."
-$PIP_CMD install flake8==7.0.0 black==23.12.1 isort==5.13.2
+pip install flake8==7.0.0 black==23.12.1 isort==5.13.2
 
 # Create a temporary file for capturing linting issues
 LINT_ISSUES=$(mktemp)
@@ -116,6 +132,9 @@ else
     echo "No package.json found, skipping JavaScript/TypeScript linting"
 fi
 
+# Deactivate virtual environment
+deactivate
+
 # Check if any issues were found
 print_header "Summary"
 if [ -n "$BLACK_DIFF_ISSUES" ] || [ -n "$BLACK_CHECK_ISSUES" ] || [ -n "$ISORT_DIFF_ISSUES" ] || [ -n "$ISORT_CHECK_ISSUES" ] || [ -n "$FLAKE8_ISSUES" ] || [ -n "$JS_ISSUES" ]; then
@@ -126,12 +145,16 @@ if [ -n "$BLACK_DIFF_ISSUES" ] || [ -n "$BLACK_CHECK_ISSUES" ] || [ -n "$ISORT_D
         echo -ne "\n${BLUE}Would you like to automatically fix formatting issues? [y/N] ${NC}"
         read -r response
         if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+            # Reactivate venv for formatting
+            source "$VENV_DIR/bin/activate"
+            
             echo "Formatting Python files with Black..."
             black --line-length=120 .
             
             echo "Sorting imports with isort..."
             isort --profile black --line-length 120 .
             
+            deactivate
             echo -e "${GREEN}Formatting complete!${NC}"
         else
             echo "Skipping automatic formatting."

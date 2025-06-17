@@ -24,10 +24,7 @@ async def run_orchestration(chat_request: ChatRequest) -> Tuple[str, AgentRespon
         bootstrap_agents(LLM_AGENT)
 
         # 2b) instantiate the flow with request_id and selected model if available
-        flow = OrchestrationFlow(
-            request_id=chat_request.request_id,
-            user_selected_model=chat_request.selected_model
-        )
+        flow = OrchestrationFlow(request_id=chat_request.request_id, user_selected_model=chat_request.selected_model)
 
         # 2c) kick off 🚀
 
