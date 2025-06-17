@@ -5,7 +5,7 @@ from config import load_agent_routes, setup_logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from models.config.config import Config
-from routes import agent_manager_routes, chat_routes, wallet_manager_routes
+from routes import agent_manager_routes, chat_routes, models_routes, wallet_manager_routes
 
 CONF = Config.get_instance()
 logger = setup_logging()
@@ -34,6 +34,7 @@ def create_app() -> FastAPI:
         chat_routes.router,
         agent_manager_routes.router,
         wallet_manager_routes.router,
+        models_routes.router,
         *load_agent_routes(),  # dynamically discovered agent routers
     ]
 

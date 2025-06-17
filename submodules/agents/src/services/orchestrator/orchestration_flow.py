@@ -13,7 +13,7 @@ import logging
 from asyncio import TimeoutError, wait_for
 from typing import Any, Dict, List, Optional
 
-from config import LLM_DELEGATOR
+from config import LLM_DELEGATOR, get_llm_for_request
 from crewai import LLM, Crew, Process, Task
 from crewai.flow.flow import Flow, listen, start
 from services.secrets import get_secret
@@ -57,14 +57,23 @@ DEFAULT_TASK_OUTPUT = "Unable to complete this task within the allowed constrain
 # Flow implementation
 # --------------------------------------------------------------------- #
 class OrchestrationFlow(Flow[OrchestrationState]):
-    def __init__(self, standard_model: str = "gemini/gemini-2.5-flash-preview-04-17", request_id: Optional[str] = None):
+    def __init__(
+        self,
+        standard_model: str = "gemini/gemini-2.5-flash-preview-04-17",
+        request_id: Optional[str] = None,
+        user_selected_model: Optional[str] = None,
+    ):
         super().__init__()
         self.request_id = request_id
         self.standard_model = standard_model
         self.standard_model_api_key = get_secret("GeminiApiKey")
+        self.user_selected_model = user_selected_model
 
         # Use a more efficient model for simple tasks
         self.efficient_model = "gemini/gemini-1.5-flash"
+
+        # Set up LLM instance based on user selection
+        self.llm_instance = get_llm_for_request(user_selected_model)
 
     # 1️⃣  Summarise recent chat -----------------------------------------
     @start()
@@ -82,7 +91,13 @@ class OrchestrationFlow(Flow[OrchestrationState]):
         # Only summarize chat history that's relevant to the current prompt
         history_text = "\n".join(chat_history)
         if history_text:
-            llm = LLM(model=self.efficient_model, api_key=self.standard_model_api_key)
+            # Always prioritize user-selected LLM (MOR), fallback to efficient model only if no user selection
+            if self.user_selected_model:
+                logger.info(f"🔥 ORCHESTRATION - Using MOR LLM for chat summarization: {self.user_selected_model}")
+                llm = self.llm_instance
+            else:
+                logger.info(f"⚠️ ORCHESTRATION - Falling back to Gemini for chat summarization: {self.efficient_model}")
+                llm = LLM(model=self.efficient_model, api_key=self.standard_model_api_key)
 
             @retry_with_backoff(max_attempts=3, base_delay=1.0, exceptions=(Exception,))
             def summarize_chat():
@@ -127,9 +142,15 @@ class OrchestrationFlow(Flow[OrchestrationState]):
                 f"Relevant chat details: {self.state.chat_history_summary}"
             )
 
-        # Use FULL MODEL for critical subtask planning - this is too important to use an efficient model, and
-        # is not limited by retrieval, but rather by latent reasoning capability.
-        llm = LLM(model=self.standard_model, response_format=SubtaskPlan, api_key=self.standard_model_api_key)
+        # Use user-selected LLM if available, otherwise use standard model for subtask planning
+        if self.user_selected_model:
+            logger.info(f"🔥 ORCHESTRATION - Using MOR LLM for subtask planning: {self.user_selected_model}")
+            from config import create_morllm
+
+            llm = create_morllm(model=self.user_selected_model, response_format=SubtaskPlan)
+        else:
+            logger.info(f"⚠️ ORCHESTRATION - Falling back to Gemini for subtask planning: {self.standard_model}")
+            llm = LLM(model=self.standard_model, response_format=SubtaskPlan, api_key=self.standard_model_api_key)
 
         @retry_with_backoff(max_attempts=3, base_delay=1.0, exceptions=(Exception,))
         def create_subtask_plan():
@@ -145,10 +166,61 @@ class OrchestrationFlow(Flow[OrchestrationState]):
                 plan.subtasks = plan.subtasks[:MAX_SUBTASKS]
 
             self.state.subtasks = plan.subtasks if plan and plan.subtasks else []
+
+            # If no subtasks were created, try Gemini fallback
+            if not self.state.subtasks:
+                logger.warning("MOR LLM failed to create subtasks, falling back to Gemini")
+                fallback_llm = LLM(
+                    model=self.standard_model, response_format=SubtaskPlan, api_key=self.standard_model_api_key
+                )
+
+                @retry_with_backoff(max_attempts=3, base_delay=1.0, exceptions=(Exception,))
+                def create_subtask_plan_with_gemini():
+                    return fallback_llm.call(prompt)
+
+                try:
+                    fallback_plan_response = create_subtask_plan_with_gemini()
+                    fallback_plan = parse_llm_structured_output(
+                        fallback_plan_response, SubtaskPlan, logger, "SubtaskPlan (Gemini fallback)"
+                    )
+
+                    if fallback_plan and fallback_plan.subtasks:
+                        if len(fallback_plan.subtasks) > MAX_SUBTASKS:
+                            fallback_plan.subtasks = fallback_plan.subtasks[:MAX_SUBTASKS]
+                        self.state.subtasks = fallback_plan.subtasks
+                    else:
+                        self.state.subtasks = ["Complete the user's request"]
+                except Exception as fallback_e:
+                    logger.error(f"Gemini fallback also failed for subtask planning: {fallback_e}")
+                    self.state.subtasks = ["Complete the user's request"]
         except Exception as e:
-            logger.error(f"Failed to create subtask plan: {e}")
-            # Fallback to a single generic subtask
-            self.state.subtasks = ["Complete the user's request"]
+            logger.error(f"Failed to create subtask plan with MOR LLM: {e}")
+            # Fallback to Gemini for subtask planning
+            logger.warning("⚠️ ORCHESTRATION - MOR LLM failed for subtask planning, falling back to Gemini")
+            try:
+                fallback_llm = LLM(
+                    model=self.standard_model, response_format=SubtaskPlan, api_key=self.standard_model_api_key
+                )
+
+                @retry_with_backoff(max_attempts=3, base_delay=1.0, exceptions=(Exception,))
+                def create_subtask_plan_with_gemini_fallback():
+                    return fallback_llm.call(prompt)
+
+                fallback_plan_response = create_subtask_plan_with_gemini_fallback()
+                fallback_plan = parse_llm_structured_output(
+                    fallback_plan_response, SubtaskPlan, logger, "SubtaskPlan (Gemini fallback)"
+                )
+
+                if fallback_plan and fallback_plan.subtasks:
+                    if len(fallback_plan.subtasks) > MAX_SUBTASKS:
+                        fallback_plan.subtasks = fallback_plan.subtasks[:MAX_SUBTASKS]
+                    self.state.subtasks = fallback_plan.subtasks
+                else:
+                    self.state.subtasks = ["Complete the user's request"]
+            except Exception as fallback_e:
+                logger.error(f"Gemini fallback also failed for subtask planning: {fallback_e}")
+                # Final fallback to a single generic subtask
+                self.state.subtasks = ["Complete the user's request"]
 
     # 3️⃣  Agent assignment (LLM decides, structured) --------------------
     @listen(create_subtasks)
@@ -162,8 +234,15 @@ class OrchestrationFlow(Flow[OrchestrationState]):
             f"Agents:\n{agent_descriptions}\n"
             f"Subtasks: {self.state.subtasks}"
         )
-        # Use FULL MODEL for critical agent assignment - this is too important to use efficient model
-        llm = LLM(model=self.standard_model, response_format=AssignmentPlan, api_key=self.standard_model_api_key)
+        # Use user-selected LLM if available, otherwise use standard model for agent assignment
+        if self.user_selected_model:
+            logger.info(f"🔥 ORCHESTRATION - Using MOR LLM for agent assignment: {self.user_selected_model}")
+            from config import create_morllm
+
+            llm = create_morllm(model=self.user_selected_model, response_format=AssignmentPlan)
+        else:
+            logger.info(f"⚠️ ORCHESTRATION - Falling back to Gemini for agent assignment: {self.standard_model}")
+            llm = LLM(model=self.standard_model, response_format=AssignmentPlan, api_key=self.standard_model_api_key)
 
         @retry_with_backoff(max_attempts=3, base_delay=1.0, exceptions=(Exception,))
         def assign_agents_to_tasks():
@@ -176,16 +255,66 @@ class OrchestrationFlow(Flow[OrchestrationState]):
             if mapping and mapping.assignments:
                 self.state.assignments = mapping.assignments
             else:
-                # Fallback: assign default agent to each subtask
-                self.state.assignments = [
-                    Assignment(subtask=subtask, agents=["default"]) for subtask in self.state.subtasks
-                ]
+                # If MOR LLM failed to provide valid assignments, fallback to Gemini
+                logger.warning("MOR LLM failed to provide valid assignments, falling back to Gemini")
+                fallback_llm = LLM(
+                    model=self.standard_model, response_format=AssignmentPlan, api_key=self.standard_model_api_key
+                )
+
+                @retry_with_backoff(max_attempts=3, base_delay=1.0, exceptions=(Exception,))
+                def assign_agents_with_gemini():
+                    return fallback_llm.call(prompt)
+
+                try:
+                    fallback_response = assign_agents_with_gemini()
+                    fallback_mapping = parse_llm_structured_output(
+                        fallback_response, AssignmentPlan, logger, "AssignmentPlan (Gemini fallback)"
+                    )
+
+                    if fallback_mapping and fallback_mapping.assignments:
+                        self.state.assignments = fallback_mapping.assignments
+                    else:
+                        raise Exception("Both MOR and Gemini failed to provide valid assignments")
+                except Exception as fallback_e:
+                    logger.error(f"Gemini fallback also failed: {fallback_e}")
+                    # Last resort: assign first available agent to each subtask
+                    available_agents = AgentRegistry.all_names()
+                    fallback_agent = available_agents[0] if available_agents else "general"
+                    logger.warning(f"Using last resort fallback agent: {fallback_agent}")
+                    self.state.assignments = [
+                        Assignment(subtask=subtask, agents=[fallback_agent]) for subtask in self.state.subtasks
+                    ]
         except Exception as e:
-            logger.error(f"Failed to assign agents: {e}")
-            # Fallback to default agent for all subtasks
-            self.state.assignments = [
-                Assignment(subtask=subtask, agents=["default"]) for subtask in self.state.subtasks
-            ]
+            logger.error(f"Failed to assign agents with MOR LLM: {e}")
+            # Fallback to Gemini for agent assignment
+            logger.warning("⚠️ ORCHESTRATION - MOR LLM failed for agent assignment, falling back to Gemini")
+            try:
+                fallback_llm = LLM(
+                    model=self.standard_model, response_format=AssignmentPlan, api_key=self.standard_model_api_key
+                )
+
+                @retry_with_backoff(max_attempts=3, base_delay=1.0, exceptions=(Exception,))
+                def assign_agents_with_gemini_fallback():
+                    return fallback_llm.call(prompt)
+
+                fallback_response = assign_agents_with_gemini_fallback()
+                fallback_mapping = parse_llm_structured_output(
+                    fallback_response, AssignmentPlan, logger, "AssignmentPlan (Gemini fallback)"
+                )
+
+                if fallback_mapping and fallback_mapping.assignments:
+                    self.state.assignments = fallback_mapping.assignments
+                else:
+                    raise Exception("Gemini fallback also failed to provide valid assignments")
+            except Exception as fallback_e:
+                logger.error(f"Gemini fallback also failed: {fallback_e}")
+                # Last resort: assign first available agent to each subtask
+                available_agents = AgentRegistry.all_names()
+                fallback_agent = available_agents[0] if available_agents else "general"
+                logger.warning(f"Using last resort fallback agent: {fallback_agent}")
+                self.state.assignments = [
+                    Assignment(subtask=subtask, agents=[fallback_agent]) for subtask in self.state.subtasks
+                ]
 
     # 4️⃣  Run each sub‑task sequentially ----------------------------------
     @listen(assign_agents)
@@ -233,6 +362,11 @@ class OrchestrationFlow(Flow[OrchestrationState]):
             # Track processing time
             start_time = time.time()
 
+            # Keep using LLM_DELEGATOR for crew management (agents should use Gemini)
+            # Only the high-level orchestration uses MOR LLM
+            logger.info(f"🤖 AGENTS - Using Gemini delegator for crew management: {LLM_DELEGATOR}")
+            manager_llm = LLM_DELEGATOR
+
             crew = Crew(
                 agents=crew_agents,
                 tasks=[
@@ -243,7 +377,7 @@ class OrchestrationFlow(Flow[OrchestrationState]):
                     )
                 ],
                 process=Process.sequential,
-                manager_llm=LLM_DELEGATOR,
+                manager_llm=manager_llm,
                 verbose=False,
             )
 
@@ -400,7 +534,13 @@ class OrchestrationFlow(Flow[OrchestrationState]):
             agent_info = f"[Executed by: {', '.join(subtask_output.agents)}]" if subtask_output.agents else ""
             prompt += f"\n{i+1}. Task: {subtask_output.subtask}\n{agent_info}\nOutput:\n{optimized_output}\n"
 
-        llm = LLM(model=self.standard_model, api_key=self.standard_model_api_key)
+        # Always prioritize user-selected LLM (MOR) for final synthesis
+        if self.user_selected_model:
+            logger.info(f"🔥 ORCHESTRATION - Using MOR LLM for final synthesis: {self.user_selected_model}")
+            llm = self.llm_instance
+        else:
+            logger.info(f"⚠️ ORCHESTRATION - Falling back to Gemini for final synthesis: {self.standard_model}")
+            llm = LLM(model=self.standard_model, api_key=self.standard_model_api_key)
 
         @retry_with_backoff(max_attempts=3, base_delay=1.0, exceptions=(Exception,))
         def synthesize_final_answer():

@@ -200,7 +200,7 @@
   color: white;
   font-weight: 600;
   font-size: 12px;
-  min-width: 85px;
+  min-width: 100px;
   text-align: right !important;
 }
 
@@ -216,23 +216,109 @@
   color: white;
 }
 
-.comingSoonContainer {
+/* Model Settings Toggle */
+.modelSettingsToggle {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modelSettingsToggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.modelSettingsLeft {
+  display: flex;
+  align-items: center;
+  color: white;
   gap: 8px;
 }
 
-.costInfo {
-  color: #68d391 !important;
-  font-size: 14px !important;
-  text-align: right !important;
+.modelSettingsText {
+  color: #e2e8f0 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
 }
 
-.modelNote {
-  color: #718096 !important;
+/* Model Configuration Container */
+.modelConfigContainer {
+  margin-top: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+/* Configuration Labels and Values */
+.configLabel {
+  color: #cbd5e0 !important;
   font-size: 12px !important;
+  font-weight: 500 !important;
+  cursor: help;
+  margin: 0 !important;
+}
+
+.configLabel:hover {
+  color: #e2e8f0 !important;
+}
+
+.configValue {
+  color: #68d391 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  font-family: 'Monaco', 'Menlo', monospace !important;
+  margin: 0 !important;
+}
+
+/* Dark theme for sliders */
+.darkSlider .chakra-slider__track {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.darkSlider .chakra-slider__filled-track {
+  background: #68d391 !important;
+}
+
+.darkSlider .chakra-slider__thumb {
+  background: #68d391 !important;
+  border: 2px solid #68d391 !important;
+}
+
+/* Dark theme for number inputs */
+.darkNumberInput .chakra-numberinput__field {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+}
+
+.darkNumberInput .chakra-numberinput__field:hover {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.darkNumberInput .chakra-numberinput__field:focus {
+  border-color: #68d391 !important;
+  box-shadow: 0 0 0 1px #68d391 !important;
+}
+
+/* Morpheus Info */
+.morpheusInfo {
+  margin-top: 16px;
+  padding: 8px 0;
+}
+
+.morpheusDescription {
+  color: #718096 !important;
+  font-size: 10px !important;
+  line-height: 1.4 !important;
   text-align: left !important;
-  flex: 1;
 }
 
 .toggleButton {

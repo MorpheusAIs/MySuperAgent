@@ -50,6 +50,7 @@ class ChatRequest(BaseModel):
     selected_agents: List[str] = Field(default_factory=list)
     chat_history: List[ChatMessage] = Field(default_factory=list)
     request_id: Optional[str] = None  # For streaming support
+    selected_model: Optional[str] = Field(None, alias="model_id")  # User-selected MOR model
 
     @property
     def messages_for_llm(self) -> List[BaseMessage]:
