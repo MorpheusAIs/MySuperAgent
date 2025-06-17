@@ -91,7 +91,13 @@ class OrchestrationFlow(Flow[OrchestrationState]):
         # Only summarize chat history that's relevant to the current prompt
         history_text = "\n".join(chat_history)
         if history_text:
-            llm = LLM(model=self.efficient_model, api_key=self.standard_model_api_key)
+            # Always prioritize user-selected LLM (MOR), fallback to efficient model only if no user selection
+            if self.user_selected_model:
+                logger.info(f"🔥 ORCHESTRATION - Using MOR LLM for chat summarization: {self.user_selected_model}")
+                llm = self.llm_instance
+            else:
+                logger.info(f"⚠️ ORCHESTRATION - Falling back to Gemini for chat summarization: {self.efficient_model}")
+                llm = LLM(model=self.efficient_model, api_key=self.standard_model_api_key)
 
             @retry_with_backoff(max_attempts=3, base_delay=1.0, exceptions=(Exception,))
             def summarize_chat():
@@ -136,9 +142,14 @@ class OrchestrationFlow(Flow[OrchestrationState]):
                 f"Relevant chat details: {self.state.chat_history_summary}"
             )
 
-        # Use FULL MODEL for critical subtask planning - this is too important to use an efficient model, and
-        # is not limited by retrieval, but rather by latent reasoning capability.
-        llm = LLM(model=self.standard_model, response_format=SubtaskPlan, api_key=self.standard_model_api_key)
+        # Use user-selected LLM if available, otherwise use standard model for subtask planning
+        if self.user_selected_model:
+            logger.info(f"🔥 ORCHESTRATION - Using MOR LLM for subtask planning: {self.user_selected_model}")
+            from config import create_morllm
+            llm = create_morllm(model=self.user_selected_model, response_format=SubtaskPlan)
+        else:
+            logger.info(f"⚠️ ORCHESTRATION - Falling back to Gemini for subtask planning: {self.standard_model}")
+            llm = LLM(model=self.standard_model, response_format=SubtaskPlan, api_key=self.standard_model_api_key)
 
         @retry_with_backoff(max_attempts=3, base_delay=1.0, exceptions=(Exception,))
         def create_subtask_plan():
@@ -171,8 +182,14 @@ class OrchestrationFlow(Flow[OrchestrationState]):
             f"Agents:\n{agent_descriptions}\n"
             f"Subtasks: {self.state.subtasks}"
         )
-        # Use FULL MODEL for critical agent assignment - this is too important to use efficient model
-        llm = LLM(model=self.standard_model, response_format=AssignmentPlan, api_key=self.standard_model_api_key)
+        # Use user-selected LLM if available, otherwise use standard model for agent assignment
+        if self.user_selected_model:
+            logger.info(f"🔥 ORCHESTRATION - Using MOR LLM for agent assignment: {self.user_selected_model}")
+            from config import create_morllm
+            llm = create_morllm(model=self.user_selected_model, response_format=AssignmentPlan)
+        else:
+            logger.info(f"⚠️ ORCHESTRATION - Falling back to Gemini for agent assignment: {self.standard_model}")
+            llm = LLM(model=self.standard_model, response_format=AssignmentPlan, api_key=self.standard_model_api_key)
 
         @retry_with_backoff(max_attempts=3, base_delay=1.0, exceptions=(Exception,))
         def assign_agents_to_tasks():
@@ -242,6 +259,11 @@ class OrchestrationFlow(Flow[OrchestrationState]):
             # Track processing time
             start_time = time.time()
 
+            # Keep using LLM_DELEGATOR for crew management (agents should use Gemini)
+            # Only the high-level orchestration uses MOR LLM
+            logger.info(f"🤖 AGENTS - Using Gemini delegator for crew management: {LLM_DELEGATOR}")
+            manager_llm = LLM_DELEGATOR
+            
             crew = Crew(
                 agents=crew_agents,
                 tasks=[
@@ -252,7 +274,7 @@ class OrchestrationFlow(Flow[OrchestrationState]):
                     )
                 ],
                 process=Process.sequential,
-                manager_llm=LLM_DELEGATOR,
+                manager_llm=manager_llm,
                 verbose=False,
             )
 
@@ -409,7 +431,13 @@ class OrchestrationFlow(Flow[OrchestrationState]):
             agent_info = f"[Executed by: {', '.join(subtask_output.agents)}]" if subtask_output.agents else ""
             prompt += f"\n{i+1}. Task: {subtask_output.subtask}\n{agent_info}\nOutput:\n{optimized_output}\n"
 
-        llm = LLM(model=self.standard_model, api_key=self.standard_model_api_key)
+        # Always prioritize user-selected LLM (MOR) for final synthesis
+        if self.user_selected_model:
+            logger.info(f"🔥 ORCHESTRATION - Using MOR LLM for final synthesis: {self.user_selected_model}")
+            llm = self.llm_instance
+        else:
+            logger.info(f"⚠️ ORCHESTRATION - Falling back to Gemini for final synthesis: {self.standard_model}")
+            llm = LLM(model=self.standard_model, api_key=self.standard_model_api_key)
 
         @retry_with_backoff(max_attempts=3, base_delay=1.0, exceptions=(Exception,))
         def synthesize_final_answer():

@@ -266,13 +266,14 @@ else:
     TOGETHER_CLIENT = None
 
 
-def create_morllm(model: str = "default", temperature: float = 0.7) -> MORLLM:
+def create_morllm(model: str = "default", temperature: float = 0.7, response_format: Optional[Any] = None) -> MORLLM:
     """
     Factory function to create MORLLM instances with user-selected models.
     
     Args:
         model: The model ID to use (default: "default")
         temperature: Sampling temperature (default: 0.7)
+        response_format: Pydantic model for structured output (optional)
         
     Returns:
         MORLLM instance configured with the specified model
@@ -281,7 +282,8 @@ def create_morllm(model: str = "default", temperature: float = 0.7) -> MORLLM:
         model=model,
         api_key=AppConfig.MOR_API_KEY,
         endpoint=AppConfig.MOR_API_ENDPOINT,
-        temperature=temperature
+        temperature=temperature,
+        response_format=response_format
     )
 
 

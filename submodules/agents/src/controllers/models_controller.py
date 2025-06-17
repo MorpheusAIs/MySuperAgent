@@ -38,7 +38,7 @@ class ModelsController:
         try:
             # Make request to MOR API
             response = requests.get(
-                f"{self.mor_api_base_url}/models/allmodels",
+                f"{self.mor_api_base_url}/models",
                 headers={
                     "Authorization": f"Bearer {self.mor_api_key}",
                     "Content-Type": "application/json"
@@ -54,14 +54,19 @@ class ModelsController:
             models = []
             if "data" in mor_data:
                 for model in mor_data["data"]:
+                    model_id = model.get("id", "unknown")
+                    tags = model.get("tags", [])
+                    
                     model_info = {
-                        "value": model.get("id", "unknown"),
-                        "label": self._format_model_label(model.get("id", "unknown")),
-                        "id": model.get("id", "unknown"),
-                        "object": model.get("object", "model"),
+                        "value": model_id,
+                        "label": self._format_model_label(model_id),
+                        "id": model_id,
+                        "object": "model",  # Always set to "model" for consistency
                         "created": model.get("created"),
-                        "owned_by": model.get("owned_by"),
-                        "context_window": 8192,  # Default value, could be enhanced
+                        "owned_by": "MOR",  # Set to MOR since these are MOR models
+                        "blockchain_id": model.get("blockchainID"),  # Include blockchain ID
+                        "tags": tags,  # Include tags for additional info
+                        "context_window": 8192,  # Default value, could be enhanced based on model
                         "supports_function_calling": True
                     }
                     models.append(model_info)
@@ -161,6 +166,24 @@ class ModelsController:
         if model_id == "default":
             return "Default MOR Model"
         
-        # Replace hyphens with spaces and capitalize
-        formatted = model_id.replace("-", " ").replace("_", " ")
-        return " ".join(word.capitalize() for word in formatted.split())
+        # Handle special cases for better readability
+        if "web" in model_id:
+            formatted = model_id.replace("-web", " (Web Search)")
+        else:
+            formatted = model_id
+            
+        # Replace hyphens and underscores with spaces and capitalize
+        formatted = formatted.replace("-", " ").replace("_", " ")
+        
+        # Handle common model name patterns
+        formatted = formatted.replace("llama", "Llama")
+        formatted = formatted.replace("mistral", "Mistral")
+        formatted = formatted.replace("qwen", "Qwen")
+        formatted = formatted.replace("venice", "Venice")
+        formatted = formatted.replace("hermes", "Hermes")
+        formatted = formatted.replace("whisper", "Whisper")
+        formatted = formatted.replace("vl", "Vision Language")
+        formatted = formatted.replace("qwq", "QwQ")
+        formatted = formatted.replace("uncensored", "Uncensored")
+        
+        return formatted

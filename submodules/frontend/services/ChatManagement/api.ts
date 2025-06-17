@@ -6,7 +6,7 @@ import { getOrCreateConversation } from "@/services/ChatManagement/storage";
 import { getStorageData } from "../LocalStorage/core";
 import { saveStorageData } from "../LocalStorage/core";
 import { trackEvent, trackError, trackTiming } from "@/services/analytics";
-import { getSelectedModel } from "@/services/models";
+import { getSelectedModel, getModelConfig } from "@/services/models";
 
 // LocalStorage key for selected agents
 const SELECTED_AGENTS_KEY = "selectedAgents";
@@ -45,8 +45,9 @@ export const writeMessage = async (
     console.error("Error loading selected agents from localStorage:", err);
   }
 
-  // Get selected model from localStorage
+  // Get selected model and configuration from localStorage
   const selectedModel = getSelectedModel() || "default";
+  const modelConfig = getModelConfig();
 
   // Track message sent event
   trackEvent('agent.message_sent', {
@@ -72,6 +73,7 @@ export const writeMessage = async (
       use_research: useResearch,
       selected_agents: selectedAgents,
       model_id: selectedModel,
+      model_config: modelConfig,
     });
 
     // Process response
@@ -291,8 +293,9 @@ export const writeMessageStream = async (
     console.error("Error loading selected agents from localStorage:", err);
   }
 
-  // Get selected model from localStorage
+  // Get selected model and configuration from localStorage
   const selectedModel = getSelectedModel() || "default";
+  const modelConfig = getModelConfig();
 
   // Track research initiated event
   trackEvent('research.initiated', {
@@ -325,6 +328,7 @@ export const writeMessageStream = async (
         use_research: true,
         selected_agents: selectedAgents,
         model_id: selectedModel,
+        model_config: modelConfig,
       }),
     });
 

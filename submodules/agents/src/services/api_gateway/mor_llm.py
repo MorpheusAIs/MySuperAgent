@@ -26,7 +26,8 @@ class MORLLM(BaseLLM):
         api_key: str = "sk-MOC63G.ac75f74343013115d31781f641857db2282ee62f90abe6cee7ab4ae0da82fae6",
         endpoint: str = "https://api.mor.org/api/v1/chat/completions",
         temperature: Optional[float] = 0.7,
-        timeout: int = 30
+        timeout: int = 30,
+        response_format: Optional[Any] = None
     ):
         """
         Initialize the MOR LLM.
@@ -37,6 +38,7 @@ class MORLLM(BaseLLM):
             endpoint: API endpoint URL
             temperature: Sampling temperature (0.0 to 1.0)
             timeout: Request timeout in seconds
+            response_format: Pydantic model for structured output
         """
         # REQUIRED: Call parent constructor with model and temperature
         super().__init__(model=model, temperature=temperature)
@@ -44,6 +46,7 @@ class MORLLM(BaseLLM):
         self.api_key = api_key
         self.endpoint = endpoint
         self.timeout = timeout
+        self.response_format = response_format
         
     def call(
         self,
@@ -73,18 +76,44 @@ class MORLLM(BaseLLM):
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
         
-        # Prepare request payload
+        # Handle structured output by modifying the prompt
+        if self.response_format and hasattr(self.response_format, 'model_json_schema'):
+            # Add JSON schema instruction to the last user message
+            schema = self.response_format.model_json_schema()
+            json_instruction = (
+                f"\n\nIMPORTANT: You must respond with valid JSON that matches this exact schema:\n"
+                f"{schema}\n"
+                f"Do not include any text before or after the JSON. Only return the JSON object."
+            )
+            
+            # Find the last user message and append the instruction
+            for i in range(len(messages) - 1, -1, -1):
+                if messages[i].get("role") == "user":
+                    messages[i]["content"] += json_instruction
+                    break
+        
+        # Prepare request payload with careful parameter handling
         payload = {
-            "model": self.model,
+            "model": self.model if self.model != "default" else "LMR-ClaudeAI-Sonnet",
             "messages": messages,
-            "temperature": self.temperature,
         }
+        
+        # Only add temperature if it's a valid value
+        if self.temperature is not None and 0.0 <= self.temperature <= 2.0:
+            payload["temperature"] = self.temperature
         
         # Add tools if provided and supported
         if tools and self.supports_function_calling():
             payload["tools"] = tools
         
         try:
+            # Debug logging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"🔥 USING MOR LLM - Model: {self.model}")
+            logger.info(f"MOR API Request payload: {payload}")
+            logger.info(f"MOR API Endpoint: {self.endpoint}")
+            
             # Make API call
             response = requests.post(
                 self.endpoint,
@@ -95,6 +124,11 @@ class MORLLM(BaseLLM):
                 json=payload,
                 timeout=self.timeout
             )
+            
+            # Debug response on failure
+            if not response.ok:
+                logger.error(f"MOR API Error Response: {response.status_code} - {response.text}")
+            
             response.raise_for_status()
             
             # Parse response
@@ -118,6 +152,24 @@ class MORLLM(BaseLLM):
                     if stop_word in content:
                         content = content.split(stop_word)[0]
                         break
+            
+            # Handle structured output
+            if self.response_format and hasattr(self.response_format, 'model_validate_json'):
+                try:
+                    # Try to parse as JSON and validate against the schema
+                    return self.response_format.model_validate_json(content)
+                except Exception as e:
+                    # If parsing fails, try to extract JSON from the content
+                    try:
+                        import re
+                        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+                        if json_match:
+                            return self.response_format.model_validate_json(json_match.group())
+                    except Exception:
+                        pass
+                    # If all else fails, return the raw content
+                    logger.warning(f"Failed to parse structured output: {e}")
+                    return content
             
             return content
             
