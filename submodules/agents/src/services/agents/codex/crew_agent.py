@@ -3,7 +3,11 @@ from typing import List, Optional
 
 from crewai import Agent
 from crewai.tools import tool
-from services.agents.codex import tools
+from services.tools.categories.external.codex.tools import (
+    ListTopTokensTool,
+    GetTopHoldersPercentTool,
+    SearchNftsTool,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -14,15 +18,17 @@ def list_top_tokens_tool(
     limit: Optional[int] = None, networks: Optional[List[str]] = None, resolution: Optional[str] = None
 ) -> str:
     """Get a list of trending tokens across specified networks."""
-    result = tools.list_top_tokens(limit=limit, networks=networks, resolution=resolution)
-    return result.formatted_response
+    tool = ListTopTokensTool()
+    result = tool.execute(limit=limit, networks=networks, resolution=resolution)
+    return result.get("formatted_response", "")
 
 
 @tool("Get Top Holders Percentage")
 def get_top_holders_percent_tool(token_name: str, network: str) -> str:
     """Get the percentage owned by top 10 holders for a token."""
-    result = tools.get_top_holders_percent(token_name=token_name, network=network)
-    return result.formatted_response
+    tool = GetTopHoldersPercentTool()
+    result = tool.execute(tokenName=token_name, network=network)
+    return result.get("formatted_response", "")
 
 
 @tool("Search NFT Collections")
@@ -34,14 +40,15 @@ def search_nfts_tool(
     window: Optional[str] = None,
 ) -> str:
     """Search for NFT collections by name or address."""
-    result = tools.search_nfts(
+    tool = SearchNftsTool()
+    result = tool.execute(
         search=search,
         limit=limit,
-        network_filter=network_filter,
-        filter_wash_trading=filter_wash_trading,
+        networkFilter=network_filter,
+        filterWashTrading=filter_wash_trading,
         window=window,
     )
-    return result.formatted_response
+    return result.get("formatted_response", "")
 
 
 # Create the agent directly

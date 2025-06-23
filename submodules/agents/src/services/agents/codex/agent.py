@@ -1,14 +1,16 @@
 import logging
 from typing import Any, Dict
 
+from langchain.schema import SystemMessage
+
 from models.service.agent_core import AgentCore
 from models.service.chat_models import AgentResponse, ChatRequest
+from services.orchestrator.registry.tool_registry import ToolRegistry
+
+from services.tools.categories.external.codex.networks import NETWORK_TO_ID_MAPPING
+from services.tools.categories.external.codex.tool_types import CodexToolType
 
 from .config import Config
-from .models import NftSearchResponse, TopHoldersResponse, TopTokensResponse
-from .tools import get_top_holders_percent, list_top_tokens, search_nfts
-from .utils.networks import NETWORK_TO_ID_MAPPING
-from .utils.tool_types import CodexToolType
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +22,24 @@ class CodexAgent(AgentCore):
         super().__init__(config)
         self.tools_provided = Config.tools
 
+        # Get tools from registry
+        self.list_top_tokens_tool = ToolRegistry.get(CodexToolType.LIST_TOP_TOKENS.value)
+        self.top_holders_tool = ToolRegistry.get(CodexToolType.GET_TOP_HOLDERS_PERCENT.value)
+        self.search_nfts_tool = ToolRegistry.get(CodexToolType.SEARCH_NFTS.value)
+
     async def _process_request(self, request: ChatRequest) -> AgentResponse:
         """Process the validated chat request for Codex API interactions."""
         try:
-            messages = [Config.system_message, *request.messages_for_llm]
+            messages = [
+                SystemMessage(
+                    content=(
+                        "You are an agent that can fetch and analyze token and NFT data "
+                        "from Codex.io. You can get trending tokens, analyze token holder "
+                        "concentration, and search for NFT collections."
+                    )
+                ),
+                *request.messages_for_llm,
+            ]
             response = await self._call_llm_with_tools(messages, self.tools_provided)
             return await self._handle_llm_response(response)
 
@@ -35,14 +51,10 @@ class CodexAgent(AgentCore):
         """Execute the appropriate Codex API tool based on function name."""
         try:
             if func_name == CodexToolType.LIST_TOP_TOKENS.value:
-                top_tokens_response: TopTokensResponse = await list_top_tokens(
-                    limit=args.get("limit"),
-                    networks=args.get("networks"),
-                    resolution=args.get("resolution"),
-                )
+                result = await self.list_top_tokens_tool.execute(**args)
                 return AgentResponse.success(
-                    content=top_tokens_response.formatted_response,
-                    metadata=top_tokens_response.model_dump(),
+                    content=result.get("message", ""),
+                    metadata=result,
                     action_type=CodexToolType.LIST_TOP_TOKENS.value,
                 )
 
@@ -64,27 +76,18 @@ class CodexAgent(AgentCore):
                         f"{args.get('tokenName')}"
                     )
 
-                holders_response: TopHoldersResponse = await get_top_holders_percent(
-                    token_name=args["tokenName"],
-                    network=args["network"],
-                )
+                result = await self.top_holders_tool.execute(**args)
                 return AgentResponse.success(
-                    content=holders_response.formatted_response,
-                    metadata=holders_response.model_dump(),
+                    content=result.get("message", ""),
+                    metadata=result,
                     action_type=CodexToolType.GET_TOP_HOLDERS_PERCENT.value,
                 )
 
             elif func_name == CodexToolType.SEARCH_NFTS.value:
-                nft_search_response: NftSearchResponse = await search_nfts(
-                    search=args["search"],
-                    limit=args.get("limit"),
-                    network_filter=args.get("networkFilter"),
-                    filter_wash_trading=args.get("filterWashTrading"),
-                    window=args.get("window"),
-                )
+                result = await self.search_nfts_tool.execute(**args)
                 return AgentResponse.success(
-                    content=nft_search_response.formatted_response,
-                    metadata=nft_search_response.model_dump(),
+                    content=result.get("message", ""),
+                    metadata=result,
                     action_type=CodexToolType.SEARCH_NFTS.value,
                 )
 
