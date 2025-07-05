@@ -1,4 +1,5 @@
 import { ChatMessage } from "@/services/types";
+import { Job } from "@/components/JobsList";
 
 export interface TelemetryData {
   processing_time?: {
@@ -29,6 +30,8 @@ export interface ChatState {
   error: string | null;
   conversationTitles: Record<string, string>;
   streamingState?: StreamingState;
+  jobs: Job[];
+  currentView: 'jobs' | 'chat';
 }
 
 export type ChatAction =
@@ -54,6 +57,22 @@ export type ChatAction =
   | {
       type: "UPDATE_STREAMING_PROGRESS";
       payload: Partial<StreamingState>;
+    }
+  | {
+      type: "ADD_JOB";
+      payload: Job;
+    }
+  | {
+      type: "UPDATE_JOB";
+      payload: { jobId: string; updates: Partial<Job> };
+    }
+  | {
+      type: "SET_CURRENT_VIEW";
+      payload: 'jobs' | 'chat';
+    }
+  | {
+      type: "SET_JOBS";
+      payload: Job[];
     };
 
 export interface ChatContextType {
@@ -67,4 +86,8 @@ export interface ChatContextType {
   refreshMessages: () => Promise<void>;
   refreshAllTitles: () => Promise<void>;
   deleteChat: (conversationId: string) => Promise<void>;
+  addJob: (job: Job) => void;
+  updateJob: (jobId: string, updates: Partial<Job>) => void;
+  setCurrentView: (view: 'jobs' | 'chat') => void;
+  selectJob: (jobId: string) => void;
 }

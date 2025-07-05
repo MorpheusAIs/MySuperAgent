@@ -18,9 +18,30 @@
 /* Input styling */
 .inputWrapper {
   width: 100%;
-  border-radius: 8px;
-  background-color: #111;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
   overflow: hidden;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+.inputWrapper:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.inputWrapper:focus-within {
+  border-color: rgba(103, 232, 249, 0.6);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 2px rgba(103, 232, 249, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 /* Text area container */
@@ -38,6 +59,7 @@
   color: white;
   width: 100%;
   font-size: 16px !important;
+  font-weight: 400;
   -webkit-text-size-adjust: 100%;
   touch-action: manipulation;
   resize: none;
@@ -47,6 +69,11 @@
   outline: none !important;
   line-height: 1.5 !important;
   overflow-y: auto !important;
+}
+
+.messageInput::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 400;
 }
 
 .messageInput:focus {

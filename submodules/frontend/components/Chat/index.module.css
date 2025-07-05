@@ -5,6 +5,35 @@
   flex-direction: column;
 }
 
+.jobsView {
+  min-height: 100vh;
+  background: #000;
+  color: white;
+}
+
+.jobsHeader {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.jobsTitle {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.centeredInput {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  min-height: 40vh;
+}
+
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .chatContainer {
     padding-bottom: env(safe-area-inset-bottom);

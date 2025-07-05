@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { useChainId, useAccount } from "wagmi";
 import { ChatMessage } from "@/services/types";
+import { Job } from "@/components/JobsList";
 import { getHttpClient } from "@/services/constants";
 import {
   writeMessage,
@@ -48,6 +49,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         // Load conversation titles from localStorage
         const data = getStorageData();
         const titles: Record<string, string> = {};
+        const jobs: Job[] = [];
 
         Object.keys(data.conversations).forEach((convId) => {
           if (data.conversations[convId].name) {
@@ -55,6 +57,37 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
             // Mark conversations with custom titles as already having attempted title generation
             if (data.conversations[convId].name !== "New Conversation") {
               titleGenerationAttempted.current.add(convId);
+            }
+          }
+          
+          // Convert conversation to job (excluding default)
+          if (convId !== "default") {
+            const conversationMessages = getMessagesHistory(convId);
+            // Only create jobs for conversations that have actual user messages (not just intro message)
+            const userMessages = conversationMessages.filter(m => m.role === "user");
+            
+            if (conversationMessages && conversationMessages.length > 0 && userMessages.length > 0) {
+              const lastMessage = conversationMessages[conversationMessages.length - 1];
+              const firstUserMessage = userMessages[0];
+              const hasAssistantResponse = conversationMessages.some(m => m.role === "assistant");
+              
+              // Determine status based on conversation state
+              let status: Job["status"] = "pending";
+              if (hasAssistantResponse && lastMessage?.role === "assistant") {
+                status = "completed";
+              } else if (conversationMessages.length > 1) {
+                status = "running";
+              }
+              
+              jobs.push({
+                id: convId,
+                title: data.conversations[convId].name || (firstUserMessage?.content ? firstUserMessage.content.substring(0, 50) + "..." : "Untitled Job"),
+                description: firstUserMessage?.content || "No description",
+                status: status,
+                createdAt: new Date(conversationMessages[0]?.timestamp || data.conversations[convId].createdAt || Date.now()),
+                lastMessage: lastMessage?.role === "assistant" && lastMessage.content ? lastMessage.content.substring(0, 100) + "..." : undefined,
+                messageCount: conversationMessages.length
+              });
             }
           }
         });
@@ -66,6 +99,12 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
             payload: { conversationId: convId, title },
           });
         });
+        
+        // Sort jobs by creation date (newest first)
+        jobs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        
+        // Set all jobs at once to avoid duplicates
+        dispatch({ type: "SET_JOBS", payload: jobs });
       } catch (error) {
         console.error("Failed to load initial data:", error);
       }
@@ -79,15 +118,14 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     async (conversationId: string) => {
       dispatch({ type: "SET_CURRENT_CONVERSATION", payload: conversationId });
 
-      // Load messages if not already loaded
-      if (!state.messages[conversationId]) {
-        dispatch({ type: "SET_LOADING", payload: true });
-        try {
-          const messages = getMessagesHistory(conversationId);
-          dispatch({
-            type: "SET_MESSAGES",
-            payload: { conversationId, messages },
-          });
+      // Always load messages to ensure we have the latest
+      dispatch({ type: "SET_LOADING", payload: true });
+      try {
+        const messages = getMessagesHistory(conversationId);
+        dispatch({
+          type: "SET_MESSAGES",
+          payload: { conversationId, messages },
+        });
 
           // Load conversation title if available
           const data = getStorageData();
@@ -119,9 +157,8 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         } finally {
           dispatch({ type: "SET_LOADING", payload: false });
         }
-      }
     },
-    [state.messages]
+    []
   );
 
   // Refresh messages and title for current conversation
@@ -512,6 +549,29 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     [state.currentConversationId]
   );
 
+  // Job management functions
+  const addJob = useCallback((job: Job) => {
+    dispatch({ type: "ADD_JOB", payload: job });
+  }, []);
+
+  const updateJob = useCallback((jobId: string, updates: Partial<Job>) => {
+    dispatch({ type: "UPDATE_JOB", payload: { jobId, updates } });
+  }, []);
+
+  const setCurrentView = useCallback((view: 'jobs' | 'chat') => {
+    dispatch({ type: "SET_CURRENT_VIEW", payload: view });
+  }, []);
+
+  const selectJob = useCallback(async (jobId: string) => {
+    // Find the job to get its conversation ID
+    const job = state.jobs.find(j => j.id === jobId);
+    if (job) {
+      // Use the job ID as the conversation ID
+      await setCurrentConversation(jobId);
+      setCurrentView('chat');
+    }
+  }, [state.jobs, setCurrentConversation]);
+
   // Context value
   const value = {
     state,
@@ -520,6 +580,10 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     refreshMessages,
     refreshAllTitles,
     deleteChat,
+    addJob,
+    updateJob,
+    setCurrentView,
+    selectJob,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

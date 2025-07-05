@@ -17,6 +17,8 @@ export const initialState: ChatState = {
     currentAgentIndex: undefined,
     totalAgents: undefined,
   },
+  jobs: [],
+  currentView: 'jobs',
 };
 
 /**
@@ -91,6 +93,39 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         },
       };
     }
+
+    case "ADD_JOB":
+      // Check if job already exists to prevent duplicates
+      const jobExists = state.jobs.some(job => job.id === action.payload.id);
+      if (jobExists) {
+        return state;
+      }
+      return {
+        ...state,
+        jobs: [action.payload, ...state.jobs],
+      };
+
+    case "UPDATE_JOB":
+      return {
+        ...state,
+        jobs: state.jobs.map(job =>
+          job.id === action.payload.jobId
+            ? { ...job, ...action.payload.updates }
+            : job
+        ),
+      };
+
+    case "SET_CURRENT_VIEW":
+      return {
+        ...state,
+        currentView: action.payload,
+      };
+
+    case "SET_JOBS":
+      return {
+        ...state,
+        jobs: action.payload,
+      };
 
     default:
       return state;
