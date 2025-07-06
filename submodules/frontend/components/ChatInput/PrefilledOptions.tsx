@@ -27,6 +27,13 @@ const PrefilledOptions: React.FC<PrefilledOptionsProps> = ({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  // Validate selectedGroup on mount and reset if invalid
+  useEffect(() => {
+    if (selectedGroup && !OPTION_GROUPS[selectedGroup as keyof typeof OPTION_GROUPS]) {
+      setSelectedGroup(null);
+    }
+  }, [selectedGroup]);
+
   // Notify parent component about expansion state
   useEffect(() => {
     if (onExpandChange) {
@@ -70,7 +77,7 @@ const PrefilledOptions: React.FC<PrefilledOptionsProps> = ({
           isExamplesPanelVisible ? styles.visible : ""
         }`}
       >
-        {OPTION_GROUPS[selectedGroup as keyof typeof OPTION_GROUPS].map(
+        {selectedGroup && OPTION_GROUPS[selectedGroup as keyof typeof OPTION_GROUPS]?.map(
           (agentType) => {
             const option =
               prefilledOptionsMap[

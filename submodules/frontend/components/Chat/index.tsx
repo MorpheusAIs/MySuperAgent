@@ -1,19 +1,38 @@
-import React, { FC, useState } from "react";
+import React, { FC, useState, useEffect } from "react";
 import { Box, useBreakpointValue, Text, VStack } from "@chakra-ui/react";
 import { MessageList } from "@/components/MessageList";
-import { JobsList, Job } from "@/components/JobsList";
+import { JobsList } from "@/components/JobsList";
 import { ChatInput } from "@/components/ChatInput";
+import PrefilledOptions from "@/components/ChatInput/PrefilledOptions";
 import { useChatContext } from "@/contexts/chat/useChatContext";
 import { trackEvent } from "@/services/analytics";
+import { createNewConversation, getAllConversations } from "@/services/ChatManagement/conversations";
+import { Conversation } from "@/services/types";
 import styles from "./index.module.css";
 
 export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
   isSidebarOpen = false,
 }) => {
-  const { state, sendMessage, addJob, updateJob, setCurrentView, selectJob } = useChatContext();
-  const { messages, currentConversationId, isLoading, jobs, currentView } = state;
+  const { state, sendMessage, setCurrentView, setCurrentConversation } = useChatContext();
+  const { messages, currentConversationId, isLoading, currentView } = state;
   const [localLoading, setLocalLoading] = useState(false);
   const [showPrefilledOptions, setShowPrefilledOptions] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  
+  // Load conversations on client side only
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setConversations(getAllConversations());
+    }
+  }, []);
+  
+  // Refresh conversations when returning to jobs view
+  useEffect(() => {
+    if (currentView === 'jobs' && typeof window !== 'undefined') {
+      setConversations(getAllConversations());
+    }
+  }, [currentView]);
   const currentMessages = messages[currentConversationId] || [];
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showLoading = isLoading || localLoading;
@@ -23,65 +42,80 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
     file: File | null,
     useResearch?: boolean
   ) => {
-    try {
-      setLocalLoading(true);
+    if (currentView === 'jobs') {
+      // Create a new conversation but stay in jobs view
+      const newConversationId = createNewConversation();
       
-      if (currentView === 'jobs') {
-        // Create a new job and conversation
-        const newJobId = Date.now().toString();
-        const newJob: Job = {
-          id: newJobId,
-          title: message.length > 50 ? message.substring(0, 50) + '...' : message,
-          description: message,
-          status: 'running',
-          createdAt: new Date(),
-          messageCount: 0,
-          lastMessage: undefined
-        };
-        
-        // Add the job
-        addJob(newJob);
-        
-        // Switch to this new conversation
-        await selectJob(newJobId);
-      }
+      // Switch to this new conversation but keep jobs view
+      await setCurrentConversation(newConversationId);
       
-      // Send the message (this will use the current conversation ID)
-      await sendMessage(message, file, useResearch ?? false);
-      
-      // Update job after message is sent
-      if (currentView === 'chat' && currentConversationId !== 'default') {
-        const job = jobs.find(j => j.id === currentConversationId);
-        if (job) {
-          const messages = state.messages[currentConversationId] || [];
-          updateJob(currentConversationId, {
-            messageCount: messages.length,
-            lastMessage: messages[messages.length - 1]?.content
+      // Small delay to ensure state has updated before sending message
+      setTimeout(() => {
+        // Send the message in the background (non-blocking)
+        sendMessage(message, file, useResearch ?? false)
+          .then(() => {
+            console.log("Message sent successfully for conversation:", newConversationId);
+            // Refresh conversations list to show updated status
+            if (typeof window !== 'undefined') {
+              setConversations(getAllConversations());
+            }
+          })
+          .catch((error) => {
+            console.error("Error sending message:", error);
+            // Refresh conversations list to show updated status
+            if (typeof window !== 'undefined') {
+              setConversations(getAllConversations());
+            }
           });
-        }
+      }, 50);
+      
+      // Refresh conversations list immediately to show the new job
+      if (typeof window !== 'undefined') {
+        setConversations(getAllConversations());
       }
       
-      setTimeout(() => setLocalLoading(false), 200);
-    } catch (error) {
-      console.error("Error sending message:", error);
-      setLocalLoading(false);
+      // Return immediately for non-blocking behavior
+      return Promise.resolve();
+    } else {
+      // For regular chat (not jobs), use the existing flow
+      try {
+        setLocalLoading(true);
+        await sendMessage(message, file, useResearch ?? false);
+        setTimeout(() => setLocalLoading(false), 200);
+      } catch (error) {
+        console.error("Error sending message:", error);
+        setLocalLoading(false);
+      }
     }
   };
   
-  const handleJobClick = async (jobId: string) => {
+  const handleJobClick = async (conversationId: string) => {
     try {
       setLocalLoading(true);
-      await selectJob(jobId);
+      await setCurrentConversation(conversationId);
+      setCurrentView('chat');
       // Small delay to ensure state updates have propagated
       setTimeout(() => setLocalLoading(false), 100);
     } catch (error) {
-      console.error("Error selecting job:", error);
+      console.error("Error selecting conversation:", error);
       setLocalLoading(false);
     }
   };
   
   const handleBackToJobs = () => {
     setCurrentView('jobs');
+  };
+
+  const handlePrefilledSelect = async (selectedMessage: string) => {
+    if (isSubmitting || showLoading) return;
+    try {
+      setIsSubmitting(true);
+      await handleSubmit(selectedMessage, null, false);
+    } catch (error) {
+      console.error("Error submitting prefilled message:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (currentView === 'jobs') {
@@ -103,7 +137,7 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
         </VStack>
         
         {/* Main Content Area */}
-        <Box flex={1} display="flex" flexDirection="column" justifyContent={jobs.length > 0 ? "flex-start" : "center"} px={4} pt={jobs.length > 0 ? 8 : 0}>
+        <Box flex={1} display="flex" flexDirection="column" justifyContent="flex-start" px={4} pt={8}>
           {/* Centered Job Input */}
           <VStack spacing={6} width="100%" align="center">
             <Box maxWidth="600px" width="100%">
@@ -123,10 +157,30 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
               />
             </Box>
             
-            {/* Jobs List - directly under input */}
+            {/* Prefilled Options - shows between input and jobs list when toggled */}
+            {showPrefilledOptions && (
+              <Box 
+                width="100%" 
+                maxWidth="600px" 
+                mt={2}
+                mb={-2}
+                borderRadius="12px"
+                overflow="hidden"
+                bg="rgba(0, 0, 0, 0.5)"
+                border="1px solid"
+                borderColor="gray.800"
+              >
+                <PrefilledOptions
+                  onSelect={handlePrefilledSelect}
+                  isSidebarOpen={isSidebarOpen}
+                />
+              </Box>
+            )}
+            
+            {/* Jobs List - directly under input/options */}
             <Box width="100%" maxWidth="600px">
               <JobsList
-                jobs={jobs}
+                conversations={conversations}
                 onJobClick={handleJobClick}
                 isLoading={showLoading}
               />

@@ -1,55 +1,63 @@
 import React, { FC, useState } from "react";
 import { Box, VStack, Text, Button, HStack, Badge, Tabs, TabList, TabPanels, Tab, TabPanel } from "@chakra-ui/react";
 import { ChatIcon, TimeIcon } from "@chakra-ui/icons";
+import { Conversation } from "@/services/types";
+import { getMessagesHistory } from "@/services/ChatManagement/storage";
 import styles from "./index.module.css";
 
-export interface Job {
-  id: string;
-  title: string;
-  description: string;
-  status: "pending" | "running" | "completed" | "failed";
-  createdAt: Date;
-  lastMessage?: string;
-  messageCount: number;
-}
-
 interface JobsListProps {
-  jobs: Job[];
+  conversations: Conversation[];
   onJobClick: (jobId: string) => void;
   isLoading?: boolean;
 }
 
-const isCurrentJob = (job: Job) => {
+const getConversationStatus = (conversation: Conversation): "pending" | "running" | "completed" | "failed" => {
+  const messages = getMessagesHistory(conversation.id);
+  const userMessages = messages.filter(m => m.role === "user");
+  const hasAssistantResponse = messages.some(m => m.role === "assistant");
+  
+  if (userMessages.length === 0) return "pending";
+  if (!hasAssistantResponse) return "running";
+  
+  const lastMessage = messages[messages.length - 1];
+  return lastMessage?.role === "assistant" ? "completed" : "running";
+};
+
+const isCurrentJob = (conversation: Conversation) => {
+  const status = getConversationStatus(conversation);
+  
   // Current jobs are those in progress or completed within the last 24 hours
-  if (job.status === 'pending' || job.status === 'running') {
+  if (status === 'pending' || status === 'running') {
     return true;
   }
   
-  if (job.status === 'completed') {
+  if (status === 'completed') {
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-    return new Date(job.createdAt) > oneDayAgo;
+    return new Date(conversation.createdAt) > oneDayAgo;
   }
   
   return false;
 };
 
-const isPreviousJob = (job: Job) => {
+const isPreviousJob = (conversation: Conversation) => {
+  const status = getConversationStatus(conversation);
+  
   // Previous jobs are completed/failed jobs older than 24 hours
-  if (job.status === 'failed') {
+  if (status === 'failed') {
     return true;
   }
   
-  if (job.status === 'completed') {
+  if (status === 'completed') {
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-    return new Date(job.createdAt) <= oneDayAgo;
+    return new Date(conversation.createdAt) <= oneDayAgo;
   }
   
   return false;
 };
 
-const getStatusColor = (status: Job["status"]) => {
+const getStatusColor = (status: "pending" | "running" | "completed" | "failed") => {
   switch (status) {
     case "pending":
       return "gray";
@@ -81,85 +89,110 @@ const formatTimeAgo = (date: Date) => {
   }
 };
 
-const JobItem: FC<{ job: Job; onClick: (jobId: string) => void }> = ({ job, onClick }) => (
-  <Button
-    key={job.id}
-    className={styles.jobItem}
-    onClick={() => onClick(job.id)}
-    variant="ghost"
-    size="lg"
-    h="auto"
-    p={4}
-    justifyContent="flex-start"
-    _hover={{ bg: "rgba(255, 255, 255, 0.02)" }}
-    _active={{ bg: "rgba(255, 255, 255, 0.01)" }}
-    w="100%"
-    overflow="hidden"
-  >
-    <VStack align="stretch" spacing={2} width="100%">
-      <HStack justify="space-between" align="flex-start" spacing={3}>
-        <VStack align="flex-start" spacing={1} flex={1} minW={0}>
-          <Text
-            fontSize="md"
-            fontWeight="semibold"
-            color="gray.200"
-            textAlign="left"
-            noOfLines={1}
-            w="100%"
-          >
-            {job.title}
-          </Text>
-          <Text
-            fontSize="sm"
-            color="gray.500"
-            textAlign="left"
-            noOfLines={2}
-            w="100%"
-          >
-            {job.description}
-          </Text>
-        </VStack>
-        <Badge colorScheme={getStatusColor(job.status)} variant="subtle" size="sm" flexShrink={0}>
-          {job.status}
-        </Badge>
-      </HStack>
-      
-      <HStack justify="space-between" fontSize="xs" color="gray.600" w="100%">
-        <HStack spacing={4} flexShrink={0}>
-          <HStack spacing={1}>
-            <ChatIcon w={3} h={3} />
-            <Text>{job.messageCount} messages</Text>
-          </HStack>
-          <HStack spacing={1}>
-            <TimeIcon w={3} h={3} />
-            <Text>{formatTimeAgo(job.createdAt)}</Text>
+const JobItem: FC<{ conversation: Conversation; onClick: (jobId: string) => void }> = ({ conversation, onClick }) => {
+  const messages = getMessagesHistory(conversation.id);
+  const userMessages = messages.filter(m => m.role === "user");
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+  const status = getConversationStatus(conversation);
+  
+  // Get title and description from first user message
+  const firstUserMessage = userMessages[0];
+  const title = conversation.name !== "New Conversation" ? conversation.name : 
+    (firstUserMessage?.content ? 
+      (typeof firstUserMessage.content === 'string' ? firstUserMessage.content.substring(0, 50) + (firstUserMessage.content.length > 50 ? '...' : '') : 'Untitled Job') : 
+      'Untitled Job');
+  const description = firstUserMessage?.content ? 
+    (typeof firstUserMessage.content === 'string' ? firstUserMessage.content : 'No description') : 
+    'No description';
+  
+  return (
+    <Button
+      key={conversation.id}
+      className={styles.jobItem}
+      onClick={() => onClick(conversation.id)}
+      variant="ghost"
+      size="lg"
+      h="auto"
+      p={4}
+      justifyContent="flex-start"
+      _hover={{ bg: "rgba(255, 255, 255, 0.02)" }}
+      _active={{ bg: "rgba(255, 255, 255, 0.01)" }}
+      w="100%"
+      overflow="hidden"
+    >
+      <VStack align="stretch" spacing={2} width="100%">
+        <HStack justify="space-between" align="flex-start" spacing={3}>
+          <VStack align="flex-start" spacing={1} flex={1} minW={0}>
+            <Text
+              fontSize="md"
+              fontWeight="semibold"
+              color="gray.200"
+              textAlign="left"
+              noOfLines={1}
+              w="100%"
+            >
+              {title}
+            </Text>
+            <Text
+              fontSize="sm"
+              color="gray.500"
+              textAlign="left"
+              noOfLines={2}
+              w="100%"
+            >
+              {description}
+            </Text>
+          </VStack>
+          <Badge colorScheme={getStatusColor(status)} variant="subtle" size="sm" flexShrink={0}>
+            {status}
+          </Badge>
+        </HStack>
+        
+        <HStack justify="space-between" fontSize="xs" color="gray.600" w="100%">
+          <HStack spacing={4} flexShrink={0}>
+            <HStack spacing={1}>
+              <ChatIcon w={3} h={3} />
+              <Text>{messages.length} messages</Text>
+            </HStack>
+            <HStack spacing={1}>
+              <TimeIcon w={3} h={3} />
+              <Text>{formatTimeAgo(new Date(conversation.createdAt))}</Text>
+            </HStack>
           </HStack>
         </HStack>
-      </HStack>
-      
-      {job.lastMessage && (
-        <Text
-          fontSize="xs"
-          color="gray.600"
-          textAlign="left"
-          noOfLines={1}
-          fontStyle="italic"
-          w="100%"
-        >
-          &quot;{job.lastMessage}&quot;
-        </Text>
-      )}
-    </VStack>
-  </Button>
-);
+        
+        {lastMessage && lastMessage.role === "assistant" && lastMessage.content && (
+          <Text
+            fontSize="xs"
+            color="gray.600"
+            textAlign="left"
+            noOfLines={1}
+            fontStyle="italic"
+            w="100%"
+          >
+            &quot;{typeof lastMessage.content === 'string' ? lastMessage.content.substring(0, 100) + (lastMessage.content.length > 100 ? '...' : '') : 'Response received'}&quot;
+          </Text>
+        )}
+      </VStack>
+    </Button>
+  );
+};
 
-export const JobsList: FC<JobsListProps> = ({ jobs, onJobClick, isLoading }) => {
+export const JobsList: FC<JobsListProps> = ({ conversations, onJobClick, isLoading }) => {
   const [activeTab, setActiveTab] = useState(0);
   
-  const currentJobs = jobs.filter(isCurrentJob);
-  const previousJobs = jobs.filter(isPreviousJob);
+  // Filter out default conversation and conversations without user messages
+  const jobConversations = conversations.filter(conv => {
+    if (conv.id === "default") return false;
+    const messages = getMessagesHistory(conv.id);
+    const userMessages = messages.filter(m => m.role === "user");
+    return userMessages.length > 0;
+  });
   
-  if (jobs.length === 0 && !isLoading) {
+  const currentJobs = jobConversations.filter(isCurrentJob);
+  const previousJobs = jobConversations.filter(isPreviousJob);
+  
+  if (jobConversations.length === 0 && !isLoading) {
     return (
       <Box className={styles.emptyState}>
         <Text fontSize="md" color="gray.500" textAlign="center">
@@ -216,8 +249,8 @@ export const JobsList: FC<JobsListProps> = ({ jobs, onJobClick, isLoading }) => 
                 </Box>
               ) : (
                 <VStack spacing={2} width="100%" align="stretch" pb={2}>
-                  {currentJobs.map((job) => (
-                    <JobItem key={job.id} job={job} onClick={onJobClick} />
+                  {currentJobs.map((conversation) => (
+                    <JobItem key={conversation.id} conversation={conversation} onClick={onJobClick} />
                   ))}
                 </VStack>
               )}
@@ -234,8 +267,8 @@ export const JobsList: FC<JobsListProps> = ({ jobs, onJobClick, isLoading }) => 
                 </Box>
               ) : (
                 <VStack spacing={2} width="100%" align="stretch" pb={2}>
-                  {previousJobs.map((job) => (
-                    <JobItem key={job.id} job={job} onClick={onJobClick} />
+                  {previousJobs.map((conversation) => (
+                    <JobItem key={conversation.id} conversation={conversation} onClick={onJobClick} />
                   ))}
                 </VStack>
               )}
