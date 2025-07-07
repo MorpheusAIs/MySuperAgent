@@ -1,5 +1,6 @@
 import React, { FC, useRef, useEffect, useState } from "react";
-import { Box, VStack } from "@chakra-ui/react";
+import { Box, VStack, IconButton, HStack, Text } from "@chakra-ui/react";
+import { ArrowBackIcon } from "@chakra-ui/icons";
 import { ChatMessage } from "@/services/types";
 import { MessageItem } from "@/components/MessageItem";
 import { LoadingIndicator } from "@/components/LoadingIndicator";
@@ -18,6 +19,7 @@ type MessageListProps = {
   ) => Promise<void>;
   disabled: boolean;
   showPrefilledOptions: boolean;
+  onBackToJobs?: () => void;
 };
 
 export const MessageList: FC<MessageListProps> = ({
@@ -27,6 +29,7 @@ export const MessageList: FC<MessageListProps> = ({
   onSubmit,
   disabled,
   showPrefilledOptions,
+  onBackToJobs,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -79,6 +82,25 @@ export const MessageList: FC<MessageListProps> = ({
       height="calc(var(--vh, 1vh) * 100 - 185px)"
       width="100%"
     >
+      {/* Back to Jobs Header */}
+      {onBackToJobs && (
+        <Box p={4} borderBottom="1px solid" borderColor="gray.700">
+          <HStack spacing={3}>
+            <IconButton
+              aria-label="Back to jobs"
+              icon={<ArrowBackIcon />}
+              size="sm"
+              variant="ghost"
+              onClick={onBackToJobs}
+              _hover={{ bg: "gray.700" }}
+            />
+            <Text fontSize="md" color="white">
+              Back to Jobs
+            </Text>
+          </HStack>
+        </Box>
+      )}
+      
       <Box
         ref={containerRef}
         flex="1 1 auto"

@@ -17,6 +17,7 @@ export const initialState: ChatState = {
     currentAgentIndex: undefined,
     totalAgents: undefined,
   },
+  currentView: 'jobs',
 };
 
 /**
@@ -91,6 +92,12 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         },
       };
     }
+
+    case "SET_CURRENT_VIEW":
+      return {
+        ...state,
+        currentView: action.payload,
+      };
 
     default:
       return state;

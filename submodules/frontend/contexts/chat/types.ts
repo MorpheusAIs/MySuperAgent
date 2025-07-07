@@ -29,6 +29,7 @@ export interface ChatState {
   error: string | null;
   conversationTitles: Record<string, string>;
   streamingState?: StreamingState;
+  currentView: 'jobs' | 'chat';
 }
 
 export type ChatAction =
@@ -54,6 +55,10 @@ export type ChatAction =
   | {
       type: "UPDATE_STREAMING_PROGRESS";
       payload: Partial<StreamingState>;
+    }
+  | {
+      type: "SET_CURRENT_VIEW";
+      payload: 'jobs' | 'chat';
     };
 
 export interface ChatContextType {
@@ -67,4 +72,5 @@ export interface ChatContextType {
   refreshMessages: () => Promise<void>;
   refreshAllTitles: () => Promise<void>;
   deleteChat: (conversationId: string) => Promise<void>;
+  setCurrentView: (view: 'jobs' | 'chat') => void;
 }

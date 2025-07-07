@@ -19,6 +19,7 @@ type ChatInputProps = {
   isSidebarOpen: boolean;
   onToggleHelp: () => void;
   showPrefilledOptions: boolean;
+  placeholder?: string;
 };
 
 export const ChatInput: FC<ChatInputProps> = ({
@@ -27,6 +28,7 @@ export const ChatInput: FC<ChatInputProps> = ({
   isSidebarOpen,
   onToggleHelp,
   showPrefilledOptions,
+  placeholder = "Ask anything",
 }) => {
   const [message, setMessage] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -177,7 +179,7 @@ export const ChatInput: FC<ChatInputProps> = ({
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder={
-                file ? "Click the arrow to process your file" : "Ask anything"
+                file ? "Click the arrow to process your file" : placeholder
               }
               minH="36px"
               maxH="240px"

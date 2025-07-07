@@ -211,9 +211,10 @@ export const prefilledOptionsMap = {
 };
 
 export const OPTION_GROUPS = {
-  Data: [AgentType.CRYPTO_DATA, AgentType.DEXSCREENER, AgentType.CODEX],
-  // Trade: [AgentType.TOKEN_SWAP, AgentType.BASE_AGENT],
-  Social: [AgentType.TWEET_SIZZLER, AgentType.ELFA],
-  Morpheus: [AgentType.MOR_REWARDS],
-  Analysis: [AgentType.RAG, AgentType.CRYPTO_NEWS, AgentType.RUGCHECK],
+  "Market Data": [AgentType.CRYPTO_DATA, AgentType.DEXSCREENER],
+  "Blockchain Data": [AgentType.CODEX, AgentType.RUGCHECK],
+  "Content & Social": [AgentType.TWEET_SIZZLER, AgentType.ELFA],
+  "Document Analysis": [AgentType.RAG, AgentType.CRYPTO_NEWS],
+  "Trading & DeFi": [AgentType.TOKEN_SWAP, AgentType.BASE_AGENT], 
+  "Morpheus Tools": [AgentType.MOR_REWARDS, AgentType.MOR_CLAIMS],
 };

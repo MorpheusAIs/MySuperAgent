@@ -79,15 +79,14 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     async (conversationId: string) => {
       dispatch({ type: "SET_CURRENT_CONVERSATION", payload: conversationId });
 
-      // Load messages if not already loaded
-      if (!state.messages[conversationId]) {
-        dispatch({ type: "SET_LOADING", payload: true });
-        try {
-          const messages = getMessagesHistory(conversationId);
-          dispatch({
-            type: "SET_MESSAGES",
-            payload: { conversationId, messages },
-          });
+      // Always load messages to ensure we have the latest
+      dispatch({ type: "SET_LOADING", payload: true });
+      try {
+        const messages = getMessagesHistory(conversationId);
+        dispatch({
+          type: "SET_MESSAGES",
+          payload: { conversationId, messages },
+        });
 
           // Load conversation title if available
           const data = getStorageData();
@@ -119,9 +118,8 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         } finally {
           dispatch({ type: "SET_LOADING", payload: false });
         }
-      }
     },
-    [state.messages]
+    []
   );
 
   // Refresh messages and title for current conversation
@@ -409,6 +407,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
                 // Error handler
                 console.error("Streaming error:", error);
 
+
                 // Don't show parse errors to user - they're handled internally
                 if (!error.message.includes("parse")) {
                   dispatch({ type: "SET_ERROR", payload: error.message });
@@ -512,6 +511,10 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     [state.currentConversationId]
   );
 
+  const setCurrentView = useCallback((view: 'jobs' | 'chat') => {
+    dispatch({ type: "SET_CURRENT_VIEW", payload: view });
+  }, []);
+
   // Context value
   const value = {
     state,
@@ -520,6 +523,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     refreshMessages,
     refreshAllTitles,
     deleteChat,
+    setCurrentView,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

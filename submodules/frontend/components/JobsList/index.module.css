@@ -1,0 +1,106 @@
+.jobsContainer {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0;
+  height: 100%;
+  max-height: 400px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabList {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+  border: none;
+  gap: 8px;
+}
+
+.tab {
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 20px;
+  margin: 0 8px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  color: #9ca3af;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.jobItem {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  text-align: left;
+  width: 100%;
+  display: block;
+}
+
+.jobItem:hover {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.jobItem:active {
+  background: rgba(255, 255, 255, 0.01) !important;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  text-align: center;
+  width: 100%;
+}
+
+.emptyTabState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  text-align: center;
+  opacity: 0.7;
+  width: 100%;
+}
+
+.tabPanelsContainer {
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.scrollableContent {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+/* Custom scrollbar styling */
+.scrollableContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollableContent::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 3px;
+}
+
+.scrollableContent::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.scrollableContent::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}

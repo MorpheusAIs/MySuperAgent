@@ -10,8 +10,11 @@ export const getMessagesHistory = (
   conversationId: string = DEFAULT_CONVERSATION_ID
 ): ChatMessage[] => {
   const data = getStorageData();
-  const convId = getOrCreateConversation(conversationId);
-  return [...(data.conversations[convId]?.messages || [])];
+  // Don't create a new conversation if it doesn't exist - just return empty array
+  if (!data.conversations[conversationId]) {
+    return [];
+  }
+  return [...(data.conversations[conversationId].messages || [])];
 };
 
 /**
