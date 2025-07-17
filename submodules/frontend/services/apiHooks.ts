@@ -235,3 +235,11 @@ export const setSantimentCredentials = async (
     throw error;
   }
 };
+
+// Re-export model-related functions from models service
+export { 
+  getAvailableModels, 
+  getDefaultModel, 
+  getModelInfo,
+  setSelectedModel 
+} from "./models";
