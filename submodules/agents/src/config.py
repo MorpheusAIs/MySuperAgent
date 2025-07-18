@@ -6,12 +6,9 @@ from crewai import LLM
 from fastapi import APIRouter
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 
-# from langchain_together import ChatTogether
 from logs import setup_logging
 from services.secrets import get_secret
-from services.vectorstore.together_embeddings import TogetherEmbeddings
 from services.vectorstore.vector_store_service import VectorStoreService
-from together import Together
 
 logger = setup_logging()
 
@@ -148,30 +145,12 @@ class AppConfig:
     MAX_UPLOAD_LENGTH = 16 * 1024 * 1024
 
     # LLM Configurations
-    LLM_AGENT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo"  # Together AI
-    LLM_DELEGATOR_MODEL = "llama-3.3-70b"  # Cerebras
+    LLM_AGENT_MODEL = "gemini/gemini-2.5-flash"
+    LLM_DELEGATOR_MODEL = "gemini/gemini-2.5-flash"
 
 
 # Check if API keys are available
-has_together_api_key = False
-has_cerebras_api_key = False
 has_gemini_api_key = False
-
-try:
-    together_api_key = get_secret("TogetherApiKey")
-    has_together_api_key = together_api_key is not None and together_api_key != ""
-    if has_together_api_key:
-        os.environ["TOGETHER_API_KEY"] = together_api_key
-except Exception as e:
-    logger.warning(f"Failed to get TogetherApiKey: {str(e)}")
-
-try:
-    cerebras_api_key = get_secret("CerebrasApiKey")
-    has_cerebras_api_key = cerebras_api_key is not None and cerebras_api_key != ""
-    if has_cerebras_api_key:
-        os.environ["CEREBRAS_API_KEY"] = cerebras_api_key
-except Exception as e:
-    logger.warning(f"Failed to get CerebrasApiKey: {str(e)}")
 
 try:
     gemini_api_key = get_secret("GeminiApiKey")
@@ -206,10 +185,10 @@ except Exception as e:
     logger.warning(f"Failed to get BraveApiKey: {str(e)}")
 
 # Use cloud models if API keys are available, otherwise use local Ollama
-if has_together_api_key and has_cerebras_api_key and has_gemini_api_key:
-    logger.info("Using cloud LLM providers (Together AI, Cerebras, and Gemini)")
+if has_gemini_api_key:
+    logger.info("Using cloud LLM provider (Gemini)")
     LLM_AGENT = LLM(
-        model="gemini/gemini-2.5-flash-preview-04-17",
+        model="gemini/gemini-2.5-flash",
         temperature=0.8,
         max_tokens=2000,
         top_p=0.9,
@@ -222,7 +201,7 @@ if has_together_api_key and has_cerebras_api_key and has_gemini_api_key:
     )
 
     LLM_DELEGATOR = LLM(
-        model="gemini/gemini-2.5-flash-preview-04-17",
+        model="gemini/gemini-2.5-flash",
         temperature=0.8,
         max_tokens=2000,
         top_p=0.9,
@@ -234,12 +213,10 @@ if has_together_api_key and has_cerebras_api_key and has_gemini_api_key:
         presence_penalty=None,
     )
 
-    embeddings = TogetherEmbeddings(
-        model_name="togethercomputer/m2-bert-80M-8k-retrieval",
-        api_key=together_api_key,
+    embeddings = OllamaEmbeddings(
+        model=AppConfig.OLLAMA_EMBEDDING_MODEL,
+        base_url=AppConfig.OLLAMA_URL,
     )
-
-    TOGETHER_CLIENT = Together(api_key=together_api_key)
 else:
     logger.info("Using local Ollama models")
     LLM_AGENT = ChatOllama(
@@ -257,8 +234,6 @@ else:
         model=AppConfig.OLLAMA_EMBEDDING_MODEL,
         base_url=AppConfig.OLLAMA_URL,
     )
-
-    TOGETHER_CLIENT = None
 
 # Vector store path for persistence
 VECTOR_STORE_PATH = os.path.join(os.getcwd(), "data", "vector_store")
