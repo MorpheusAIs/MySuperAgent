@@ -57,7 +57,7 @@ DEFAULT_TASK_OUTPUT = "Unable to complete this task within the allowed constrain
 # Flow implementation
 # --------------------------------------------------------------------- #
 class OrchestrationFlow(Flow[OrchestrationState]):
-    def __init__(self, standard_model: str = "gemini/gemini-2.5-flash-preview-04-17", request_id: Optional[str] = None):
+    def __init__(self, standard_model: str = "gemini/gemini-2.5-flash", request_id: Optional[str] = None):
         super().__init__()
         self.request_id = request_id
         self.standard_model = standard_model
