@@ -67,7 +67,8 @@ export interface ChatContextType {
   sendMessage: (
     message: string,
     file: File | null,
-    useResearch?: boolean
+    useResearch?: boolean,
+    conversationId?: string
   ) => Promise<void>;
   refreshMessages: () => Promise<void>;
   refreshAllTitles: () => Promise<void>;

@@ -49,25 +49,23 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
       // Switch to this new conversation but keep jobs view
       await setCurrentConversation(newConversationId);
       
-      // Small delay to ensure state has updated before sending message
-      setTimeout(() => {
-        // Send the message in the background (non-blocking)
-        sendMessage(message, file, useResearch ?? false)
-          .then(() => {
-            console.log("Message sent successfully for conversation:", newConversationId);
-            // Refresh conversations list to show updated status
-            if (typeof window !== 'undefined') {
-              setConversations(getAllConversations());
-            }
-          })
-          .catch((error) => {
-            console.error("Error sending message:", error);
-            // Refresh conversations list to show updated status
-            if (typeof window !== 'undefined') {
-              setConversations(getAllConversations());
-            }
-          });
-      }, 50);
+      // Send the message in the background (non-blocking)
+      // Pass the newConversationId directly to avoid race conditions with state updates
+      sendMessage(message, file, useResearch ?? false, newConversationId)
+        .then(() => {
+          console.log("Message sent successfully for conversation:", newConversationId);
+          // Refresh conversations list to show updated status
+          if (typeof window !== 'undefined') {
+            setConversations(getAllConversations());
+          }
+        })
+        .catch((error) => {
+          console.error("Error sending message:", error);
+          // Refresh conversations list to show updated status
+          if (typeof window !== 'undefined') {
+            setConversations(getAllConversations());
+          }
+        });
       
       // Refresh conversations list immediately to show the new job
       if (typeof window !== 'undefined') {
