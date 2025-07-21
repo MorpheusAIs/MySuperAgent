@@ -244,11 +244,13 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     async (
       message: string,
       file: File | null,
-      useResearch: boolean = false
+      useResearch: boolean = false,
+      conversationId?: string
     ) => {
       if (!message && !file) return;
 
-      const { currentConversationId } = state;
+      // Use provided conversationId or fall back to current conversation from state
+      const targetConversationId = conversationId || state.currentConversationId;
       dispatch({ type: "SET_LOADING", payload: true });
 
       try {
@@ -265,7 +267,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
           dispatch({
             type: "ADD_OPTIMISTIC_MESSAGE",
             payload: {
-              conversationId: currentConversationId,
+              conversationId: targetConversationId,
               message: optimisticMessage,
             },
           });
@@ -289,7 +291,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
               getHttpClient(),
               chainId,
               address || "",
-              currentConversationId,
+              targetConversationId,
               (event: StreamingEvent) => {
                 // Handle streaming events
                 console.log("Received streaming event:", event);
@@ -396,7 +398,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
                 dispatch({
                   type: "ADD_OPTIMISTIC_MESSAGE",
                   payload: {
-                    conversationId: currentConversationId,
+                    conversationId: targetConversationId,
                     message: response,
                   },
                 });
@@ -438,7 +440,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
               getHttpClient(),
               chainId,
               address || "",
-              currentConversationId,
+              targetConversationId,
               useResearch
             );
 
@@ -447,7 +449,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
           }
         } else {
           // File upload flow
-          await uploadFile(file, getHttpClient(), currentConversationId);
+          await uploadFile(file, getHttpClient(), targetConversationId);
           // Refresh messages to get server response
           await refreshMessages();
         }
@@ -474,7 +476,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         });
       }
     },
-    [state.currentConversationId, chainId, address, refreshMessages]
+    [chainId, address, refreshMessages, state.currentConversationId]
   );
 
   // Delete conversation
