@@ -10,10 +10,7 @@ export async function initializeAgents() {
 
   initializationPromise = (async () => {
     if (!AgentRegistry.isInitialized()) {
-      console.log('[Agents] Initializing agent system...');
       await AgentRegistry.initialize();
-      console.log('[Agents] Agent system initialized successfully');
-      console.log('[Agents] Available agents:', AgentRegistry.getAvailableAgents().map(a => a.name));
     }
   })();
 
@@ -22,5 +19,5 @@ export async function initializeAgents() {
 
 // Initialize immediately when this module is imported
 initializeAgents().catch(error => {
-  console.error('[Agents] Failed to initialize agents:', error);
+  console.error('Failed to initialize agents:', error);
 });

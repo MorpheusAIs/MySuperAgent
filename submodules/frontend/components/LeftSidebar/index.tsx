@@ -1,156 +1,85 @@
-import React, { FC, useEffect, useState, useRef } from "react";
+import React, { FC, useState } from "react";
 import {
   Box,
-  Input,
-  InputGroup,
-  InputLeftElement,
   Select,
   Text,
   VStack,
-  Popover,
-  PopoverContent,
-  PopoverBody,
-  PopoverArrow,
-  PopoverTrigger,
+  Divider,
+  Tooltip,
+  Flex,
 } from "@chakra-ui/react";
 import {
   IconChevronLeft,
   IconChevronRight,
-  IconPlus,
-  IconSearch,
-  IconRefresh,
-  IconTrash,
-  IconPencil,
+  IconBrandDiscord,
+  IconBrandTwitter,
+  IconBrandGithub,
+  IconQuestionMark,
+  IconWorld,
 } from "@tabler/icons-react";
-import { useRouter } from "next/router";
-import { ProfileMenu } from "./ProfileMenu";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { Workflows } from "@/components/Workflows";
+import { ApiCredentialsButton } from "@/components/Credentials/Button";
+import { CDPWalletsButton } from "@/components/CDPWallets/Button";
+import { SettingsButton } from "@/components/Settings";
+import { SyncButton } from "@/components/Sync/Button";
+import { StyledTooltip } from "../Common/StyledTooltip";
 import styles from "./index.module.css";
-
-import { useChatContext } from "@/contexts/chat/useChatContext";
-import {
-  getAllConversations,
-  createNewConversation,
-  clearMessagesHistory,
-  updateConversationTitle,
-} from "@/contexts/chat";
-import { Conversation } from "@/services/types";
 
 export type LeftSidebarProps = {
   isSidebarOpen: boolean;
   onToggleSidebar: (open: boolean) => void;
 };
 
+const MenuSection = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <Box mb={2}>
+    <Text
+      color="gray.400"
+      fontSize="sm"
+      px={3}
+      py={2}
+      textTransform="uppercase"
+    >
+      {title}
+    </Text>
+    {children}
+  </Box>
+);
+
+const ExternalLinkMenuItem = ({
+  icon: Icon,
+  title,
+  href,
+}: {
+  icon: React.ElementType;
+  title: string;
+  href: string;
+}) => (
+  <div
+    className={styles.externalMenuItem}
+    onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
+  >
+    <Flex align="center" gap={3}>
+      {Icon && <Icon size={20} />}
+      <Text>{title}</Text>
+    </Flex>
+  </div>
+);
+
 export const LeftSidebar: FC<LeftSidebarProps> = ({
   isSidebarOpen,
   onToggleSidebar,
 }) => {
-  const {
-    state,
-    setCurrentConversation,
-    deleteChat,
-    refreshMessages,
-    refreshAllTitles,
-  } = useChatContext();
-  const { currentConversationId, conversationTitles } = state;
-
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState("llama3.2:3b");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
-  const editInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
   const ToggleIcon = isSidebarOpen ? IconChevronLeft : IconChevronRight;
 
   const modelOptions = [{ value: "llama3.3:70b", label: "Llama 3.3 (70B)" }];
-
-  const fetchConversations = () => {
-    try {
-      const conversationsData = getAllConversations();
-      const updatedConversations = conversationsData.map((conv) => ({
-        ...conv,
-        name: conversationTitles[conv.id] || conv.name,
-      }));
-      setConversations(updatedConversations);
-    } catch (error) {
-      console.error("Failed to fetch conversations:", error);
-    }
-  };
-
-  const handleCreateNewConversation = async () => {
-    setIsLoading(true);
-    try {
-      const newConversationId = createNewConversation();
-      fetchConversations();
-      setCurrentConversation(newConversationId);
-    } catch (error) {
-      console.error("Failed to create new conversation:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteConversation = async (conversationId: string) => {
-    try {
-      await deleteChat(conversationId);
-      fetchConversations();
-      if (conversationId === currentConversationId) {
-        setCurrentConversation("default");
-      }
-    } catch (error) {
-      console.error("Failed to delete conversation:", error);
-    }
-  };
-
-  const handleClearChatHistory = async () => {
-    try {
-      clearMessagesHistory(currentConversationId);
-      router.reload();
-    } catch (error) {
-      console.error("Failed to clear chat history:", error);
-    }
-  };
-
-  const handleStartEdit = (conversation: Conversation, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingId(conversation.id);
-    setEditValue(conversation.name);
-    setTimeout(() => editInputRef.current?.focus(), 0);
-  };
-
-  const handleSaveEdit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!editingId || !editValue.trim()) return;
-
-    try {
-      await updateConversationTitle(editingId, editValue.trim());
-      await refreshAllTitles();
-    } catch (error) {
-      console.error("Failed to update conversation title:", error);
-    }
-    setEditingId(null);
-  };
-
-  useEffect(() => {
-    fetchConversations();
-  }, [conversationTitles, currentConversationId]);
-
-  // Disabled auto-refresh polling - was causing excessive API calls
-  // useEffect(() => {
-  //   const intervalId = setInterval(() => {
-  //     refreshMessages();
-  //   }, 2000);
-
-  //   return () => clearInterval(intervalId);
-  // }, [refreshMessages]);
-
-  const filteredConversations = conversations.filter(
-    (conv) =>
-      conv?.name
-        ?.toLowerCase?.()
-        ?.includes(searchQuery?.toLowerCase?.() ?? "") ?? false
-  );
 
   return (
     <div
@@ -160,97 +89,99 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
     >
       <div className={styles.sidebar}>
         <div className={styles.container}>
-          <div className={styles.searchContainer}>
-            <InputGroup>
-              <InputLeftElement>
-                <IconSearch className={styles.searchIcon} size={16} />
-              </InputLeftElement>
-              <Input
-                placeholder="Search chats..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={styles.searchInput}
-              />
-            </InputGroup>
-            <button
-              className={styles.newChatIcon}
-              onClick={handleCreateNewConversation}
-              disabled={isLoading}
-            >
-              <IconPlus size={16} />
-            </button>
-          </div>
-
-          <div className={styles.mainContent}>
-            {filteredConversations.map((conversation) => (
-              <div
-                key={conversation.id}
-                className={`${styles.conversationItem} ${
-                  currentConversationId === conversation.id
-                    ? styles.conversationActive
-                    : ""
-                }`}
-                onClick={() => setCurrentConversation(conversation.id)}
-              >
-                {editingId === conversation.id ? (
-                  <form
-                    onSubmit={handleSaveEdit}
-                    style={{ flex: 1 }}
-                    onClick={(e) => e.stopPropagation()}
+          <ConnectButton.Custom>
+            {({ account }) => (
+              <div className={styles.mainContent}>
+                <MenuSection title="Basic">
+                  <Tooltip
+                    isDisabled={!!account}
+                    label="Connect your wallet to access personalized settings and configurations. These settings are unique to each wallet address and help customize your experience."
+                    placement="right"
                   >
-                    <input
-                      ref={editInputRef}
-                      className={styles.titleInput}
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={handleSaveEdit}
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") {
-                          setEditingId(null);
-                        }
-                      }}
-                    />
-                  </form>
-                ) : (
-                  <span className={styles.conversationName}>
-                    {conversation.name}
-                  </span>
-                )}
+                    <div className={styles.menuItem}>
+                      <Box
+                        pointerEvents={account ? "auto" : "none"}
+                        opacity={account ? 1 : 0.5}
+                      >
+                        <SettingsButton />
+                      </Box>
+                    </div>
+                  </Tooltip>
+                </MenuSection>
 
-                <div className={styles.buttonGroup}>
-                  {conversation.id !== "default" && (
-                    <button
-                      className={styles.editButton}
-                      onClick={(e) => handleStartEdit(conversation, e)}
-                    >
-                      <IconPencil size={16} />
-                    </button>
-                  )}
-                  {conversation.id === "default" ? (
-                    <button
-                      className={styles.resetButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleClearChatHistory();
-                      }}
-                    >
-                      <IconRefresh size={16} />
-                    </button>
-                  ) : (
-                    <button
-                      className={styles.deleteButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteConversation(conversation.id);
-                      }}
-                    >
-                      <IconTrash size={16} />
-                    </button>
-                  )}
-                </div>
+                <Divider my={1} borderColor="whiteAlpha.200" />
+
+                <MenuSection title="Advanced">
+                  <Tooltip
+                    isDisabled={!!account}
+                    label="A wallet connection is required to access advanced features like workflows, API integrations, device sync, and CDP wallets."
+                    placement="right"
+                  >
+                    <div>
+                      <Box
+                        pointerEvents={account ? "auto" : "none"}
+                        opacity={account ? 1 : 0.5}
+                        pl={1}
+                      >
+                        <StyledTooltip
+                          label="Scheduled workflows that handle automated trades, swaps, and more are coming soon. Use cases include automated DCA strategies, signal-driven quant trading, and more"
+                          placement="right"
+                        >
+                          <div className={styles.menuItem}>
+                            <Workflows />
+                          </div>
+                        </StyledTooltip>
+                        <div className={styles.menuItem}>
+                          <ApiCredentialsButton />
+                        </div>
+                        <div className={styles.menuItem}>
+                          <SyncButton />
+                        </div>
+                        <StyledTooltip
+                          label="Coinbase Developer Platform's managed wallets integration coming soon. This will enable secure key management and automated CDP interactions such as trading, borrowing, and more."
+                          placement="right"
+                        >
+                          <div className={styles.menuItem}>
+                            <CDPWalletsButton />
+                          </div>
+                        </StyledTooltip>
+                      </Box>
+                    </div>
+                  </Tooltip>
+                </MenuSection>
+
+                <Divider my={1} borderColor="whiteAlpha.200" />
+
+                <MenuSection title="About">
+                  <ExternalLinkMenuItem
+                    icon={IconBrandDiscord}
+                    title="Join our Discord community!"
+                    href="https://discord.gg/Dc26EFb6JK"
+                  />
+                  <ExternalLinkMenuItem
+                    icon={IconBrandTwitter}
+                    title="Follow us on Twitter"
+                    href="https://twitter.com/MorpheusAIs"
+                  />
+                  <ExternalLinkMenuItem
+                    icon={IconBrandGithub}
+                    title="Become a contributor"
+                    href="https://github.com/MorpheusAIs/Docs"
+                  />
+                  <ExternalLinkMenuItem
+                    icon={IconWorld}
+                    title="Learn about Morpheus"
+                    href="https://mor.org/"
+                  />
+                  <ExternalLinkMenuItem
+                    icon={IconQuestionMark}
+                    title="Help Center & FAQs"
+                    href="https://morpheusai.gitbook.io/morpheus/faqs"
+                  />
+                </MenuSection>
               </div>
-            ))}
-          </div>
+            )}
+          </ConnectButton.Custom>
 
           <div className={styles.footer}>
             <VStack spacing={4} align="stretch" width="100%">
@@ -269,18 +200,51 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                     ))}
                   </Select>
                 </Box>
-                <div className={styles.comingSoonContainer}>
-                  <Text className={styles.costInfo}>Coming soon</Text>
-                  <Text className={styles.modelNote}>
-                    Stake your Morpheus tokens to access even more powerful
-                    models, create your own agents, and leverage builder keys to
-                    automatically enable advanced agents.
-                  </Text>
+                <div className={styles.creditsContainer}>
+                  <Text className={styles.creditsLabel}>Morpheus Credits Balance</Text>
+                  <Text className={styles.creditsAmount}>1,250 MOR</Text>
                 </div>
               </Box>
             </VStack>
 
-            <ProfileMenu />
+            <ConnectButton.Custom>
+              {({
+                account,
+                chain,
+                openAccountModal,
+                openChainModal,
+                openConnectModal,
+                mounted,
+              }) => {
+                const ready = mounted;
+                const connected = ready && account && chain;
+
+                return (
+                  <div
+                    {...(!ready && {
+                      "aria-hidden": true,
+                      style: {
+                        opacity: 0,
+                        pointerEvents: "none",
+                        userSelect: "none",
+                      },
+                    })}
+                    className={styles.connectButtonWrapper}
+                  >
+                    <div
+                      className={styles.profileContainer}
+                      onClick={connected ? openAccountModal : openConnectModal}
+                    >
+                      <div className={styles.accountInfo}>
+                        {connected
+                          ? "Active session logged in as " + account.displayName
+                          : "Connect Wallet to Enable Full Functionality"}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }}
+            </ConnectButton.Custom>
           </div>
         </div>
       </div>

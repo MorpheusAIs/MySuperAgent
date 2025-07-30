@@ -26,11 +26,13 @@
     "@mastra/core": "^0.12.0",
     "@mastra/libsql": "^0.12.0",
     "@mastra/loggers": "^0.10.5",
+    "@mastra/mcp": "^0.10.8",
     "@rainbow-me/rainbowkit": "^2.0.5",
     "@tabler/icons-react": "^3.1.0",
     "@tanstack/react-query": "^5.28.4",
     "@types/uuid": "^10.0.0",
     "@vercel/analytics": "^1.5.0",
+    "ai": "^4.3.19",
     "axios": "^1.6.8",
     "ethers": "^6.13.5",
     "flags": "^4.0.0",
@@ -44,7 +46,8 @@
     "react-markdown": "^9.0.0",
     "uuid": "^11.1.0",
     "viem": "^2.8.12",
-    "wagmi": "^2.5.11"
+    "wagmi": "^2.5.11",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@swc/cli": "^0.3.12",

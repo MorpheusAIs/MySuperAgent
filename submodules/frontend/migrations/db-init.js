@@ -65,7 +65,7 @@ async function initializeDatabase() {
         
         -- Optional scheduling fields
         is_scheduled BOOLEAN DEFAULT FALSE,
-        schedule_type VARCHAR(20) DEFAULT NULL CHECK (schedule_type IS NULL OR schedule_type IN ('once', 'daily', 'weekly', 'monthly', 'custom')),
+        schedule_type VARCHAR(20) DEFAULT NULL CHECK (schedule_type IS NULL OR schedule_type IN ('once', 'hourly', 'daily', 'weekly', 'custom')),
         schedule_time TIMESTAMP WITH TIME ZONE DEFAULT NULL,
         next_run_time TIMESTAMP WITH TIME ZONE DEFAULT NULL,
         interval_days INTEGER DEFAULT NULL,

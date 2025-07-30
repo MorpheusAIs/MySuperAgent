@@ -85,6 +85,15 @@ export interface CrewResponseMetadata {
   final_answer_actions?: import('./FinalAnswerAction.types').FinalAnswerAction[];
 
   /**
+   * Agent selection debugging information
+   */
+  selected_agent?: string;
+  selection_method?: 'user_selected' | 'intelligent' | 'intelligent_fallback' | 'unknown';
+  user_requested_agents?: string[];
+  selected_agents?: string[];
+  available_agents?: string[];
+
+  /**
    * Any additional metadata fields
    */
   [key: string]: any;

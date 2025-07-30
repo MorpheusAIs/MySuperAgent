@@ -78,6 +78,7 @@ export interface ChatContextType {
   ) => Promise<void>;
   refreshMessages: () => Promise<void>;
   refreshAllTitles: () => Promise<void>;
+  refreshJobs: () => Promise<void>;
   deleteChat: (conversationId: string) => Promise<void>;
   setCurrentView: (view: 'jobs' | 'chat') => void;
 }

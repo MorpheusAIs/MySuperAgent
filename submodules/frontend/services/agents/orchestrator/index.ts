@@ -23,13 +23,15 @@ export class Orchestrator {
           }
         }
         
-        // If no selected agent is available, fall back to intelligent selection
+        // If no selected agent is available, fall back to LLM-based intelligent selection
         if (!selectedAgent) {
-          selectedAgent = AgentRegistry.selectBestAgent(request.prompt.content);
+          const selectionResult = await AgentRegistry.selectBestAgentWithLLM(request.prompt.content);
+          selectedAgent = selectionResult.agent;
         }
       } else {
-        // Use intelligent agent selection
-        selectedAgent = AgentRegistry.selectBestAgent(request.prompt.content);
+        // Use LLM-based intelligent agent selection
+        const selectionResult = await AgentRegistry.selectBestAgentWithLLM(request.prompt.content);
+        selectedAgent = selectionResult.agent;
       }
 
       if (!selectedAgent) {
@@ -65,47 +67,53 @@ export class Orchestrator {
 
   async streamOrchestration(request: ChatRequest, res: any): Promise<void> {
     try {
-      console.log('StreamOrchestration - AgentRegistry initialized:', AgentRegistry.isInitialized());
-      console.log('StreamOrchestration - Available agents:', AgentRegistry.getAvailableAgents());
-      console.log('StreamOrchestration - Request selectedAgents:', request.selectedAgents);
-      console.log('StreamOrchestration - Request prompt:', request.prompt.content);
-
+      console.log('[ORCHESTRATOR DEBUG] Starting orchestration for request:', {
+        prompt: request.prompt.content.substring(0, 100) + '...',
+        selectedAgents: request.selectedAgents,
+        useResearch: request.useResearch
+      });
+      
       // Determine which agent(s) to use for streaming
       let selectedAgent;
+      let selectionMethod = 'unknown';
+      
       if (request.selectedAgents && request.selectedAgents.length > 0) {
+        console.log('[ORCHESTRATOR DEBUG] Trying to use user-selected agents:', request.selectedAgents);
         // Try to find the first available agent from the selected list
-        console.log('Looking for available agents from selection:', request.selectedAgents);
-        
         for (const agentName of request.selectedAgents) {
           selectedAgent = AgentRegistry.get(agentName);
           if (selectedAgent) {
-            console.log('Found available agent:', agentName);
+            selectionMethod = 'user_selected';
+            console.log('[ORCHESTRATOR DEBUG] Found user-selected agent:', agentName);
             break;
+          } else {
+            console.log('[ORCHESTRATOR DEBUG] User-selected agent not found:', agentName);
           }
         }
         
-        // If no selected agent is available, fall back to intelligent selection
+        // If no selected agent is available, fall back to LLM-based intelligent selection
         if (!selectedAgent) {
-          console.log('No selected agents available, falling back to intelligent selection');
-          selectedAgent = AgentRegistry.selectBestAgent(request.prompt.content);
-          console.log('Selected agent from intelligent fallback:', selectedAgent?.getDefinition().name);
+          console.log('[ORCHESTRATOR DEBUG] No user-selected agents available, falling back to LLM-based intelligent selection');
+          const selectionResult = await AgentRegistry.selectBestAgentWithLLM(request.prompt.content);
+          selectedAgent = selectionResult.agent;
+          selectionMethod = 'llm_intelligent_fallback';
+          console.log('[ORCHESTRATOR DEBUG] LLM fallback selection reasoning:', selectionResult.reasoning);
         }
       } else {
-        // Use intelligent agent selection
-        console.log('Using intelligent agent selection');
-        selectedAgent = AgentRegistry.selectBestAgent(request.prompt.content);
-        console.log('Selected agent from intelligent selection:', selectedAgent?.getDefinition().name);
+        console.log('[ORCHESTRATOR DEBUG] No agents pre-selected, using LLM-based intelligent selection');
+        // Use LLM-based intelligent agent selection
+        const selectionResult = await AgentRegistry.selectBestAgentWithLLM(request.prompt.content);
+        selectedAgent = selectionResult.agent;
+        selectionMethod = 'llm_intelligent';
+        console.log('[ORCHESTRATOR DEBUG] LLM selection reasoning:', selectionResult.reasoning);
       }
 
       if (!selectedAgent) {
-        console.error('NO AGENT SELECTED!');
-        console.error('AgentRegistry state:', {
-          initialized: AgentRegistry.isInitialized(),
-          availableAgents: AgentRegistry.getAvailableAgents(),
-          totalAgents: AgentRegistry.getAll().length
-        });
         throw new Error('No suitable agent found');
       }
+      
+      const selectedAgentName = selectedAgent.getDefinition().name;
+      console.log('[ORCHESTRATOR DEBUG] Final selected agent:', selectedAgentName, 'Selection method:', selectionMethod);
 
       // Convert to Mastra message format
       const messages = [];
@@ -215,11 +223,15 @@ export class Orchestrator {
           }
         })}\n\n`);
 
-        // Emit stream complete with final metadata
+        // Emit stream complete with final metadata including debugging info
         const metadata = {
           collaboration: "orchestrated",
           contributing_agents: contributingAgents,
           subtask_outputs: subtaskOutputs,
+          selected_agent: selectedAgentName,
+          selection_method: selectionMethod,
+          user_requested_agents: request.selectedAgents || [],
+          available_agents: AgentRegistry.getAvailableAgents().map(a => a.name),
           token_usage: globalTelemetry.total_token_usage.total > 0 ? {
             total_tokens: globalTelemetry.total_token_usage.total,
             prompt_tokens: globalTelemetry.total_token_usage.prompt,
@@ -229,6 +241,8 @@ export class Orchestrator {
             duration: globalTelemetry.total_processing_time,
           } : undefined,
         };
+        
+        console.log('[ORCHESTRATOR DEBUG] Final response metadata:', metadata);
 
         res.write(`data: ${JSON.stringify({
           type: 'stream_complete',
@@ -242,6 +256,7 @@ export class Orchestrator {
         res.end();
 
       } else {
+        console.log('[ORCHESTRATOR DEBUG] Agent does not support streaming, using regular chat');
         // Fallback to regular chat if streaming not available
         const response = await selectedAgent.chat({
           prompt: request.prompt,
@@ -250,17 +265,27 @@ export class Orchestrator {
 
         const agentName = selectedAgent.getDefinition().name;
         
-        // Send as complete event for non-streaming
+        // Send as complete event for non-streaming with debugging info
         res.write(`data: ${JSON.stringify({
-          type: 'complete',
-          agent: agentName,
-          response: {
-            responseType: 'success',
-            content: response.content || 'No response generated',
-            metadata: {
-              ...response.metadata,
-              selectedAgent: agentName,
-            }
+          type: 'stream_complete',
+          data: {
+            final_answer: response.content || 'No response generated',
+            collaboration: "single_agent",
+            contributing_agents: [agentName],
+            selected_agent: agentName,
+            selection_method: selectionMethod,
+            user_requested_agents: request.selectedAgents || [],
+            available_agents: AgentRegistry.getAvailableAgents().map(a => a.name),
+            subtask_outputs: [{
+              subtask: 'Direct agent response',
+              output: response.content || 'No response generated',
+              agents: [agentName],
+              telemetry: {
+                processing_time: { duration: 0 },
+                token_usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+              }
+            }],
+            timestamp: new Date().toISOString()
           }
         })}\n\n`);
 

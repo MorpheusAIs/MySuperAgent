@@ -21,11 +21,10 @@ export default async function handler(
       chatRequest.requestId = uuidv4();
     }
     
-
-    // Only support streaming for research/multi-agent flow
-    if (!chatRequest.useResearch) {
+    // Check if request has required fields
+    if (!chatRequest.prompt?.content) {
       return res.status(400).json({ 
-        error: 'Streaming is only supported for research mode' 
+        error: 'Missing prompt content' 
       });
     }
 

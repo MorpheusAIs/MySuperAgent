@@ -6,6 +6,7 @@ import { Command } from "./Commands";
 import { CommandsPortal } from "./CommandsPortal";
 import { ToolsButton } from "@/components/Tools/ToolsButton";
 import { ScheduleButton } from "@/components/ScheduleButton";
+import { InlineSchedule } from "./InlineSchedule";
 import { isFeatureEnabled } from "@/services/featureFlags";
 import styles from "./index.module.css";
 import BASE_URL from "@/services/constants";
@@ -38,6 +39,7 @@ export const ChatInput: FC<ChatInputProps> = ({
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
   const [isMobile] = useMediaQuery("(max-width: 768px)");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -145,6 +147,7 @@ export const ChatInput: FC<ChatInputProps> = ({
       // Clear input immediately to improve UX
       setMessage("");
       setFile(null);
+      setShowSchedule(false);
 
       // Submit the message with research always enabled
       await onSubmit(messageToSend, fileToSend, true);
@@ -153,6 +156,15 @@ export const ChatInput: FC<ChatInputProps> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleToggleSchedule = () => {
+    setShowSchedule(!showSchedule);
+  };
+
+  const handleScheduleJobCreated = (jobId: string) => {
+    setShowSchedule(false);
+    setMessage("");
   };
 
 
@@ -212,10 +224,6 @@ export const ChatInput: FC<ChatInputProps> = ({
                 size="sm"
                 onClick={handleFileUpload}
               />
-              <ScheduleButton
-                message={message}
-                disabled={isSubmitting || disabled || !message.trim()}
-              />
               {isFeatureEnabled('feature.prefilled_options') && (
                 <Button
                   leftIcon={<QuestionOutlineIcon />}
@@ -228,6 +236,12 @@ export const ChatInput: FC<ChatInputProps> = ({
                   Help
                 </Button>
               )}
+              <ScheduleButton
+                message={message}
+                disabled={isSubmitting || disabled || !message.trim()}
+                isExpanded={showSchedule}
+                onToggle={handleToggleSchedule}
+              />
             </div>
 
             {/* Right aligned tools button */}
@@ -237,6 +251,15 @@ export const ChatInput: FC<ChatInputProps> = ({
               </div>
             )}
           </div>
+
+          {/* Inline Schedule Component */}
+          {showSchedule && (
+            <InlineSchedule
+              message={message}
+              onJobCreated={handleScheduleJobCreated}
+              onClose={() => setShowSchedule(false)}
+            />
+          )}
         </div>
 
         {/* Hidden file input */}

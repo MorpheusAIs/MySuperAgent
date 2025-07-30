@@ -36,7 +36,7 @@ export interface Job {
   
   // Optional scheduling fields
   is_scheduled: boolean;
-  schedule_type?: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom' | null;
+  schedule_type?: 'once' | 'hourly' | 'daily' | 'weekly' | 'custom' | null;
   schedule_time?: Date | null;
   next_run_time?: Date | null;
   interval_days?: number | null;
@@ -347,10 +347,28 @@ export class MessageDB {
     
     const result = await pool.query(query, values);
     const row = result.rows[0];
+    
+    // Safely parse content and metadata
+    let content, metadata;
+    
+    try {
+      content = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
+    } catch (e) {
+      // If parsing fails, treat as plain string
+      content = row.content;
+    }
+    
+    try {
+      metadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+    } catch (e) {
+      // If parsing fails, use empty object
+      metadata = {};
+    }
+    
     return {
       ...row,
-      content: JSON.parse(row.content),
-      metadata: JSON.parse(row.metadata)
+      content,
+      metadata
     };
   }
 
@@ -417,10 +435,28 @@ export class MessageDB {
     
     const result = await pool.query(query, [messageId, ...values]);
     const row = result.rows[0];
+    
+    // Safely parse content and metadata
+    let content, metadata;
+    
+    try {
+      content = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
+    } catch (e) {
+      // If parsing fails, treat as plain string
+      content = row.content;
+    }
+    
+    try {
+      metadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+    } catch (e) {
+      // If parsing fails, use empty object
+      metadata = {};
+    }
+    
     return {
       ...row,
-      content: JSON.parse(row.content),
-      metadata: JSON.parse(row.metadata)
+      content,
+      metadata
     };
   }
 }

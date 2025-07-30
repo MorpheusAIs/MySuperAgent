@@ -31,6 +31,8 @@ import {
   FaMemory,
   FaChevronDown,
   FaChevronUp,
+  FaUsers,
+  FaInfoCircle,
 } from "react-icons/fa";
 import { AiOutlineDeploymentUnit } from "react-icons/ai";
 import { RiTeamLine, RiFlowChart } from "react-icons/ri";
@@ -239,6 +241,10 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
   content,
   metadata,
 }) => {
+  // DEBUG: Log all metadata for debugging
+  console.log('[CrewResponseMessage DEBUG] Full metadata received:', metadata);
+  console.log('[CrewResponseMessage DEBUG] Metadata keys:', metadata ? Object.keys(metadata) : 'No metadata');
+  
   // Initialize all tasks as collapsed (empty set)
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
   const [showDetails, setShowDetails] = useState(false);
@@ -390,14 +396,6 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
     }
   };
 
-  if (!metadata) {
-    return (
-      <ReactMarkdown components={MarkdownComponents}>
-        {displayedContent}
-      </ReactMarkdown>
-    );
-  }
-
   const toggleTask = (taskIndex: number) => {
     const newExpanded = new Set(expandedTasks);
     if (newExpanded.has(taskIndex)) {
@@ -409,20 +407,20 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
   };
 
   const totalAgents =
-    metadata.subtask_outputs?.reduce(
+    metadata?.subtask_outputs?.reduce(
       (acc: number, task) => acc + (task.agents?.length || 0),
       0
     ) || 0;
 
   const totalTime =
-    metadata.subtask_outputs?.reduce(
+    metadata?.subtask_outputs?.reduce(
       (acc: number, task) =>
         acc + (task.telemetry?.processing_time?.duration || 0),
       0
     ) || 0;
 
   const totalTokens =
-    metadata.subtask_outputs?.reduce(
+    metadata?.subtask_outputs?.reduce(
       (acc: number, task) =>
         acc + (task.telemetry?.token_usage?.total_tokens || 0),
       0
@@ -430,7 +428,7 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
 
   // Get all unique agents
   const allAgents =
-    metadata.subtask_outputs?.reduce((acc: string[], task) => {
+    metadata?.subtask_outputs?.reduce((acc: string[], task) => {
       if (task.agents) {
         task.agents.forEach((agent) => {
           if (!acc.includes(agent)) {
@@ -441,6 +439,14 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
       return acc;
     }, []) || [];
 
+  if (!metadata) {
+    return (
+      <ReactMarkdown components={MarkdownComponents}>
+        {displayedContent}
+      </ReactMarkdown>
+    );
+  }
+  
   return (
     <Box className={styles.crewResponseContainer}>
       {/* Main Response */}
@@ -489,6 +495,92 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
               })}
             </Box>
           )}
+      </Box>
+
+      {/* Agent Selection Debug Info - ALWAYS SHOW FOR DEBUGGING */}
+      <Box
+        bg="gray.900"
+        borderRadius="lg"
+        p={4}
+        border="1px solid"
+        borderColor="blue.700"
+        mt={4}
+      >
+        <HStack spacing={2} mb={3}>
+          <Icon as={FaInfoCircle} boxSize={4} color="blue.400" />
+          <Text fontSize="sm" fontWeight="bold" color="blue.200">
+            Agent Selection Debug
+          </Text>
+        </HStack>
+        
+        <VStack align="stretch" spacing={2} fontSize="xs">
+          <HStack justify="space-between">
+            <Text color="gray.400">Raw Metadata Keys:</Text>
+            <Text color="gray.300" fontSize="xs">
+              {metadata ? Object.keys(metadata).join(', ') : 'No metadata'}
+            </Text>
+          </HStack>
+          
+          <VStack align="stretch" spacing={2} fontSize="xs">
+            {metadata.selected_agent && (
+              <HStack justify="space-between">
+                <Text color="gray.400">Selected Agent:</Text>
+                <Badge colorScheme="blue" fontSize="xs">{metadata.selected_agent}</Badge>
+              </HStack>
+            )}
+            
+            {metadata.selection_method && (
+              <HStack justify="space-between">
+                <Text color="gray.400">Selection Method:</Text>
+                <Badge 
+                  colorScheme={metadata.selection_method === 'user_selected' ? 'green' : 
+                             metadata.selection_method === 'intelligent_fallback' ? 'orange' : 'purple'} 
+                  fontSize="xs"
+                >
+                  {metadata.selection_method.replace('_', ' ')}
+                </Badge>
+              </HStack>
+            )}
+            
+            {metadata.user_requested_agents && metadata.user_requested_agents.length > 0 && (
+              <HStack justify="space-between" align="start">
+                <Text color="gray.400">Requested Agents:</Text>
+                <VStack align="end" spacing={1}>
+                  {metadata.user_requested_agents.map((agent, idx) => (
+                    <Badge key={idx} colorScheme="yellow" fontSize="xs">{agent}</Badge>
+                  ))}
+                </VStack>
+              </HStack>
+            )}
+            
+            {metadata.contributing_agents && metadata.contributing_agents.length > 0 && (
+              <HStack justify="space-between" align="start">
+                <Text color="gray.400">Contributing Agents:</Text>
+                <VStack align="end" spacing={1}>
+                  {metadata.contributing_agents.map((agent, idx) => (
+                    <Badge key={idx} colorScheme="green" fontSize="xs">{agent}</Badge>
+                  ))}
+                </VStack>
+              </HStack>
+            )}
+            
+            {metadata.available_agents && metadata.available_agents.length > 0 && (
+              <Box>
+                <HStack justify="space-between" mb={1}>
+                  <Text color="gray.400">Available Agents:</Text>
+                  <Text color="gray.500" fontSize="xs">{metadata.available_agents.length} total</Text>
+                </HStack>
+                <Box maxH="100px" overflowY="auto" p={2} bg="gray.800" borderRadius="md">
+                  <Box display="flex" flexWrap="wrap" gap={1}>
+                    {metadata.available_agents.map((agent, idx) => (
+                      <Badge key={idx} colorScheme="gray" fontSize="xs" variant="outline">{agent}</Badge>
+                    ))}
+                  </Box>
+                </Box>
+              </Box>
+            )}
+          </VStack>
+        </VStack>
       </Box>
 
       {/* Orchestration Flow */}

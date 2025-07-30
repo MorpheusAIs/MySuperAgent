@@ -1,0 +1,96 @@
+.container {
+  padding: 8px 16px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.input {
+  background-color: #27292c !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  font-size: 14px !important;
+  border-radius: 8px !important;
+  height: 32px !important;
+}
+
+.input:focus {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: none !important;
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.select {
+  background-color: #27292c !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  font-size: 14px !important;
+  border-radius: 8px !important;
+  height: 32px !important;
+}
+
+.select:focus {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: none !important;
+}
+
+.select option {
+  background-color: #27292c;
+  color: white;
+}
+
+.actionButton {
+  background-color: #27292c !important;
+  color: #ddd !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  height: 32px !important;
+  padding: 6px 12px !important;
+  border: none !important;
+  font-weight: 400 !important;
+}
+
+.actionButton:hover {
+  background-color: #343639 !important;
+}
+
+.dayButton {
+  background-color: #27292c;
+  color: #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  width: 32px;
+  height: 28px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dayButton:hover {
+  background-color: #343639;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.daySelected {
+  background-color: #2f854f !important;
+  color: white !important;
+  border-color: #2f854f !important;
+}
+
+.daySelected:hover {
+  background-color: #286c42 !important;
+}

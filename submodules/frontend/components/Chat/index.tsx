@@ -21,6 +21,7 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
   const [showPrefilledOptions, setShowPrefilledOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
+  const [jobsRefreshKey, setJobsRefreshKey] = useState(0);
   const { address, getAddress } = useWalletAddress();
   
   // Load user preferences only (jobs come from ChatProviderDB)
@@ -44,7 +45,10 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
     loadUserPreferences();
   }, [getAddress]);
   
-  // No need to refresh jobs - ChatProviderDB handles this
+  // Function to refresh jobs list
+  const refreshJobsList = () => {
+    setJobsRefreshKey(prev => prev + 1);
+  };
 
   const currentMessages = messages[currentConversationId] || [];
   const isMobile = useBreakpointValue({ base: true, md: false });
@@ -113,6 +117,9 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
         
         // Switch to this new job but keep jobs view
         await setCurrentConversation(newJob.id);
+        
+        // Refresh the jobs list to show the new job
+        refreshJobsList();
         
         // Send the message in the background (non-blocking)
         sendMessage(message, file, useResearch, newJob.id)
@@ -235,6 +242,7 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
               <JobsList
                 onJobClick={handleJobClick}
                 isLoading={showLoading}
+                refreshKey={jobsRefreshKey}
               />
             </Box>
           </VStack>

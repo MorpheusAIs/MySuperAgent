@@ -1,6 +1,6 @@
-import React, { FC, useState, useEffect } from "react";
-import { Box, VStack, Text, Button, HStack, Badge, Tabs, TabList, TabPanels, Tab, TabPanel, useToast } from "@chakra-ui/react";
-import { ChatIcon, TimeIcon, RepeatIcon, CalendarIcon } from "@chakra-ui/icons";
+import React, { FC, useState, useEffect, useMemo, useCallback } from "react";
+import { Box, VStack, Text, Button, HStack, Badge, Tabs, TabList, TabPanels, Tab, TabPanel, useToast, Input, InputGroup, InputLeftElement, Select, Flex } from "@chakra-ui/react";
+import { ChatIcon, TimeIcon, RepeatIcon, CalendarIcon, SearchIcon } from "@chakra-ui/icons";
 import { Job } from "@/services/Database/db";
 import JobsAPI from "@/services/API/jobs";
 import { useWalletAddress } from "@/services/Wallet/utils";
@@ -9,6 +9,7 @@ import styles from "./index.module.css";
 interface JobsListProps {
   onJobClick: (jobId: string) => void;
   isLoading?: boolean;
+  refreshKey?: number;
 }
 
 const getJobStatus = (job: Job): "pending" | "running" | "completed" | "failed" => {
@@ -79,6 +80,38 @@ const formatTimeAgo = (date: Date) => {
   } else {
     return `${days}d ago`;
   }
+};
+
+const PaginationControls: FC<{ 
+  currentPage: number; 
+  totalPages: number; 
+  onPageChange: (page: number) => void;
+}> = ({ currentPage, totalPages, onPageChange }) => {
+  if (totalPages <= 1) return null;
+  
+  return (
+    <HStack spacing={2} justify="center" mt={4}>
+      <Button 
+        size="xs" 
+        onClick={() => onPageChange(currentPage - 1)} 
+        isDisabled={currentPage === 1}
+        variant="ghost"
+      >
+        Previous
+      </Button>
+      <Text fontSize="xs" color="gray.500">
+        {currentPage} / {totalPages}
+      </Text>
+      <Button 
+        size="xs" 
+        onClick={() => onPageChange(currentPage + 1)} 
+        isDisabled={currentPage === totalPages}
+        variant="ghost"
+      >
+        Next
+      </Button>
+    </HStack>
+  );
 };
 
 const ScheduledJobItem: FC<{ job: Job; onToggle: (jobId: string) => void }> = ({ job, onToggle }) => {
@@ -271,14 +304,21 @@ const JobItem: FC<{ job: Job; onClick: (jobId: string) => void; messageCount?: n
   );
 };
 
-export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading }) => {
+export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading, refreshKey = 0 }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [scheduledJobs, setScheduledJobs] = useState<Job[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [scheduledJobsLoading, setScheduledJobsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [scheduledPage, setScheduledPage] = useState(1);
+  const [previousPage, setPreviousPage] = useState(1);
   const { getAddress } = useWalletAddress();
   const toast = useToast();
+  
+  const ITEMS_PER_PAGE = 10;
 
   // Load jobs and scheduled jobs
   useEffect(() => {
@@ -319,12 +359,42 @@ export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading }) => {
     };
 
     loadData();
-  }, [getAddress]); // Remove toast from dependencies to prevent re-renders
+  }, [getAddress, refreshKey]); // Add refreshKey to trigger reload when jobs are created
   
-  // Filter jobs
-  const currentJobs = jobs.filter(isCurrentJob);
-  const previousJobs = jobs.filter(isPreviousJob);
-  const activeScheduledJobs = scheduledJobs.filter(job => job.is_active);
+  // Filter jobs based on search and status
+  const filterJobs = useCallback((jobsList: Job[]) => {
+    return jobsList.filter(job => {
+      const matchesSearch = searchQuery === "" || 
+        job.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (job.description && job.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        job.initial_message.toLowerCase().includes(searchQuery.toLowerCase());
+        
+      const matchesStatus = statusFilter === "all" || job.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [searchQuery, statusFilter]);
+  
+  // Apply filters and pagination
+  const allCurrentJobs = useMemo(() => filterJobs(jobs.filter(isCurrentJob)), [jobs, filterJobs]);
+  const allPreviousJobs = useMemo(() => filterJobs(jobs.filter(isPreviousJob)), [jobs, filterJobs]);
+  const allActiveScheduledJobs = useMemo(() => filterJobs(scheduledJobs.filter(job => job.is_active)), [scheduledJobs, filterJobs]);
+  
+  // Paginate results
+  const paginateJobs = (jobsList: Job[], page: number) => {
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    return jobsList.slice(start, end);
+  };
+  
+  const currentJobs = paginateJobs(allCurrentJobs, currentPage);
+  const previousJobs = paginateJobs(allPreviousJobs, previousPage);
+  const activeScheduledJobs = paginateJobs(allActiveScheduledJobs, scheduledPage);
+  
+  // Calculate total pages
+  const currentTotalPages = Math.ceil(allCurrentJobs.length / ITEMS_PER_PAGE);
+  const previousTotalPages = Math.ceil(allPreviousJobs.length / ITEMS_PER_PAGE);
+  const scheduledTotalPages = Math.ceil(allActiveScheduledJobs.length / ITEMS_PER_PAGE);
 
   const handleScheduledJobToggle = async (jobId: string) => {
     try {
@@ -398,7 +468,7 @@ export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading }) => {
             fontSize="sm"
             fontWeight="medium"
           >
-            Current Jobs ({currentJobs.length})
+            Current Jobs ({allCurrentJobs.length})
           </Tab>
           <Tab 
             className={styles.tab}
@@ -410,7 +480,7 @@ export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading }) => {
             fontSize="sm"
             fontWeight="medium"
           >
-            Scheduled Jobs ({activeScheduledJobs.length})
+            Scheduled Jobs ({allActiveScheduledJobs.length})
           </Tab>
           <Tab 
             className={styles.tab}
@@ -422,25 +492,32 @@ export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading }) => {
             fontSize="sm"
             fontWeight="medium"
           >
-            Previous Jobs ({previousJobs.length})
+            Previous Jobs ({allPreviousJobs.length})
           </Tab>
         </TabList>
 
         <TabPanels className={styles.tabPanelsContainer}>
           <TabPanel p={0} h="100%">
             <Box className={styles.scrollableContent}>
-              {currentJobs.length === 0 ? (
+              {allCurrentJobs.length === 0 ? (
                 <Box className={styles.emptyTabState}>
                   <Text fontSize="sm" color="gray.600" textAlign="center">
-                    No current jobs
+                    {searchQuery || statusFilter !== "all" ? "No jobs match your search criteria" : "No current jobs"}
                   </Text>
                 </Box>
               ) : (
-                <VStack spacing={2} width="100%" align="stretch" pb={2}>
-                  {currentJobs.map((job) => (
-                    <JobItem key={job.id} job={job} onClick={onJobClick} />
-                  ))}
-                </VStack>
+                <>
+                  <VStack spacing={2} width="100%" align="stretch" pb={2}>
+                    {currentJobs.map((job) => (
+                      <JobItem key={job.id} job={job} onClick={onJobClick} />
+                    ))}
+                  </VStack>
+                  <PaginationControls 
+                    currentPage={currentPage}
+                    totalPages={currentTotalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </>
               )}
             </Box>
           </TabPanel>
@@ -453,36 +530,50 @@ export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading }) => {
                     Loading scheduled jobs...
                   </Text>
                 </Box>
-              ) : activeScheduledJobs.length === 0 ? (
+              ) : allActiveScheduledJobs.length === 0 ? (
                 <Box className={styles.emptyTabState}>
                   <Text fontSize="sm" color="gray.600" textAlign="center">
-                    No scheduled jobs yet
+                    {searchQuery || statusFilter !== "all" ? "No jobs match your search criteria" : "No scheduled jobs yet"}
                   </Text>
                 </Box>
               ) : (
-                <VStack spacing={2} width="100%" align="stretch" pb={2}>
-                  {activeScheduledJobs.map((job) => (
-                    <ScheduledJobItem key={job.id} job={job} onToggle={handleScheduledJobToggle} />
-                  ))}
-                </VStack>
+                <>
+                  <VStack spacing={2} width="100%" align="stretch" pb={2}>
+                    {activeScheduledJobs.map((job) => (
+                      <ScheduledJobItem key={job.id} job={job} onToggle={handleScheduledJobToggle} />
+                    ))}
+                  </VStack>
+                  <PaginationControls 
+                    currentPage={scheduledPage}
+                    totalPages={scheduledTotalPages}
+                    onPageChange={setScheduledPage}
+                  />
+                </>
               )}
             </Box>
           </TabPanel>
           
           <TabPanel p={0} pt={4} h="100%">
             <Box className={styles.scrollableContent}>
-              {previousJobs.length === 0 ? (
+              {allPreviousJobs.length === 0 ? (
                 <Box className={styles.emptyTabState}>
                   <Text fontSize="sm" color="gray.600" textAlign="center">
-                    No completed jobs yet
+                    {searchQuery || statusFilter !== "all" ? "No jobs match your search criteria" : "No completed jobs yet"}
                   </Text>
                 </Box>
               ) : (
-                <VStack spacing={2} width="100%" align="stretch" pb={2}>
-                  {previousJobs.map((job) => (
-                    <JobItem key={job.id} job={job} onClick={onJobClick} />
-                  ))}
-                </VStack>
+                <>
+                  <VStack spacing={2} width="100%" align="stretch" pb={2}>
+                    {previousJobs.map((job) => (
+                      <JobItem key={job.id} job={job} onClick={onJobClick} />
+                    ))}
+                  </VStack>
+                  <PaginationControls 
+                    currentPage={previousPage}
+                    totalPages={previousTotalPages}
+                    onPageChange={setPreviousPage}
+                  />
+                </>
               )}
             </Box>
           </TabPanel>

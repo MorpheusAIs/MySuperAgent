@@ -98,7 +98,7 @@ export class JobsAPI {
   }
 
   static calculateNextRunTime(
-    scheduleType: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom',
+    scheduleType: 'once' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom',
     currentTime: Date,
     intervalDays?: number
   ): Date | null {
@@ -107,6 +107,10 @@ export class JobsAPI {
     switch (scheduleType) {
       case 'once':
         return null; // No next run for one-time jobs
+      
+      case 'hourly':
+        nextRun.setHours(nextRun.getHours() + 1);
+        break;
       
       case 'daily':
         nextRun.setDate(nextRun.getDate() + 1);

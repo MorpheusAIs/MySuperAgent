@@ -36,47 +36,6 @@
   overflow: hidden;
 }
 
-.searchContainer {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 4px 0;
-}
-
-.searchInput {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: white !important;
-  border-radius: 8px !important;
-}
-
-.searchInput:focus {
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  box-shadow: none !important;
-}
-
-.searchIcon {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.newChatIcon {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 36px;
-}
-
-.newChatIcon:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
 
 .mainContent {
   flex: 1;
@@ -87,100 +46,6 @@
   margin-bottom: 8px;
 }
 
-.conversationItem {
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: rgba(255, 255, 255, 0.9);
-  min-height: 24px;
-  background-color: rgba(255, 255, 255, 0.02);
-}
-
-.conversationItem:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  transform: translateX(2px);
-}
-
-.conversationActive {
-  background-color: rgba(255, 255, 255, 0.08);
-  border-left: 3px solid rgba(255, 255, 255, 0.5);
-}
-
-.conversationName {
-  font-size: 15px;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.buttonGroup {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.deleteButton,
-.resetButton {
-  opacity: 1;
-  background-color: transparent;
-  color: rgba(255, 255, 255, 0.6);
-  border: none;
-  padding: 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.deleteButton:hover,
-.resetButton:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.9);
-  transform: scale(1.1);
-}
-
-.titleInput {
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 15px;
-  font-weight: 500;
-  width: 100%;
-  padding: 0;
-  outline: none;
-}
-
-.titleInput:focus {
-  border: none;
-  outline: none;
-}
-
-.editButton {
-  opacity: 1;
-  background-color: transparent;
-  color: rgba(255, 255, 255, 0.6);
-  border: none;
-  padding: 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.editButton:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.9);
-  transform: scale(1.1);
-}
 
 .footer {
   margin-top: auto;
@@ -261,22 +126,6 @@
   transform: translateY(-1px);
 }
 
-.tokenizedAgentsButton {
-  width: 100%;
-  background-color: rgba(255, 255, 255, 0.05);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.tokenizedAgentsButton:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-}
 
 @media (max-width: 768px) {
   .container {
@@ -286,4 +135,101 @@
   .toggleButton {
     top: 10px;
   }
+}
+
+.menuItem {
+  width: 100% !important;
+  padding: 8px !important;
+  background: transparent !important;
+  color: white !important;
+  font-size: 18px !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.menuItem:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.menuItem > button {
+  width: 100% !important;
+  height: auto !important;
+  padding: 0 !important;
+  background: none !important;
+  color: white !important;
+  font-size: 14px !important;
+  text-align: left !important;
+  justify-content: flex-start !important;
+}
+
+.externalMenuItem {
+  width: 100% !important;
+  padding: 8px 12px !important;
+  background: transparent !important;
+  color: white !important;
+  font-size: 14px !important;
+  transition: background-color 0.2s ease !important;
+  border-radius: 8px !important;
+  cursor: pointer;
+}
+
+.externalMenuItem:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.externalMenuItem svg {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.externalMenuItem:hover svg {
+  color: white;
+}
+
+.profileContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-top: 16px;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.profileContainer:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.connectButtonWrapper {
+  width: 100%;
+}
+
+.accountInfo {
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.creditsContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.creditsLabel {
+  color: white;
+  font-weight: 600;
+  font-size: 12px;
+  min-width: 85px;
+  text-align: right !important;
+}
+
+.creditsAmount {
+  color: #68d391 !important;
+  font-size: 14px !important;
+  text-align: right !important;
+  flex: 1;
 }

@@ -279,7 +279,8 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
           fileUrl = uploadResult.fileUrl;
           
           // Update job to indicate file was uploaded
-          await JobsAPI.updateJob(walletAddress, currentConvId, {
+          await JobsAPI.updateJob(currentConvId, {
+            wallet_address: walletAddress,
             has_uploaded_file: true
           });
         }
@@ -335,7 +336,8 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
               await JobsAPI.createMessage(walletAddress, currentConvId, convertChatMessageToMessage(finalResponse, currentConvId, nextOrderIndex));
               
               // Update job status
-              await JobsAPI.updateJob(walletAddress, currentConvId, {
+              await JobsAPI.updateJob(currentConvId, {
+                wallet_address: walletAddress,
                 status: 'completed'
               });
 
@@ -373,7 +375,8 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
                     const generatedTitle = await generateConversationTitle(httpClient, currentConvId);
                     
                     // Update job name in database
-                    await JobsAPI.updateJob(walletAddress, currentConvId, {
+                    await JobsAPI.updateJob(currentConvId, {
+                      wallet_address: walletAddress,
                       name: generatedTitle
                     });
                     
@@ -403,7 +406,8 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
               await JobsAPI.createMessage(walletAddress, currentConvId, convertChatMessageToMessage(errorMessage, currentConvId, nextOrderIndex));
               
               // Update job status
-              await JobsAPI.updateJob(walletAddress, currentConvId, {
+              await JobsAPI.updateJob(currentConvId, {
+                wallet_address: walletAddress,
                 status: 'failed'
               });
 

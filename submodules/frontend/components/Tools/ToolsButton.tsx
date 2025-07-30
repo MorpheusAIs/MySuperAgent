@@ -17,10 +17,10 @@ export const ToolsButton: React.FC<ToolsButtonProps> = ({ apiBaseUrl }) => {
         leftIcon={<SettingsIcon />}
         size="sm"
         className={styles.actionButton}
-        aria-label="Tools"
+        aria-label="Agents"
         onClick={onOpen}
       >
-        Tools
+        Agents
       </Button>
 
       <ToolsConfigurationModal

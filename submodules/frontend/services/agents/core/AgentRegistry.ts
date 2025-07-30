@@ -8,7 +8,6 @@ class AgentRegistryClass {
   register(agent: BaseAgent) {
     const definition = agent.getDefinition();
     this.agents.set(definition.name, agent);
-    console.log(`Registered agent: ${definition.name}`, definition);
   }
 
   get(name: string): BaseAgent | undefined {
@@ -38,92 +37,89 @@ class AgentRegistryClass {
     );
   }
 
+  // Legacy keyword-based selection - DEPRECATED, use selectBestAgentWithLLM instead
   selectBestAgent(prompt: string): BaseAgent | null {
-    console.log('Selecting best agent for prompt:', prompt);
-    console.log('Available agents:', Array.from(this.agents.keys()));
+    console.warn('[AGENT SELECTION] Using deprecated keyword-based selection');
+    // Fallback to default agent
+    return this.get('default');
+  }
+
+  /**
+   * Get agent descriptions for LLM-based selection (similar to Python's llm_choice_payload)
+   */
+  getLLMChoicePayload(): Array<{name: string, description: string, capabilities: string[]}> {
+    return this.getDefinitions().map(def => ({
+      name: def.name,
+      description: def.description,
+      capabilities: def.capabilities
+    }));
+  }
+
+  /**
+   * Use LLM to intelligently select the best agent for a task (proper implementation)
+   */
+  async selectBestAgentWithLLM(prompt: string): Promise<{agent: BaseAgent | null, reasoning: string}> {
+    console.log('[AGENT SELECTION DEBUG] Starting LLM-based agent selection for prompt:', prompt.substring(0, 100) + '...');
     
-    // Simple heuristic-based agent selection
-    const lowerPrompt = prompt.toLowerCase();
+    const agentDescriptions = this.getLLMChoicePayload();
+    console.log('[AGENT SELECTION DEBUG] Available agents:', agentDescriptions.map(a => a.name));
     
-    // Keyword mapping for agent selection
-    const agentKeywords = {
-      // Original agents
-      research: ['search', 'find', 'research', 'investigate', 'information', 'web', 'internet'],
-      code: ['code', 'program', 'function', 'bug', 'debug', 'syntax', 'algorithm', 'development'],
-      data: ['data', 'analyze', 'csv', 'json', 'statistics', 'dataset', 'process'],
-      math: ['calculate', 'math', 'equation', 'solve', 'formula', 'computation', 'number'],
+    try {
+      // Import openai from ai-sdk
+      const { openai } = await import('@ai-sdk/openai');
+      const { generateObject } = await import('ai');
+      const { z } = await import('zod');
       
-      // All backend agents with their specific keywords
-      // MCP Agents
-      mcp_reddit: ['reddit', 'subreddit', 'reddit posts', 'reddit comments', 'reddit discussion'],
-      mcp_brave: ['brave search', 'web search', 'search engine', 'find information'],
-      mcp_hacker_news: ['hacker news', 'hn', 'tech news', 'startup news', 'developer news'],
-      mcp_google_maps: ['google maps', 'location', 'address', 'directions', 'places', 'map'],
-      mcp_airbnb: ['airbnb', 'vacation rental', 'accommodation', 'short term rental'],
-      mcp_yt_transcripts: ['youtube transcript', 'video transcript', 'youtube captions'],
-      mcp_puppeteer: ['web scraping', 'puppeteer', 'automation', 'dynamic content'],
+      // Create structured output schema for agent selection
+      const AgentSelectionSchema = z.object({
+        selected_agent: z.string().describe('The name of the best agent for this task'),
+        reasoning: z.string().describe('Explanation of why this agent was selected')
+      });
       
-      // Crypto Agents
-      crypto_data: ['crypto', 'cryptocurrency', 'bitcoin', 'ethereum', 'price', 'market cap', 'tvl', 'defi', 'token'],
-      mor_rewards: ['mor', 'morpheus', 'mor rewards', 'mor staking', 'morpheus rewards'],
-      rugcheck: ['rug check', 'token safety', 'rug pull', 'scam token', 'token analysis'],
-      codex: ['codex', 'smart contract', 'blockchain code', 'solidity', 'code analysis'],
-      imagen: ['imagen', 'image generation', 'ai image', 'create image'],
-      dexscreener: ['dexscreener', 'dex', 'decentralized exchange', 'trading pairs', 'dex data'],
-      elfa: ['elfa', 'yield farming', 'liquidity farming', 'defi strategy'],
+      // Build the selection prompt similar to Python backend
+      const agentList = agentDescriptions.map(agent => 
+        `- ${agent.name}: ${agent.description} (Capabilities: ${agent.capabilities.join(', ')})`
+      ).join('\n');
       
-      // Core Agents
-      default: ['help', 'general', 'assistance', 'question'],
-      rag: ['document search', 'knowledge base', 'retrieval', 'context search'],
-      news_agent: ['news', 'breaking', 'current events', 'media', 'journalism', 'headlines'],
-      tweet_sizzler: ['tweet', 'twitter content', 'social media content', 'tweet optimization'],
+      const selectionPrompt = `Select the best agent for this task. Match agent expertise to task requirements. Prefer specialized agents over generalists.\n\nAvailable agents:\n${agentList}\n\nTask: ${prompt}`;
       
-      // Research & Analysis
-      research_agent: ['research', 'web research', 'find information', 'investigate', 'verify'],
-      document_analyzer: ['document', 'pdf', 'text analysis', 'file analysis'],
-      web_extraction_specialist: ['web scraping', 'extract data', 'website data', 'scrape website'],
+      console.log('[AGENT SELECTION DEBUG] Making LLM call with prompt:', selectionPrompt.substring(0, 200) + '...');
       
-      // Social Media
-      instagram_agent: ['instagram', 'insta', 'ig', 'instagram posts', 'instagram profile'],
-      tiktok_agent: ['tiktok', 'tik tok', 'short video', 'tiktok trends'],
-      twitter_analyst: ['twitter', 'tweet', 'x.com', 'social listening', 'twitter trends'],
-      facebook_analyst: ['facebook', 'fb', 'facebook posts', 'facebook pages'],
-      reddit_analyst: ['reddit', 'subreddit', 'reddit analysis', 'reddit trends'],
-      social_media_intelligence: ['social media', 'cross platform', 'social trends', 'social analysis'],
+      // Make the LLM call using ai-sdk
+      const result = await generateObject({
+        model: openai('gpt-4o-mini'),
+        schema: AgentSelectionSchema,
+        prompt: selectionPrompt,
+      });
       
-      // Business Intelligence
-      business_analyst: ['business', 'company', 'market analysis', 'competitive intelligence'],
-      linkedin_intelligence: ['linkedin', 'professional network', 'linkedin profile', 'linkedin company'],
-      job_market_analyst: ['jobs', 'employment', 'job market', 'hiring', 'career', 'glassdoor'],
+      console.log('[AGENT SELECTION DEBUG] LLM selection result:', result.object);
       
-      // Industry Specialists
-      ecommerce_analyst: ['ecommerce', 'amazon', 'shopping', 'product', 'retail', 'marketplace'],
-      travel_intelligence: ['travel', 'hotel', 'destination', 'vacation', 'tourism', 'booking'],
-      real_estate_analyst: ['real estate', 'property', 'house', 'apartment', 'zillow', 'rent'],
+      const selectedAgentName = result.object.selected_agent;
+      const selectedAgent = this.get(selectedAgentName);
       
-      // Content & Multimedia
-      youtube_analyst: ['youtube', 'video', 'channel', 'youtube comments', 'video analysis'],
-      visual_content_creator: ['image', 'generate image', 'create visual', 'dalle', 'picture'],
-      content_discovery_specialist: ['content discovery', 'find content', 'content search'],
-      code_assistant: ['code', 'programming', 'development', 'coding help', 'debug'],
-    };
-    
-    let bestAgent: BaseAgent | null = null;
-    let maxScore = 0;
-    
-    for (const [agentType, keywords] of Object.entries(agentKeywords)) {
-      const score = keywords.reduce((acc, keyword) => {
-        return acc + (lowerPrompt.includes(keyword) ? 1 : 0);
-      }, 0);
-      
-      if (score > maxScore) {
-        maxScore = score;
-        bestAgent = this.get(agentType);
+      if (selectedAgent) {
+        console.log('[AGENT SELECTION DEBUG] Successfully selected agent:', selectedAgentName);
+        return {
+          agent: selectedAgent,
+          reasoning: result.object.reasoning
+        };
+      } else {
+        console.warn('[AGENT SELECTION DEBUG] LLM selected non-existent agent:', selectedAgentName);
+        const fallbackAgent = this.get('default');
+        return {
+          agent: fallbackAgent,
+          reasoning: `LLM selected ${selectedAgentName} but agent not found, using default`
+        };
       }
+      
+    } catch (error) {
+      console.error('[AGENT SELECTION DEBUG] Error in LLM-based selection:', error);
+      const fallbackAgent = this.get('default');
+      return {
+        agent: fallbackAgent,
+        reasoning: `Error in LLM selection: ${error instanceof Error ? error.message : 'Unknown error'}, using default`
+      };
     }
-    
-    // Fallback to default agent if no specific match
-    return bestAgent || this.get('default');
   }
 
   parseCommand(prompt: string): { agentName: string | null; message: string } {
