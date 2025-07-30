@@ -20,6 +20,8 @@ export interface StreamingState {
   telemetry?: TelemetryData;
   currentAgentIndex?: number;
   totalAgents?: number;
+  streamingContent?: string;
+  isStreaming?: boolean;
 }
 
 export interface ChatState {
@@ -55,6 +57,10 @@ export type ChatAction =
   | {
       type: "UPDATE_STREAMING_PROGRESS";
       payload: Partial<StreamingState>;
+    }
+  | {
+      type: "SET_STREAMING_CONTENT";
+      payload: { content: string; isStreaming: boolean };
     }
   | {
       type: "SET_CURRENT_VIEW";

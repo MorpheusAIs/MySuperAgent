@@ -1,10 +1,11 @@
 import React, { FC, useState, useEffect, useRef } from "react";
 import { Textarea, IconButton, useMediaQuery, Button } from "@chakra-ui/react";
-import { AddIcon, LinkIcon, QuestionOutlineIcon } from "@chakra-ui/icons";
+import { AddIcon, QuestionOutlineIcon } from "@chakra-ui/icons";
 import { SendIcon } from "../CustomIcon/SendIcon";
 import { Command } from "./Commands";
 import { CommandsPortal } from "./CommandsPortal";
 import { ToolsButton } from "@/components/Tools/ToolsButton";
+import { ScheduleButton } from "@/components/ScheduleButton";
 import { isFeatureEnabled } from "@/services/featureFlags";
 import styles from "./index.module.css";
 import BASE_URL from "@/services/constants";
@@ -37,7 +38,6 @@ export const ChatInput: FC<ChatInputProps> = ({
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
   const [isMobile] = useMediaQuery("(max-width: 768px)");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [useResearch, setUseResearch] = useState(true);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -143,8 +143,8 @@ export const ChatInput: FC<ChatInputProps> = ({
       setMessage("");
       setFile(null);
 
-      // Submit the message with all flags
-      await onSubmit(messageToSend, fileToSend, useResearch);
+      // Submit the message with research always enabled
+      await onSubmit(messageToSend, fileToSend, true);
     } catch (error) {
       console.error("Error submitting message:", error);
     } finally {
@@ -152,9 +152,6 @@ export const ChatInput: FC<ChatInputProps> = ({
     }
   };
 
-  const toggleResearch = () => {
-    setUseResearch((prev) => !prev);
-  };
 
   return (
     <>
@@ -212,18 +209,10 @@ export const ChatInput: FC<ChatInputProps> = ({
                 size="sm"
                 onClick={handleFileUpload}
               />
-              {isFeatureEnabled('feature.research_mode') && (
-                <Button
-                  leftIcon={<LinkIcon />}
-                  size="sm"
-                  className={`${styles.actionButton} ${
-                    useResearch ? styles.activeButton : ""
-                  }`}
-                  onClick={toggleResearch}
-                >
-                  Research
-                </Button>
-              )}
+              <ScheduleButton
+                message={message}
+                disabled={isSubmitting || disabled || !message.trim()}
+              />
               {isFeatureEnabled('feature.prefilled_options') && (
                 <Button
                   leftIcon={<QuestionOutlineIcon />}

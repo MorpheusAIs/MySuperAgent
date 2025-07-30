@@ -61,11 +61,10 @@ export const writeMessage = async (
         role: "user",
         content: message,
       },
-      chat_history: currentHistory,
-      chain_id: String(chainId),
-      wallet_address: address,
-      use_research: useResearch,
-      selected_agents: selectedAgents,
+      chatHistory: currentHistory,
+      conversationId: convId,
+      useResearch: useResearch,
+      selectedAgents: selectedAgents,
     });
 
     // Process response
@@ -309,11 +308,10 @@ export const writeMessageStream = async (
           role: "user",
           content: message,
         },
-        chat_history: currentHistory,
-        chain_id: String(chainId),
-        wallet_address: address,
-        use_research: true,
-        selected_agents: selectedAgents,
+        chatHistory: currentHistory,
+        conversationId: convId,
+        useResearch: true,
+        selectedAgents: selectedAgents,
       }),
     });
 
@@ -544,7 +542,7 @@ export const writeMessageStream = async (
                 onComplete(assistantMessage);
                 return;
               case "error":
-                const errorMsg = event.data.message || "Stream error";
+                const errorMsg = event.message || event.data?.message || "Stream error";
                 trackError('research.streaming', new Error(errorMsg), {
                   conversationId,
                   selectedAgents,

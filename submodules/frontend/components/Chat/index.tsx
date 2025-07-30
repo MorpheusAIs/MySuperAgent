@@ -40,7 +40,7 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
   const handleSubmit = async (
     message: string,
     file: File | null,
-    useResearch?: boolean
+    useResearch: boolean = true
   ) => {
     if (currentView === 'jobs') {
       // Create a new conversation but stay in jobs view
@@ -51,7 +51,7 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
       
       // Send the message in the background (non-blocking)
       // Pass the newConversationId directly to avoid race conditions with state updates
-      sendMessage(message, file, useResearch ?? false, newConversationId)
+      sendMessage(message, file, useResearch, newConversationId)
         .then(() => {
           console.log("Message sent successfully for conversation:", newConversationId);
           // Refresh conversations list to show updated status
@@ -78,7 +78,7 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
       // For regular chat (not jobs), use the existing flow
       try {
         setLocalLoading(true);
-        await sendMessage(message, file, useResearch ?? false);
+        await sendMessage(message, file, useResearch);
         setTimeout(() => setLocalLoading(false), 200);
       } catch (error) {
         console.error("Error sending message:", error);
@@ -108,7 +108,7 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
     if (isSubmitting || showLoading) return;
     try {
       setIsSubmitting(true);
-      await handleSubmit(selectedMessage, null, false);
+      await handleSubmit(selectedMessage, null, true);
     } catch (error) {
       console.error("Error submitting prefilled message:", error);
     } finally {

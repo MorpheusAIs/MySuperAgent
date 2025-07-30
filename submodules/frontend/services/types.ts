@@ -8,6 +8,8 @@ export type ChatMessageBase = {
   requires_action?: boolean;
   action_type?: string;
   timestamp?: number;
+  id?: string;
+  isStreaming?: boolean;
 };
 
 export type UserMessage = ChatMessageBase & {
@@ -32,6 +34,7 @@ export interface Conversation {
   messages: ChatMessage[];
   createdAt: number;
   hasUploadedFile: boolean;
+  scheduledJobId?: number;
 }
 
 export interface LocalStorageData {
