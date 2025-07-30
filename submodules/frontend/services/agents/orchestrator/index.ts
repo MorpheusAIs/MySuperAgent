@@ -1,5 +1,6 @@
 import { ChatRequest, AgentResponse, ResponseType } from '@/services/agents/types';
 import { EventEmitter } from 'events';
+import { AgentRegistry } from '@/services/agents/core/AgentRegistry';
 
 export class Orchestrator {
   private eventEmitter: EventEmitter;
@@ -10,13 +11,22 @@ export class Orchestrator {
 
   async runOrchestration(request: ChatRequest): Promise<[string, AgentResponse]> {
     try {
-      const { AgentRegistry } = await import('@/services/agents/core/AgentRegistry');
 
       // Determine which agent(s) to use
       let selectedAgent;
       if (request.selectedAgents && request.selectedAgents.length > 0) {
-        // Use first selected agent
-        selectedAgent = AgentRegistry.get(request.selectedAgents[0]);
+        // Try to find the first available agent from the selected list
+        for (const agentName of request.selectedAgents) {
+          selectedAgent = AgentRegistry.get(agentName);
+          if (selectedAgent) {
+            break;
+          }
+        }
+        
+        // If no selected agent is available, fall back to intelligent selection
+        if (!selectedAgent) {
+          selectedAgent = AgentRegistry.selectBestAgent(request.prompt.content);
+        }
       } else {
         // Use intelligent agent selection
         selectedAgent = AgentRegistry.selectBestAgent(request.prompt.content);
@@ -55,19 +65,45 @@ export class Orchestrator {
 
   async streamOrchestration(request: ChatRequest, res: any): Promise<void> {
     try {
-      const { AgentRegistry } = await import('@/services/agents/core/AgentRegistry');
+      console.log('StreamOrchestration - AgentRegistry initialized:', AgentRegistry.isInitialized());
+      console.log('StreamOrchestration - Available agents:', AgentRegistry.getAvailableAgents());
+      console.log('StreamOrchestration - Request selectedAgents:', request.selectedAgents);
+      console.log('StreamOrchestration - Request prompt:', request.prompt.content);
 
       // Determine which agent(s) to use for streaming
       let selectedAgent;
       if (request.selectedAgents && request.selectedAgents.length > 0) {
-        // Use first selected agent
-        selectedAgent = AgentRegistry.get(request.selectedAgents[0]);
+        // Try to find the first available agent from the selected list
+        console.log('Looking for available agents from selection:', request.selectedAgents);
+        
+        for (const agentName of request.selectedAgents) {
+          selectedAgent = AgentRegistry.get(agentName);
+          if (selectedAgent) {
+            console.log('Found available agent:', agentName);
+            break;
+          }
+        }
+        
+        // If no selected agent is available, fall back to intelligent selection
+        if (!selectedAgent) {
+          console.log('No selected agents available, falling back to intelligent selection');
+          selectedAgent = AgentRegistry.selectBestAgent(request.prompt.content);
+          console.log('Selected agent from intelligent fallback:', selectedAgent?.getDefinition().name);
+        }
       } else {
         // Use intelligent agent selection
+        console.log('Using intelligent agent selection');
         selectedAgent = AgentRegistry.selectBestAgent(request.prompt.content);
+        console.log('Selected agent from intelligent selection:', selectedAgent?.getDefinition().name);
       }
 
       if (!selectedAgent) {
+        console.error('NO AGENT SELECTED!');
+        console.error('AgentRegistry state:', {
+          initialized: AgentRegistry.isInitialized(),
+          availableAgents: AgentRegistry.getAvailableAgents(),
+          totalAgents: AgentRegistry.getAll().length
+        });
         throw new Error('No suitable agent found');
       }
 

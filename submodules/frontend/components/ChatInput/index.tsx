@@ -76,8 +76,11 @@ export const ChatInput: FC<ChatInputProps> = ({
   useEffect(() => {
     fetch(`${BASE_URL}/agents/commands`)
       .then((res) => res.json())
-      .then((data) => setCommands(data.commands))
-      .catch((error) => console.error("Error fetching commands:", error));
+      .then((data) => setCommands(data.commands || []))
+      .catch((error) => {
+        console.error("Error fetching commands:", error);
+        setCommands([]); // Set empty array on error
+      });
   }, []);
 
   // Filter commands based on input

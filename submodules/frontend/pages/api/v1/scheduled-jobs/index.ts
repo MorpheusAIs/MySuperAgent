@@ -1,15 +1,29 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import ScheduledJobsDB from '@/services/ScheduledJobs/db';
+import { JobDB, ScheduledJobDB } from '@/services/Database/db';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // For now, use a placeholder user identifier - in production this would come from auth
-  const userIdentifier = req.headers['x-user-id'] as string || 'default-user';
+  const walletAddress = req.headers['x-wallet-address'] as string;
+
+  if (!walletAddress) {
+    return res.status(400).json({ error: 'Wallet address is required in x-wallet-address header' });
+  }
 
   try {
+    let DB;
+    try {
+      const module = await import('@/services/Database/db');
+      DB = module;
+    } catch (importError) {
+      console.error('Database module not available:', importError);
+      return res.status(503).json({ 
+        error: 'Database service unavailable. Please install dependencies and initialize the database.' 
+      });
+    }
+
     switch (req.method) {
       case 'GET':
-        const jobs = await ScheduledJobsDB.getJobsByUser(userIdentifier);
-        return res.status(200).json({ jobs });
+        const scheduledJobs = await DB.ScheduledJobDB.getScheduledJobsByWallet(walletAddress);
+        return res.status(200).json({ jobs: scheduledJobs });
 
       case 'POST':
         const { 
@@ -30,16 +44,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
         }
 
+        // First create the job
+        const job = await DB.JobDB.createJob({
+          wallet_address: walletAddress,
+          name: job_name,
+          description: job_description || null,
+          initial_message: message_content,
+          status: 'pending',
+          is_scheduled: true,
+          has_uploaded_file: false
+        });
+
         // Calculate initial next_run_time
         const scheduleDate = new Date(schedule_time);
         const now = new Date();
         const next_run_time = scheduleDate > now ? scheduleDate : now;
 
-        const newJob = await ScheduledJobsDB.createJob({
-          user_identifier: userIdentifier,
-          job_name,
-          job_description: job_description || null,
-          message_content,
+        // Create the scheduled job
+        const newScheduledJob = await DB.ScheduledJobDB.createScheduledJob({
+          job_id: job.id,
+          wallet_address: walletAddress,
           schedule_type,
           schedule_time: scheduleDate,
           next_run_time,
@@ -49,26 +73,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           timezone: timezone || 'UTC'
         });
 
-        return res.status(201).json({ job: newJob });
+        return res.status(201).json({ job: newScheduledJob, created_job: job });
 
       case 'PUT':
         const { id, ...updates } = req.body;
         
         if (!id) {
-          return res.status(400).json({ error: 'Job ID is required' });
+          return res.status(400).json({ error: 'Scheduled job ID is required' });
         }
 
-        const updatedJob = await ScheduledJobsDB.updateJob(id, updates);
-        return res.status(200).json({ job: updatedJob });
+        // Verify scheduled job belongs to wallet
+        const existingScheduledJobs = await DB.ScheduledJobDB.getScheduledJobsByWallet(walletAddress);
+        const existingScheduledJob = existingScheduledJobs.find(sj => sj.id === id);
+        
+        if (!existingScheduledJob) {
+          return res.status(404).json({ error: 'Scheduled job not found' });
+        }
+
+        const updatedScheduledJob = await DB.ScheduledJobDB.updateScheduledJob(id, updates);
+        return res.status(200).json({ job: updatedScheduledJob });
 
       case 'DELETE':
         const { id: deleteId } = req.body;
         
         if (!deleteId) {
-          return res.status(400).json({ error: 'Job ID is required' });
+          return res.status(400).json({ error: 'Scheduled job ID is required' });
         }
 
-        await ScheduledJobsDB.deleteJob(deleteId);
+        // Verify scheduled job belongs to wallet
+        const scheduledJobsToCheck = await DB.ScheduledJobDB.getScheduledJobsByWallet(walletAddress);
+        const scheduledJobToDelete = scheduledJobsToCheck.find(sj => sj.id === deleteId);
+        
+        if (!scheduledJobToDelete) {
+          return res.status(404).json({ error: 'Scheduled job not found' });
+        }
+
+        await DB.ScheduledJobDB.deleteScheduledJob(deleteId);
         return res.status(204).end();
 
       default:

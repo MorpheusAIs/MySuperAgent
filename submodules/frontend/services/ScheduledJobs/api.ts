@@ -1,45 +1,54 @@
 import axios from 'axios';
 import BASE_URL from '@/services/constants';
-import { ScheduledJob } from './db';
+import { ScheduledJob } from '@/services/Database/db';
 
 export class ScheduledJobsAPI {
-  private static getHeaders() {
-    // In production, this would use actual user authentication
+  private static getHeaders(walletAddress: string) {
     return {
-      'x-user-id': 'default-user'
+      'x-wallet-address': walletAddress,
+      'Content-Type': 'application/json'
     };
   }
 
-  static async getScheduledJobs(): Promise<ScheduledJob[]> {
-    const response = await axios.get(`${BASE_URL}/v1/scheduled-jobs`, {
-      headers: this.getHeaders()
+  static async getScheduledJobs(walletAddress: string): Promise<ScheduledJob[]> {
+    const response = await axios.get(`${BASE_URL}/api/v1/scheduled-jobs`, {
+      headers: this.getHeaders(walletAddress)
     });
     return response.data.jobs;
   }
 
-  static async createScheduledJob(job: Omit<ScheduledJob, 'id' | 'created_at' | 'updated_at' | 'last_run_at' | 'run_count' | 'user_identifier'>): Promise<ScheduledJob> {
-    const response = await axios.post(`${BASE_URL}/v1/scheduled-jobs`, job, {
-      headers: this.getHeaders()
+  static async createScheduledJob(walletAddress: string, job: {
+    job_name: string;
+    job_description?: string;
+    message_content: string;
+    schedule_type: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
+    schedule_time: string;
+    interval_days?: number;
+    max_runs?: number;
+    timezone?: string;
+  }): Promise<ScheduledJob> {
+    const response = await axios.post(`${BASE_URL}/api/v1/scheduled-jobs`, job, {
+      headers: this.getHeaders(walletAddress)
     });
     return response.data.job;
   }
 
-  static async updateScheduledJob(id: number, updates: Partial<ScheduledJob>): Promise<ScheduledJob> {
-    const response = await axios.put(`${BASE_URL}/v1/scheduled-jobs`, { id, ...updates }, {
-      headers: this.getHeaders()
+  static async updateScheduledJob(walletAddress: string, id: number, updates: Partial<ScheduledJob>): Promise<ScheduledJob> {
+    const response = await axios.put(`${BASE_URL}/api/v1/scheduled-jobs`, { id, ...updates }, {
+      headers: this.getHeaders(walletAddress)
     });
     return response.data.job;
   }
 
-  static async deleteScheduledJob(id: number): Promise<void> {
-    await axios.delete(`${BASE_URL}/v1/scheduled-jobs`, {
+  static async deleteScheduledJob(walletAddress: string, id: number): Promise<void> {
+    await axios.delete(`${BASE_URL}/api/v1/scheduled-jobs`, {
       data: { id },
-      headers: this.getHeaders()
+      headers: this.getHeaders(walletAddress)
     });
   }
 
-  static async deactivateScheduledJob(id: number): Promise<ScheduledJob> {
-    return this.updateScheduledJob(id, { is_active: false });
+  static async deactivateScheduledJob(walletAddress: string, id: number): Promise<ScheduledJob> {
+    return this.updateScheduledJob(walletAddress, id, { is_active: false });
   }
 
   static formatScheduleDescription(job: ScheduledJob): string {

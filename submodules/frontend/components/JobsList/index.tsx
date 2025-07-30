@@ -281,12 +281,17 @@ export const JobsList: FC<JobsListProps> = ({ conversations, onJobClick, isLoadi
         setScheduledJobs(jobs);
       } catch (error) {
         console.error('Error loading scheduled jobs:', error);
-        toast({
-          title: 'Error loading scheduled jobs',
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-        });
+        setScheduledJobs([]); // Set empty array on error
+        // Only show toast if it's not a dependency issue
+        if (!error.message?.includes('Database service unavailable')) {
+          toast({
+            title: 'Scheduled jobs unavailable',
+            description: 'Please install dependencies and initialize database',
+            status: 'warning',
+            duration: 5000,
+            isClosable: true,
+          });
+        }
       } finally {
         setScheduledJobsLoading(false);
       }

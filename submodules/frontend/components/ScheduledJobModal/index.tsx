@@ -66,7 +66,7 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
       // Combine date and time
       const scheduleDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
       
-      const response = await axios.post(`${BASE_URL}/v1/scheduled-jobs`, {
+      const response = await axios.post(`${BASE_URL}/api/v1/scheduled-jobs`, {
         job_name: jobName,
         job_description: jobDescription || null,
         message_content: initialMessage,
