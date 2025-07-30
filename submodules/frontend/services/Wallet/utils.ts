@@ -1,30 +1,26 @@
 import { useAccount } from 'wagmi';
+import { useCallback } from 'react';
 
 export const useWalletAddress = () => {
   const { address, isConnected } = useAccount();
+  
+  // Memoize getAddress to prevent useEffect re-triggers
+  const getAddress = useCallback(() => {
+    return address || null;
+  }, [address]);
+  
   return {
     address: address || null,
     isConnected,
-    // Default address for development/testing when no wallet is connected
-    getAddress: () => address || '0x0000000000000000000000000000000000000000'
+    getAddress
   };
 };
 
-export const getWalletAddressFromAccount = (account: any): string => {
-  return account?.address || '0x0000000000000000000000000000000000000000';
-};
-
-// Utility to ensure we always have a valid wallet address
-export const ensureWalletAddress = (address?: string | null): string => {
-  if (!address) {
-    // Use a default address for development/testing
-    return '0x0000000000000000000000000000000000000000';
-  }
-  return address;
+export const getWalletAddressFromAccount = (account: any): string | null => {
+  return account?.address || null;
 };
 
 export default {
   useWalletAddress,
-  getWalletAddressFromAccount,
-  ensureWalletAddress
+  getWalletAddressFromAccount
 };

@@ -1,32 +1,22 @@
 import React, { FC, useState, useEffect } from "react";
 import { Box, VStack, Text, Button, HStack, Badge, Tabs, TabList, TabPanels, Tab, TabPanel, useToast } from "@chakra-ui/react";
 import { ChatIcon, TimeIcon, RepeatIcon, CalendarIcon } from "@chakra-ui/icons";
-import { Conversation } from "@/services/types";
-import { getMessagesHistory } from "@/services/ChatManagement/storage";
-import { ScheduledJob } from "@/services/ScheduledJobs/db";
-import ScheduledJobsAPI from "@/services/ScheduledJobs/api";
+import { Job } from "@/services/Database/db";
+import JobsAPI from "@/services/API/jobs";
+import { useWalletAddress } from "@/services/Wallet/utils";
 import styles from "./index.module.css";
 
 interface JobsListProps {
-  conversations: Conversation[];
   onJobClick: (jobId: string) => void;
   isLoading?: boolean;
 }
 
-const getConversationStatus = (conversation: Conversation): "pending" | "running" | "completed" | "failed" => {
-  const messages = getMessagesHistory(conversation.id);
-  const userMessages = messages.filter(m => m.role === "user");
-  const hasAssistantResponse = messages.some(m => m.role === "assistant");
-  
-  if (userMessages.length === 0) return "pending";
-  if (!hasAssistantResponse) return "running";
-  
-  const lastMessage = messages[messages.length - 1];
-  return lastMessage?.role === "assistant" ? "completed" : "running";
+const getJobStatus = (job: Job): "pending" | "running" | "completed" | "failed" => {
+  return job.status;
 };
 
-const isCurrentJob = (conversation: Conversation) => {
-  const status = getConversationStatus(conversation);
+const isCurrentJob = (job: Job) => {
+  const status = getJobStatus(job);
   
   // Current jobs are those in progress or completed within the last 24 hours
   if (status === 'pending' || status === 'running') {
@@ -36,14 +26,14 @@ const isCurrentJob = (conversation: Conversation) => {
   if (status === 'completed') {
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-    return new Date(conversation.createdAt) > oneDayAgo;
+    return new Date(job.created_at) > oneDayAgo;
   }
   
   return false;
 };
 
-const isPreviousJob = (conversation: Conversation) => {
-  const status = getConversationStatus(conversation);
+const isPreviousJob = (job: Job) => {
+  const status = getJobStatus(job);
   
   // Previous jobs are completed/failed jobs older than 24 hours
   if (status === 'failed') {
@@ -53,7 +43,7 @@ const isPreviousJob = (conversation: Conversation) => {
   if (status === 'completed') {
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-    return new Date(conversation.createdAt) <= oneDayAgo;
+    return new Date(job.created_at) <= oneDayAgo;
   }
   
   return false;
@@ -91,9 +81,28 @@ const formatTimeAgo = (date: Date) => {
   }
 };
 
-const ScheduledJobItem: FC<{ job: ScheduledJob; onToggle: (jobId: number) => void }> = ({ job, onToggle }) => {
-  const nextRun = new Date(job.next_run_time);
-  const isOverdue = nextRun < new Date() && job.is_active;
+const ScheduledJobItem: FC<{ job: Job; onToggle: (jobId: string) => void }> = ({ job, onToggle }) => {
+  const nextRun = job.next_run_time ? new Date(job.next_run_time) : null;
+  const isOverdue = nextRun && nextRun < new Date() && job.is_active;
+  
+  const formatScheduleDescription = (job: Job): string => {
+    if (!job.schedule_type) return 'Unknown';
+    
+    switch (job.schedule_type) {
+      case 'once':
+        return 'One time';
+      case 'daily':
+        return 'Daily';
+      case 'weekly':
+        return 'Weekly';
+      case 'monthly':
+        return 'Monthly';
+      case 'custom':
+        return job.interval_days ? `Every ${job.interval_days} days` : 'Custom';
+      default:
+        return job.schedule_type;
+    }
+  };
   
   return (
     <Button
@@ -123,7 +132,7 @@ const ScheduledJobItem: FC<{ job: ScheduledJob; onToggle: (jobId: number) => voi
                 noOfLines={1}
                 flex={1}
               >
-                {job.job_name}
+                {job.name}
               </Text>
             </HStack>
             <Text
@@ -133,7 +142,7 @@ const ScheduledJobItem: FC<{ job: ScheduledJob; onToggle: (jobId: number) => voi
               noOfLines={2}
               w="100%"
             >
-              {job.job_description || job.message_content.substring(0, 100) + '...'}
+              {job.description || job.initial_message.substring(0, 100) + '...'}
             </Text>
           </VStack>
           <Badge 
@@ -150,14 +159,16 @@ const ScheduledJobItem: FC<{ job: ScheduledJob; onToggle: (jobId: number) => voi
           <HStack spacing={4} flexShrink={0}>
             <HStack spacing={1}>
               <CalendarIcon w={3} h={3} />
-              <Text>{ScheduledJobsAPI.formatScheduleDescription(job)}</Text>
+              <Text>{formatScheduleDescription(job)}</Text>
             </HStack>
-            <HStack spacing={1}>
-              <TimeIcon w={3} h={3} />
-              <Text>
-                Next: {nextRun.toLocaleDateString()} {nextRun.toLocaleTimeString()}
-              </Text>
-            </HStack>
+            {nextRun && (
+              <HStack spacing={1}>
+                <TimeIcon w={3} h={3} />
+                <Text>
+                  Next: {nextRun.toLocaleDateString()} {nextRun.toLocaleTimeString()}
+                </Text>
+              </HStack>
+            )}
           </HStack>
         </HStack>
         
@@ -177,27 +188,21 @@ const ScheduledJobItem: FC<{ job: ScheduledJob; onToggle: (jobId: number) => voi
   );
 };
 
-const JobItem: FC<{ conversation: Conversation; onClick: (jobId: string) => void }> = ({ conversation, onClick }) => {
-  const messages = getMessagesHistory(conversation.id);
-  const userMessages = messages.filter(m => m.role === "user");
-  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
-  const status = getConversationStatus(conversation);
+const JobItem: FC<{ job: Job; onClick: (jobId: string) => void; messageCount?: number }> = ({ job, onClick, messageCount = 0 }) => {
+  const status = getJobStatus(job);
   
-  // Get title and description from first user message
-  const firstUserMessage = userMessages[0];
-  const title = conversation.name !== "New Conversation" ? conversation.name : 
-    (firstUserMessage?.content ? 
-      (typeof firstUserMessage.content === 'string' ? firstUserMessage.content.substring(0, 50) + (firstUserMessage.content.length > 50 ? '...' : '') : 'Untitled Job') : 
+  // Get title and description from job
+  const title = job.name !== "New Job" ? job.name : 
+    (job.initial_message ? 
+      (job.initial_message.substring(0, 50) + (job.initial_message.length > 50 ? '...' : '')) : 
       'Untitled Job');
-  const description = firstUserMessage?.content ? 
-    (typeof firstUserMessage.content === 'string' ? firstUserMessage.content : 'No description') : 
-    'No description';
+  const description = job.description || job.initial_message || 'No description';
   
   return (
     <Button
-      key={conversation.id}
+      key={job.id}
       className={styles.jobItem}
-      onClick={() => onClick(conversation.id)}
+      onClick={() => onClick(job.id)}
       variant="ghost"
       size="lg"
       h="auto"
@@ -240,16 +245,16 @@ const JobItem: FC<{ conversation: Conversation; onClick: (jobId: string) => void
           <HStack spacing={4} flexShrink={0}>
             <HStack spacing={1}>
               <ChatIcon w={3} h={3} />
-              <Text>{messages.length} messages</Text>
+              <Text>{messageCount} messages</Text>
             </HStack>
             <HStack spacing={1}>
               <TimeIcon w={3} h={3} />
-              <Text>{formatTimeAgo(new Date(conversation.createdAt))}</Text>
+              <Text>{formatTimeAgo(new Date(job.created_at))}</Text>
             </HStack>
           </HStack>
         </HStack>
         
-        {lastMessage && lastMessage.role === "assistant" && lastMessage.content && (
+        {job.status === 'completed' && (
           <Text
             fontSize="xs"
             color="gray.600"
@@ -258,7 +263,7 @@ const JobItem: FC<{ conversation: Conversation; onClick: (jobId: string) => void
             fontStyle="italic"
             w="100%"
           >
-            &quot;{typeof lastMessage.content === 'string' ? lastMessage.content.substring(0, 100) + (lastMessage.content.length > 100 ? '...' : '') : 'Response received'}&quot;
+            &quot;Job completed successfully&quot;
           </Text>
         )}
       </VStack>
@@ -266,59 +271,83 @@ const JobItem: FC<{ conversation: Conversation; onClick: (jobId: string) => void
   );
 };
 
-export const JobsList: FC<JobsListProps> = ({ conversations, onJobClick, isLoading }) => {
+export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading }) => {
   const [activeTab, setActiveTab] = useState(0);
-  const [scheduledJobs, setScheduledJobs] = useState<ScheduledJob[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [scheduledJobs, setScheduledJobs] = useState<Job[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
   const [scheduledJobsLoading, setScheduledJobsLoading] = useState(false);
+  const { getAddress } = useWalletAddress();
   const toast = useToast();
 
-  // Load scheduled jobs
+  // Load jobs and scheduled jobs
   useEffect(() => {
-    const loadScheduledJobs = async () => {
+    const loadData = async () => {
+      const walletAddress = getAddress();
+      if (!walletAddress) {
+        // No wallet connected, reset state
+        setJobs([]);
+        setScheduledJobs([]);
+        setJobsLoading(false);
+        setScheduledJobsLoading(false);
+        return;
+      }
+      
+      // Load regular jobs
+      setJobsLoading(true);
+      try {
+        const jobsList = await JobsAPI.getJobs(walletAddress);
+        setJobs(jobsList);
+      } catch (error: any) {
+        console.error('Error loading jobs:', error);
+        setJobs([]);
+      } finally {
+        setJobsLoading(false);
+      }
+
+      // Load scheduled jobs
       setScheduledJobsLoading(true);
       try {
-        const jobs = await ScheduledJobsAPI.getScheduledJobs();
-        setScheduledJobs(jobs);
-      } catch (error) {
+        const scheduledJobsList = await JobsAPI.getScheduledJobs(walletAddress);
+        setScheduledJobs(scheduledJobsList);
+      } catch (error: any) {
         console.error('Error loading scheduled jobs:', error);
-        setScheduledJobs([]); // Set empty array on error
-        // Only show toast if it's not a dependency issue
-        if (!error.message?.includes('Database service unavailable')) {
-          toast({
-            title: 'Scheduled jobs unavailable',
-            description: 'Please install dependencies and initialize database',
-            status: 'warning',
-            duration: 5000,
-            isClosable: true,
-          });
-        }
+        setScheduledJobs([]);
       } finally {
         setScheduledJobsLoading(false);
       }
     };
 
-    loadScheduledJobs();
-  }, [toast]);
+    loadData();
+  }, [getAddress]); // Remove toast from dependencies to prevent re-renders
   
-  // Filter out default conversation and conversations without user messages
-  const jobConversations = conversations.filter(conv => {
-    if (conv.id === "default") return false;
-    const messages = getMessagesHistory(conv.id);
-    const userMessages = messages.filter(m => m.role === "user");
-    return userMessages.length > 0;
-  });
-  
-  const currentJobs = jobConversations.filter(isCurrentJob);
-  const previousJobs = jobConversations.filter(isPreviousJob);
+  // Filter jobs
+  const currentJobs = jobs.filter(isCurrentJob);
+  const previousJobs = jobs.filter(isPreviousJob);
   const activeScheduledJobs = scheduledJobs.filter(job => job.is_active);
 
-  const handleScheduledJobToggle = async (jobId: number) => {
+  const handleScheduledJobToggle = async (jobId: string) => {
     try {
+      const walletAddress = getAddress();
+      if (!walletAddress) {
+        toast({
+          title: 'Wallet not connected',
+          description: 'Please connect your wallet to update jobs',
+          status: 'warning',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+      
       const job = scheduledJobs.find(j => j.id === jobId);
       if (job) {
-        await ScheduledJobsAPI.updateScheduledJob(jobId, { is_active: !job.is_active });
+        await JobsAPI.updateJob(jobId, { 
+          wallet_address: walletAddress,
+          is_active: !job.is_active 
+        });
         // Refresh scheduled jobs
-        const updatedJobs = await ScheduledJobsAPI.getScheduledJobs();
+        const updatedJobs = await JobsAPI.getScheduledJobs(walletAddress);
         setScheduledJobs(updatedJobs);
         
         toast({
@@ -339,7 +368,7 @@ export const JobsList: FC<JobsListProps> = ({ conversations, onJobClick, isLoadi
     }
   };
   
-  if (jobConversations.length === 0 && activeScheduledJobs.length === 0 && !isLoading && !scheduledJobsLoading) {
+  if (jobs.length === 0 && activeScheduledJobs.length === 0 && !isLoading && !scheduledJobsLoading) {
     return (
       <Box className={styles.emptyState}>
         <Text fontSize="md" color="gray.500" textAlign="center">
@@ -408,8 +437,8 @@ export const JobsList: FC<JobsListProps> = ({ conversations, onJobClick, isLoadi
                 </Box>
               ) : (
                 <VStack spacing={2} width="100%" align="stretch" pb={2}>
-                  {currentJobs.map((conversation) => (
-                    <JobItem key={conversation.id} conversation={conversation} onClick={onJobClick} />
+                  {currentJobs.map((job) => (
+                    <JobItem key={job.id} job={job} onClick={onJobClick} />
                   ))}
                 </VStack>
               )}
@@ -450,8 +479,8 @@ export const JobsList: FC<JobsListProps> = ({ conversations, onJobClick, isLoadi
                 </Box>
               ) : (
                 <VStack spacing={2} width="100%" align="stretch" pb={2}>
-                  {previousJobs.map((conversation) => (
-                    <JobItem key={conversation.id} conversation={conversation} onClick={onJobClick} />
+                  {previousJobs.map((job) => (
+                    <JobItem key={job.id} job={job} onClick={onJobClick} />
                   ))}
                 </VStack>
               )}

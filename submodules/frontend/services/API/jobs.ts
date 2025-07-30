@@ -30,7 +30,9 @@ export class JobsAPI {
     return response.data.job;
   }
 
-  static async updateJob(walletAddress: string, jobId: string, updates: Partial<Job>): Promise<Job> {
+  static async updateJob(jobId: string, updates: Partial<Job>): Promise<Job> {
+    // Extract wallet address from updates or use a default approach
+    const walletAddress = updates.wallet_address || 'temp';
     const response = await axios.put(`${BASE_URL}/api/v1/jobs`, { id: jobId, ...updates }, {
       headers: this.getHeaders(walletAddress)
     });
@@ -93,6 +95,54 @@ export class JobsAPI {
     if (lastMessage.role === 'assistant') return 'completed';
     
     return 'running';
+  }
+
+  static calculateNextRunTime(
+    scheduleType: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom',
+    currentTime: Date,
+    intervalDays?: number
+  ): Date | null {
+    const nextRun = new Date(currentTime);
+
+    switch (scheduleType) {
+      case 'once':
+        return null; // No next run for one-time jobs
+      
+      case 'daily':
+        nextRun.setDate(nextRun.getDate() + 1);
+        break;
+      
+      case 'weekly':
+        nextRun.setDate(nextRun.getDate() + 7);
+        break;
+      
+      case 'monthly':
+        nextRun.setMonth(nextRun.getMonth() + 1);
+        break;
+      
+      case 'custom':
+        if (intervalDays) {
+          nextRun.setDate(nextRun.getDate() + intervalDays);
+        } else {
+          return null;
+        }
+        break;
+    }
+
+    return nextRun;
+  }
+
+  static async getScheduledJobs(walletAddress: string): Promise<Job[]> {
+    try {
+      const response = await axios.get(`${BASE_URL}/api/v1/jobs/scheduled`, {
+        headers: this.getHeaders(walletAddress)
+      });
+      
+      return response.data.jobs || [];
+    } catch (error: any) {
+      console.error('Error fetching scheduled jobs:', error);
+      throw new Error(error.response?.data?.error || 'Failed to fetch scheduled jobs');
+    }
   }
 }
 

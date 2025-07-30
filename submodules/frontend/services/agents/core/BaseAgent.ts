@@ -1,22 +1,26 @@
 import { Agent } from '@mastra/core';
 import { openai } from '@ai-sdk/openai';
 import { AgentResponse, ChatRequest, ResponseType } from '@/services/agents/types';
+import { getApifyToolsets } from '@/services/agents/mcp-client';
 
 export abstract class BaseAgent {
   protected agent: Agent;
   protected name: string;
   protected description: string;
   protected capabilities: string[];
+  protected useApifyTools: boolean;
 
   constructor(
     name: string,
     description: string,
     capabilities: string[],
-    modelName: string = 'gpt-4o-mini'
+    modelName: string = 'gpt-4o-mini',
+    useApifyTools: boolean = false
   ) {
     this.name = name;
     this.description = description;
     this.capabilities = capabilities;
+    this.useApifyTools = useApifyTools;
 
     // Create the Mastra agent with proper configuration
     this.agent = new Agent({
@@ -36,8 +40,15 @@ export abstract class BaseAgent {
       // Build messages from request
       const messages = this.buildMessages(request);
       
+      // Get dynamic toolsets if needed
+      const options: any = {};
+      if (this.useApifyTools) {
+        const apifyToolsets = await getApifyToolsets();
+        options.toolsets = apifyToolsets;
+      }
+
       // Use Mastra's generate method
-      const result = await this.agent.generate(messages);
+      const result = await this.agent.generate(messages, options);
 
       return this.parseResponse(result);
     } catch (error) {
@@ -65,8 +76,15 @@ export abstract class BaseAgent {
   }
 
   async streamVNext(messages: any, options?: any) {
+    // Get dynamic toolsets if needed
+    const enhancedOptions = { ...options };
+    if (this.useApifyTools) {
+      const apifyToolsets = await getApifyToolsets();
+      enhancedOptions.toolsets = { ...enhancedOptions.toolsets, ...apifyToolsets };
+    }
+
     // Delegate to the underlying Mastra agent's streamVNext method
-    return await this.agent.streamVNext(messages, options);
+    return await this.agent.streamVNext(messages, enhancedOptions);
   }
 
   protected parseResponse(result: any): AgentResponse {

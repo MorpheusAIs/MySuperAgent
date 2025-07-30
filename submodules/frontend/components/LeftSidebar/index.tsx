@@ -136,13 +136,14 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
     fetchConversations();
   }, [conversationTitles, currentConversationId]);
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      refreshMessages();
-    }, 2000);
+  // Disabled auto-refresh polling - was causing excessive API calls
+  // useEffect(() => {
+  //   const intervalId = setInterval(() => {
+  //     refreshMessages();
+  //   }, 2000);
 
-    return () => clearInterval(intervalId);
-  }, [refreshMessages]);
+  //   return () => clearInterval(intervalId);
+  // }, [refreshMessages]);
 
   const filteredConversations = conversations.filter(
     (conv) =>

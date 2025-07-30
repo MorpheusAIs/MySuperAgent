@@ -1,4 +1,4 @@
-import React, { FC, useState, useEffect } from "react";
+import React, { FC, useState, useEffect, useCallback } from "react";
 import { Box, useBreakpointValue, Text, VStack } from "@chakra-ui/react";
 import { MessageList } from "@/components/MessageList";
 import { JobsList } from "@/components/JobsList";
@@ -6,8 +6,10 @@ import { ChatInput } from "@/components/ChatInput";
 import PrefilledOptions from "@/components/ChatInput/PrefilledOptions";
 import { useChatContext } from "@/contexts/chat/useChatContext";
 import { trackEvent } from "@/services/analytics";
-import { createNewConversation, getAllConversations } from "@/services/ChatManagement/conversations";
-import { Conversation } from "@/services/types";
+import JobsAPI from "@/services/API/jobs";
+import { useWalletAddress } from "@/services/Wallet/utils";
+import { Job, UserPreferences } from "@/services/Database/db";
+import UserPreferencesAPI from "@/services/API/userPreferences";
 import styles from "./index.module.css";
 
 export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
@@ -18,21 +20,32 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
   const [localLoading, setLocalLoading] = useState(false);
   const [showPrefilledOptions, setShowPrefilledOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
+  const { address, getAddress } = useWalletAddress();
   
-  // Load conversations on client side only
+  // Load user preferences only (jobs come from ChatProviderDB)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setConversations(getAllConversations());
-    }
-  }, []);
+    const loadUserPreferences = async () => {
+      const walletAddress = getAddress();
+      if (!walletAddress) {
+        // No wallet connected, skip loading preferences
+        return;
+      }
+      
+      try {
+        const preferences = await UserPreferencesAPI.getUserPreferences(walletAddress);
+        setUserPreferences(preferences);
+      } catch (error) {
+        console.error('Error loading user preferences:', error);
+        // Don't set preferences if loading fails - use defaults
+      }
+    };
+
+    loadUserPreferences();
+  }, [getAddress]);
   
-  // Refresh conversations when returning to jobs view
-  useEffect(() => {
-    if (currentView === 'jobs' && typeof window !== 'undefined') {
-      setConversations(getAllConversations());
-    }
-  }, [currentView]);
+  // No need to refresh jobs - ChatProviderDB handles this
+
   const currentMessages = messages[currentConversationId] || [];
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showLoading = isLoading || localLoading;
@@ -43,37 +56,79 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
     useResearch: boolean = true
   ) => {
     if (currentView === 'jobs') {
-      // Create a new conversation but stay in jobs view
-      const newConversationId = createNewConversation();
-      
-      // Switch to this new conversation but keep jobs view
-      await setCurrentConversation(newConversationId);
-      
-      // Send the message in the background (non-blocking)
-      // Pass the newConversationId directly to avoid race conditions with state updates
-      sendMessage(message, file, useResearch, newConversationId)
-        .then(() => {
-          console.log("Message sent successfully for conversation:", newConversationId);
-          // Refresh conversations list to show updated status
-          if (typeof window !== 'undefined') {
-            setConversations(getAllConversations());
-          }
-        })
-        .catch((error) => {
-          console.error("Error sending message:", error);
-          // Refresh conversations list to show updated status
-          if (typeof window !== 'undefined') {
-            setConversations(getAllConversations());
-          }
+      // Create a new job but stay in jobs view
+      try {
+        const walletAddress = getAddress();
+        if (!walletAddress) {
+          console.error("No wallet connected - cannot create job");
+          throw new Error("Please connect your wallet to create jobs");
+        }
+        const shouldAutoSchedule = userPreferences?.auto_schedule_jobs || false;
+        
+        const newJob = await JobsAPI.createJob(walletAddress, {
+          name: JobsAPI.generateJobName(message),
+          initial_message: message,
+          is_scheduled: shouldAutoSchedule,
+          has_uploaded_file: !!file
         });
-      
-      // Refresh conversations list immediately to show the new job
-      if (typeof window !== 'undefined') {
-        setConversations(getAllConversations());
+        
+        // If auto-scheduling is enabled, update the job with scheduling fields
+        if (shouldAutoSchedule && userPreferences) {
+          try {
+            // Create schedule time based on user preferences
+            const now = new Date();
+            const [hours, minutes] = userPreferences.default_schedule_time.split(':');
+            const scheduleDateTime = new Date();
+            scheduleDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            
+            // If the time has already passed today, schedule for tomorrow
+            if (scheduleDateTime <= now) {
+              scheduleDateTime.setDate(scheduleDateTime.getDate() + 1);
+            }
+
+            // Calculate next run time
+            const nextRunTime = JobsAPI.calculateNextRunTime(
+              userPreferences.default_schedule_type as 'once' | 'daily' | 'weekly' | 'monthly' | 'custom',
+              scheduleDateTime,
+              userPreferences.default_schedule_type === 'custom' ? 1 : undefined
+            );
+            
+            // Update the job with scheduling information
+            await JobsAPI.updateJob(newJob.id, {
+              wallet_address: walletAddress,
+              is_scheduled: true,
+              schedule_type: userPreferences.default_schedule_type as 'once' | 'daily' | 'weekly' | 'monthly' | 'custom',
+              schedule_time: scheduleDateTime,
+              next_run_time: nextRunTime,
+              interval_days: userPreferences.default_schedule_type === 'custom' ? 1 : null,
+              timezone: userPreferences.timezone,
+            });
+            
+            console.log(`Job auto-scheduled for ${scheduleDateTime.toLocaleString()}`);
+          } catch (scheduleError) {
+            console.error('Error auto-scheduling job:', scheduleError);
+            // Continue with regular job creation even if scheduling fails
+          }
+        }
+        
+        // Switch to this new job but keep jobs view
+        await setCurrentConversation(newJob.id);
+        
+        // Send the message in the background (non-blocking)
+        sendMessage(message, file, useResearch, newJob.id)
+          .then(() => {
+            console.log("Message sent successfully for job:", newJob.id);
+          })
+          .catch((error) => {
+            console.error("Error sending message:", error);
+          });
+        
+        // Return immediately for non-blocking behavior
+        return Promise.resolve();
+      } catch (error) {
+        console.error("Error creating new job:", error);
+        throw error;
       }
-      
-      // Return immediately for non-blocking behavior
-      return Promise.resolve();
     } else {
       // For regular chat (not jobs), use the existing flow
       try {
@@ -87,15 +142,15 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
     }
   };
   
-  const handleJobClick = async (conversationId: string) => {
+  const handleJobClick = async (jobId: string) => {
     try {
       setLocalLoading(true);
-      await setCurrentConversation(conversationId);
+      await setCurrentConversation(jobId);
       setCurrentView('chat');
       // Small delay to ensure state updates have propagated
       setTimeout(() => setLocalLoading(false), 100);
     } catch (error) {
-      console.error("Error selecting conversation:", error);
+      console.error("Error selecting job:", error);
       setLocalLoading(false);
     }
   };
@@ -178,7 +233,6 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
             {/* Jobs List - directly under input/options */}
             <Box width="100%" maxWidth="600px">
               <JobsList
-                conversations={conversations}
                 onJobClick={handleJobClick}
                 isLoading={showLoading}
               />

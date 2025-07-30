@@ -4,15 +4,15 @@ import { LeftSidebar } from "@/components/LeftSidebar";
 import { Chat } from "@/components/Chat";
 import { useState } from "react";
 import { HeaderBar } from "@/components/HeaderBar";
-import { ChatProvider } from "@/contexts/chat/ChatProvider";
+import { ChatProviderDB } from "@/contexts/chat/ChatProviderDB";
 import styles from "./index.module.css";
 
 // Wrapper with provider
 const HomeWithProvider: NextPage = () => {
   return (
-    <ChatProvider>
+    <ChatProviderDB>
       <Home />
-    </ChatProvider>
+    </ChatProviderDB>
   );
 };
 

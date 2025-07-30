@@ -29,11 +29,22 @@ export interface Job {
   description: string | null;
   initial_message: string;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
-  is_scheduled: boolean;
   created_at: Date;
   updated_at: Date;
   completed_at: Date | null;
   has_uploaded_file: boolean;
+  
+  // Optional scheduling fields
+  is_scheduled: boolean;
+  schedule_type?: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom' | null;
+  schedule_time?: Date | null;
+  next_run_time?: Date | null;
+  interval_days?: number | null;
+  is_active: boolean;
+  last_run_at?: Date | null;
+  run_count: number;
+  max_runs?: number | null;
+  timezone: string;
 }
 
 export interface Message {
@@ -52,22 +63,6 @@ export interface Message {
   order_index: number;
 }
 
-export interface ScheduledJob {
-  id: number;
-  job_id: string;
-  wallet_address: string;
-  schedule_type: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
-  schedule_time: Date;
-  next_run_time: Date;
-  interval_days: number | null;
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
-  last_run_at: Date | null;
-  run_count: number;
-  max_runs: number | null;
-  timezone: string;
-}
 
 // Database service classes
 export class UserDB {
@@ -105,6 +100,7 @@ export class UserPreferencesDB {
     // Ensure user exists first
     await UserDB.createOrUpdateUser(walletAddress);
 
+    // First try to update, if no rows affected, insert
     const allowedFields = ['auto_schedule_jobs', 'default_schedule_type', 'default_schedule_time', 'timezone'];
     const updateFields = Object.keys(preferences)
       .filter(key => allowedFields.includes(key))
@@ -115,15 +111,67 @@ export class UserPreferencesDB {
       .filter(key => allowedFields.includes(key))
       .map(key => preferences[key as keyof UserPreferences]);
     
-    const query = `
+    const updateQuery = `
       UPDATE user_preferences 
-      SET ${updateFields}
+      SET ${updateFields}, updated_at = CURRENT_TIMESTAMP
       WHERE wallet_address = $1
       RETURNING *;
     `;
     
-    const result = await pool.query(query, [walletAddress, ...values]);
+    const updateResult = await pool.query(updateQuery, [walletAddress, ...values]);
+    
+    if (updateResult.rows.length > 0) {
+      return updateResult.rows[0];
+    }
+    
+    // If no rows were updated, insert new preferences
+    const insertQuery = `
+      INSERT INTO user_preferences (
+        wallet_address, auto_schedule_jobs, default_schedule_type, 
+        default_schedule_time, timezone
+      ) VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+    `;
+    
+    const insertValues = [
+      walletAddress,
+      preferences.auto_schedule_jobs || false,
+      preferences.default_schedule_type || 'daily',
+      preferences.default_schedule_time || '09:00:00',
+      preferences.timezone || 'UTC'
+    ];
+    
+    const insertResult = await pool.query(insertQuery, insertValues);
+    return insertResult.rows[0];
+  }
+
+  static async createPreferences(walletAddress: string, preferences: Partial<UserPreferences>): Promise<UserPreferences> {
+    // Ensure user exists first
+    await UserDB.createOrUpdateUser(walletAddress);
+
+    const query = `
+      INSERT INTO user_preferences (
+        wallet_address, auto_schedule_jobs, default_schedule_type, 
+        default_schedule_time, timezone
+      ) VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+    `;
+    
+    const values = [
+      walletAddress,
+      preferences.auto_schedule_jobs || false,
+      preferences.default_schedule_type || 'daily',
+      preferences.default_schedule_time || '09:00:00',
+      preferences.timezone || 'UTC'
+    ];
+    
+    const result = await pool.query(query, values);
     return result.rows[0];
+  }
+
+  static async deletePreferences(walletAddress: string): Promise<void> {
+    const query = 'DELETE FROM user_preferences WHERE wallet_address = $1;';
+    await pool.query(query, [walletAddress]);
   }
 }
 
@@ -135,8 +183,10 @@ export class JobDB {
     const query = `
       INSERT INTO jobs (
         wallet_address, name, description, initial_message, 
-        status, is_scheduled, has_uploaded_file
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        status, has_uploaded_file, is_scheduled, schedule_type, 
+        schedule_time, next_run_time, interval_days, is_active, 
+        last_run_at, run_count, max_runs, timezone
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *;
     `;
     
@@ -146,8 +196,17 @@ export class JobDB {
       job.description,
       job.initial_message,
       job.status || 'pending',
+      job.has_uploaded_file || false,
       job.is_scheduled || false,
-      job.has_uploaded_file || false
+      job.schedule_type || null,
+      job.schedule_time || null,
+      job.next_run_time || null,
+      job.interval_days || null,
+      job.is_active !== undefined ? job.is_active : true,
+      job.last_run_at || null,
+      job.run_count || 0,
+      job.max_runs || null,
+      job.timezone || 'UTC'
     ];
     
     const result = await pool.query(query, values);
@@ -172,7 +231,11 @@ export class JobDB {
   }
 
   static async updateJob(jobId: string, updates: Partial<Job>): Promise<Job> {
-    const allowedFields = ['name', 'description', 'status', 'is_scheduled', 'completed_at', 'has_uploaded_file'];
+    const allowedFields = [
+      'name', 'description', 'status', 'completed_at', 'has_uploaded_file',
+      'is_scheduled', 'schedule_type', 'schedule_time', 'next_run_time', 
+      'interval_days', 'is_active', 'last_run_at', 'run_count', 'max_runs', 'timezone'
+    ];
     const updateFields = Object.keys(updates)
       .filter(key => allowedFields.includes(key))
       .map((key, index) => `${key} = $${index + 2}`)
@@ -191,6 +254,64 @@ export class JobDB {
     
     const result = await pool.query(query, [jobId, ...values]);
     return result.rows[0];
+  }
+
+  static async getScheduledJobs(walletAddress: string): Promise<Job[]> {
+    const query = `
+      SELECT * FROM jobs 
+      WHERE wallet_address = $1 AND is_scheduled = TRUE 
+      ORDER BY next_run_time ASC;
+    `;
+    
+    const result = await pool.query(query, [walletAddress]);
+    return result.rows;
+  }
+
+  static async getActiveScheduledJobs(): Promise<Job[]> {
+    const query = `
+      SELECT * FROM jobs 
+      WHERE is_scheduled = TRUE AND is_active = TRUE 
+      AND next_run_time <= CURRENT_TIMESTAMP
+      ORDER BY next_run_time ASC;
+    `;
+    
+    const result = await pool.query(query);
+    return result.rows;
+  }
+
+  static calculateNextRunTime(
+    scheduleType: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom',
+    currentTime: Date,
+    intervalDays?: number
+  ): Date | null {
+    const nextRun = new Date(currentTime);
+
+    switch (scheduleType) {
+      case 'once':
+        return null; // No next run for one-time jobs
+      
+      case 'daily':
+        nextRun.setDate(nextRun.getDate() + 1);
+        break;
+      
+      case 'weekly':
+        nextRun.setDate(nextRun.getDate() + 7);
+        break;
+      
+      case 'monthly':
+        nextRun.setMonth(nextRun.getMonth() + 1);
+        break;
+      
+      case 'custom':
+        if (intervalDays) {
+          nextRun.setDate(nextRun.getDate() + intervalDays);
+        } else {
+          return null;
+        }
+        break;
+    }
+
+    return nextRun;
   }
 
   static async deleteJob(jobId: string): Promise<void> {
@@ -241,11 +362,29 @@ export class MessageDB {
     `;
     
     const result = await pool.query(query, [jobId]);
-    return result.rows.map(row => ({
-      ...row,
-      content: JSON.parse(row.content),
-      metadata: JSON.parse(row.metadata)
-    }));
+    return result.rows.map(row => {
+      let content, metadata;
+      
+      try {
+        content = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
+      } catch (e) {
+        // If parsing fails, treat as plain string
+        content = row.content;
+      }
+      
+      try {
+        metadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+      } catch (e) {
+        // If parsing fails, use empty object
+        metadata = {};
+      }
+      
+      return {
+        ...row,
+        content,
+        metadata
+      };
+    });
   }
 
   static async updateMessage(messageId: string, updates: Partial<Message>): Promise<Message> {
@@ -286,151 +425,9 @@ export class MessageDB {
   }
 }
 
-export class ScheduledJobDB {
-  static async createScheduledJob(scheduledJob: Omit<ScheduledJob, 'id' | 'created_at' | 'updated_at' | 'last_run_at' | 'run_count'>): Promise<ScheduledJob> {
-    const query = `
-      INSERT INTO scheduled_jobs (
-        job_id, wallet_address, schedule_type, schedule_time, next_run_time,
-        interval_days, is_active, max_runs, timezone
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *;
-    `;
-    
-    const values = [
-      scheduledJob.job_id,
-      scheduledJob.wallet_address,
-      scheduledJob.schedule_type,
-      scheduledJob.schedule_time,
-      scheduledJob.next_run_time,
-      scheduledJob.interval_days,
-      scheduledJob.is_active ?? true,
-      scheduledJob.max_runs,
-      scheduledJob.timezone || 'UTC'
-    ];
-    
-    const result = await pool.query(query, values);
-    return result.rows[0];
-  }
-
-  static async getScheduledJobsByWallet(walletAddress: string): Promise<ScheduledJob[]> {
-    const query = `
-      SELECT * FROM scheduled_jobs 
-      WHERE wallet_address = $1 
-      ORDER BY next_run_time ASC;
-    `;
-    
-    const result = await pool.query(query, [walletAddress]);
-    return result.rows;
-  }
-
-  static async getJobsToRun(): Promise<ScheduledJob[]> {
-    const query = `
-      SELECT * FROM scheduled_jobs 
-      WHERE is_active = true 
-        AND next_run_time <= NOW()
-        AND (max_runs IS NULL OR run_count < max_runs)
-      ORDER BY next_run_time ASC
-      LIMIT 50;
-    `;
-    
-    const result = await pool.query(query);
-    return result.rows;
-  }
-
-  static async updateScheduledJobAfterRun(scheduledJobId: number, nextRunTime: Date | null): Promise<void> {
-    if (nextRunTime) {
-      const query = `
-        UPDATE scheduled_jobs 
-        SET last_run_at = NOW(), 
-            run_count = run_count + 1,
-            next_run_time = $2
-        WHERE id = $1;
-      `;
-      await pool.query(query, [scheduledJobId, nextRunTime]);
-    } else {
-      // Deactivate job if no next run time
-      const query = `
-        UPDATE scheduled_jobs 
-        SET last_run_at = NOW(), 
-            run_count = run_count + 1,
-            is_active = false
-        WHERE id = $1;
-      `;
-      await pool.query(query, [scheduledJobId]);
-    }
-  }
-
-  static async updateScheduledJob(scheduledJobId: number, updates: Partial<ScheduledJob>): Promise<ScheduledJob> {
-    const allowedFields = [
-      'schedule_type', 'schedule_time', 'next_run_time', 
-      'interval_days', 'is_active', 'max_runs', 'timezone'
-    ];
-    
-    const updateFields = Object.keys(updates)
-      .filter(key => allowedFields.includes(key))
-      .map((key, index) => `${key} = $${index + 2}`)
-      .join(', ');
-    
-    const values = Object.keys(updates)
-      .filter(key => allowedFields.includes(key))
-      .map(key => updates[key as keyof ScheduledJob]);
-    
-    const query = `
-      UPDATE scheduled_jobs 
-      SET ${updateFields}
-      WHERE id = $1
-      RETURNING *;
-    `;
-    
-    const result = await pool.query(query, [scheduledJobId, ...values]);
-    return result.rows[0];
-  }
-
-  static async deleteScheduledJob(scheduledJobId: number): Promise<void> {
-    const query = 'DELETE FROM scheduled_jobs WHERE id = $1;';
-    await pool.query(query, [scheduledJobId]);
-  }
-
-  static calculateNextRunTime(
-    scheduleType: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom',
-    currentTime: Date,
-    intervalDays?: number
-  ): Date | null {
-    const nextRun = new Date(currentTime);
-
-    switch (scheduleType) {
-      case 'once':
-        return null; // No next run for one-time jobs
-      
-      case 'daily':
-        nextRun.setDate(nextRun.getDate() + 1);
-        break;
-      
-      case 'weekly':
-        nextRun.setDate(nextRun.getDate() + 7);
-        break;
-      
-      case 'monthly':
-        nextRun.setMonth(nextRun.getMonth() + 1);
-        break;
-      
-      case 'custom':
-        if (intervalDays) {
-          nextRun.setDate(nextRun.getDate() + intervalDays);
-        } else {
-          return null;
-        }
-        break;
-    }
-
-    return nextRun;
-  }
-}
-
 export default {
   UserDB,
   UserPreferencesDB,
   JobDB,
-  MessageDB,
-  ScheduledJobDB
+  MessageDB
 };
