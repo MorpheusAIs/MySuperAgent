@@ -1,5 +1,4 @@
 from models.service.agent_config import AgentConfig
-from services.agents.base_agent.tool_types import BaseAgentToolType
 
 
 class Config:
@@ -29,7 +28,7 @@ class Config:
 
     tools = [
         {
-            "name": BaseAgentToolType.SWAP_ASSETS.value,
+            "name": "swap_assets",
             "description": "Swap one asset for another (Base Mainnet only)",
             "parameters": {
                 "type": "object",
@@ -48,7 +47,7 @@ class Config:
             },
         },
         {
-            "name": BaseAgentToolType.TRANSFER_ASSET.value,
+            "name": "transfer_asset",
             "description": "Transfer an asset to another address",
             "parameters": {
                 "type": "object",
@@ -58,12 +57,16 @@ class Config:
                         "type": "string",
                         "description": "Asset ID to transfer",
                     },
+                    "destination_address": {
+                        "type": "string",
+                        "description": "Destination address to transfer to",
+                    },
                 },
-                "required": ["amount", "asset_id"],
+                "required": ["amount", "asset_id", "destination_address"],
             },
         },
         {
-            "name": BaseAgentToolType.GET_BALANCE.value,
+            "name": "get_balance",
             "description": "Get balance of a specific asset",
             "parameters": {
                 "type": "object",
@@ -76,54 +79,67 @@ class Config:
                 "required": ["asset_id"],
             },
         },
-        # TODO: Add more base tools / functionality
-        # {
-        #     "name": BaseAgentToolType.CREATE_TOKEN.value,
-        #     "description": "Create a new ERC-20 token",
-        #     "parameters": {
-        #         "type": "object",
-        #         "properties": {
-        #             "name": {"type": "string", "description": "Name of the token"},
-        #             "symbol": {"type": "string", "description": "Symbol of the token"},
-        #             "initial_supply": {
-        #                 "type": "integer",
-        #                 "description": "Initial supply of tokens",
-        #             },
-        #         },
-        #         "required": ["name", "symbol", "initial_supply"],
-        #     },
-        # },
-        # {
-        #     "name": BaseAgentToolType.REQUEST_ETH_FROM_FAUCET.value,
-        #     "description": "Request ETH from testnet faucet",
-        #     "parameters": {"type": "object", "properties": {}},
-        # },
-        # {
-        #     "name": BaseAgentToolType.MINT_NFT.value,
-        #     "description": "Mint an NFT to an address",
-        #     "parameters": {
-        #         "type": "object",
-        #         "properties": {
-        #             "contract_address": {"type": "string", "description": "NFT contract address"},
-        #             "mint_to": {"type": "string", "description": "Address to mint NFT to"},
-        #         },
-        #         "required": ["contract_address", "mint_to"],
-        #     },
-        # },
-        # {
-        #     "name": BaseAgentToolType.REGISTER_BASENAME.value,
-        #     "description": "Register a basename for the agent's wallet",
-        #     "parameters": {
-        #         "type": "object",
-        #         "properties": {
-        #             "basename": {"type": "string", "description": "Basename to register"},
-        #             "amount": {
-        #                 "type": "number",
-        #                 "description": "Amount of ETH to pay for registration",
-        #                 "default": 0.002,
-        #             },
-        #         },
-        #         "required": ["basename"],
-        #     },
-        # },
+        # Uncomment these when needed
+        {
+            "name": "create_token",
+            "description": "Create a new ERC-20 token",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Name of the token"},
+                    "symbol": {"type": "string", "description": "Symbol of the token"},
+                    "initial_supply": {
+                        "type": "integer",
+                        "description": "Initial supply of tokens",
+                    },
+                },
+                "required": ["name", "symbol", "initial_supply"],
+            },
+        },
+        {
+            "name": "request_eth_from_faucet",
+            "description": "Request ETH from testnet faucet",
+            "parameters": {"type": "object", "properties": {}},
+        },
+        {
+            "name": "deploy_nft",
+            "description": "Deploy an ERC-721 NFT contract",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Name of the NFT collection"},
+                    "symbol": {"type": "string", "description": "Symbol of the NFT collection"},
+                    "base_uri": {"type": "string", "description": "Base URI for token metadata"},
+                },
+                "required": ["name", "symbol", "base_uri"],
+            },
+        },
+        {
+            "name": "mint_nft",
+            "description": "Mint an NFT to an address",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contract_address": {"type": "string", "description": "NFT contract address"},
+                    "mint_to": {"type": "string", "description": "Address to mint NFT to"},
+                },
+                "required": ["contract_address", "mint_to"],
+            },
+        },
+        {
+            "name": "register_basename",
+            "description": "Register a basename for the agent's wallet",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "basename": {"type": "string", "description": "Basename to register"},
+                    "amount": {
+                        "type": "number",
+                        "description": "Amount of ETH to pay for registration",
+                        "default": 0.002,
+                    },
+                },
+                "required": ["basename"],
+            },
+        },
     ]

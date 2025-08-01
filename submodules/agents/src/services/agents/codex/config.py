@@ -1,7 +1,6 @@
 from langchain.schema import SystemMessage
 from models.service.agent_config import AgentConfig
-
-from .utils.tool_types import CodexToolType
+from services.tools.categories.external.codex.tool_types import CodexToolType
 
 
 class Config:

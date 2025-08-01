@@ -1,8 +1,6 @@
 from langchain.schema import SystemMessage
 from models.service.agent_config import AgentConfig
 
-from .tool_types import DexScreenerToolType
-
 
 class Config:
     """Configuration for DexScreener Token API."""
@@ -47,7 +45,7 @@ class Config:
 
     tools = [
         {
-            "name": DexScreenerToolType.GET_LATEST_TOKEN_PROFILES.value,
+            "name": "get_latest_token_profiles",
             "description": "Get the latest token profiles from DexScreener",
             "parameters": {
                 "type": "object",
@@ -61,7 +59,7 @@ class Config:
             },
         },
         {
-            "name": DexScreenerToolType.GET_LATEST_BOOSTED_TOKENS.value,
+            "name": "get_latest_boosted_tokens",
             "description": "Get the latest boosted tokens from DexScreener",
             "parameters": {
                 "type": "object",
@@ -75,7 +73,7 @@ class Config:
             },
         },
         {
-            "name": DexScreenerToolType.GET_TOP_BOOSTED_TOKENS.value,
+            "name": "get_top_boosted_tokens",
             "description": "Get the tokens with most active boosts",
             "parameters": {
                 "type": "object",
@@ -89,7 +87,7 @@ class Config:
             },
         },
         {
-            "name": DexScreenerToolType.SEARCH_DEX_PAIRS.value,
+            "name": "search_dex_pairs",
             "description": "Search for DEX trading pairs and their activity",
             "parameters": {
                 "type": "object",

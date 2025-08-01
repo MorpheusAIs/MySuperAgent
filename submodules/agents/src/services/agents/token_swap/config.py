@@ -1,8 +1,6 @@
 from langchain.schema import SystemMessage
 from models.service.agent_config import AgentConfig
 
-from .utils.tool_types import SwapToolType
-
 
 class Config:
     """Configuration for Token Swap Agent."""
@@ -25,24 +23,6 @@ class Config:
         is_enabled=False,
     )
 
-    # *************#
-    # SYSTEM MESSAGE
-    # *************#
-    system_message = SystemMessage(
-        content=(
-            "You are a helpful assistant for token swapping operations. "
-            "You can help users swap between different cryptocurrencies on various blockchain networks. "
-            "You can also check the status of pending transactions. "
-            "When a user wants to swap tokens, ask for the following information if not provided: "
-            "- Source token (token1) "
-            "- Destination token (token2) "
-            "- Amount to swap "
-            "When a user wants to check transaction status, ask for: "
-            "- Transaction hash "
-            "- Chain ID"
-        )
-    )
-
     # *************
     # TOOLS CONFIG
     # *************
@@ -51,7 +31,7 @@ class Config:
         {
             "type": "function",
             "function": {
-                "name": SwapToolType.SWAP_TOKENS.value,
+                "name": "swap_tokens",
                 "description": (
                     "Construct a token swap transaction with validation and quote. "
                     "Make sure the source token and destination token ONLY include "
@@ -82,7 +62,7 @@ class Config:
         {
             "type": "function",
             "function": {
-                "name": SwapToolType.GET_TRANSACTION_STATUS.value,
+                "name": "get_transaction_status",
                 "description": "Get the current status of a transaction",
                 "parameters": {
                     "type": "object",

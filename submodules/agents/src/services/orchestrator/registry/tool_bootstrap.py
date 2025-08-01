@@ -17,6 +17,8 @@ from crewai_tools import (
     YoutubeVideoSearchTool,
 )
 from services.orchestrator.registry.tool_registry import ToolRegistry
+from services.tools import bootstrap_tools as bootstrap_custom_tools
+from services.tools import ToolRegistry as CustomToolRegistry
 
 
 def _register_tool(tool_name, tool_creator_func, **kwargs):
@@ -44,11 +46,32 @@ def _register_tool(tool_name, tool_creator_func, **kwargs):
         return False
 
 
+def _register_custom_tools():
+    """
+    Register custom tools from the dedicated tools service.
+    """
+    # Make sure custom tools are initialized
+    bootstrap_custom_tools()
+    
+    # Get all tools from the custom registry
+    for tool_name in CustomToolRegistry.all_names():
+        try:
+            custom_tool = CustomToolRegistry.get(tool_name)
+            # Don't register if a tool with the same name already exists
+            if tool_name not in ToolRegistry.all_names():
+                ToolRegistry.register(tool_name, custom_tool)
+        except Exception as e:
+            print(f"Failed to register custom tool {tool_name}: {e}")
+
+
 def bootstrap_tools():
     """
     Register all default tools with the ToolRegistry.
     Only registers each tool if it hasn't already been registered.
     """
+    # Register custom tools first
+    _register_custom_tools()
+    
     # ======== SEARCH TOOLS ========
     # General web search
     _register_tool("brave_search", BraveSearchTool)

@@ -1,6 +1,5 @@
 from langchain.schema import SystemMessage
 from models.service.agent_config import AgentConfig
-from services.agents.crypto_data.tool_types import CryptoDataToolType
 
 
 class Config:
@@ -50,7 +49,7 @@ class Config:
     # *************
     tools = [
         {
-            "name": CryptoDataToolType.GET_PRICE.value,
+            "name": "get_coin_price",
             "description": "Get the price of a cryptocurrency",
             "parameters": {
                 "type": "object",
@@ -64,7 +63,7 @@ class Config:
             },
         },
         {
-            "name": CryptoDataToolType.GET_FLOOR_PRICE.value,
+            "name": "get_nft_floor_price",
             "description": "Get the floor price of an NFT",
             "parameters": {
                 "type": "object",
@@ -78,7 +77,7 @@ class Config:
             },
         },
         {
-            "name": CryptoDataToolType.GET_TOTAL_VALUE_LOCKED.value,
+            "name": "get_protocol_tvl",
             "description": "Get the TVL (Total Value Locked) of a protocol.",
             "parameters": {
                 "type": "object",
@@ -92,7 +91,7 @@ class Config:
             },
         },
         {
-            "name": CryptoDataToolType.GET_FULLY_DILUTED_VALUATION.value,
+            "name": "get_fully_diluted_valuation",
             "description": "Get the fdv or fully diluted valuation of a coin",
             "parameters": {
                 "type": "object",
@@ -106,7 +105,7 @@ class Config:
             },
         },
         {
-            "name": CryptoDataToolType.GET_MARKET_CAP.value,
+            "name": "get_market_cap",
             "description": "Get the mc or market cap of a coin",
             "parameters": {
                 "type": "object",
