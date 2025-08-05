@@ -125,9 +125,13 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
         sendMessage(message, file, useResearch, newJob.id)
           .then(() => {
             console.log("Message sent successfully for job:", newJob.id);
+            // Refresh jobs list after message is sent to update status
+            refreshJobsList();
           })
           .catch((error) => {
             console.error("Error sending message:", error);
+            // Refresh even on error to show the failed status
+            refreshJobsList();
           });
         
         // Return immediately for non-blocking behavior
@@ -159,6 +163,23 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
     } catch (error) {
       console.error("Error selecting job:", error);
       setLocalLoading(false);
+    }
+  };
+
+  const handleRunScheduledJob = async (originalJobId: string, newJobId: string, initialMessage: string) => {
+    try {
+      // Switch to the new job
+      await setCurrentConversation(newJobId);
+      
+      // Send the initial message to start the conversation
+      await sendMessage(initialMessage, null, true, newJobId);
+      
+      // Switch to chat view to show the conversation
+      setCurrentView('chat');
+      
+      console.log(`Scheduled job executed: ${originalJobId} -> ${newJobId}`);
+    } catch (error) {
+      console.error("Error running scheduled job:", error);
     }
   };
   
@@ -238,9 +259,10 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
             )}
             
             {/* Jobs List - directly under input/options */}
-            <Box width="100%" maxWidth="600px">
+            <Box width="100%" maxWidth="600px" height="calc(100vh - 400px)" minHeight="400px" overflow="hidden">
               <JobsList
                 onJobClick={handleJobClick}
+                onRunScheduledJob={handleRunScheduledJob}
                 isLoading={showLoading}
                 refreshKey={jobsRefreshKey}
               />

@@ -17,19 +17,57 @@ export abstract class BaseAgent {
     modelName: string = 'gpt-4o-mini',
     useApifyTools: boolean = false
   ) {
+    console.log(`[BaseAgent] Creating agent: ${name}`);
     this.name = name;
     this.description = description;
     this.capabilities = capabilities;
     this.useApifyTools = useApifyTools;
 
     // Create the Mastra agent with proper configuration
-    this.agent = new Agent({
+    const tools = this.getTools();
+    console.log(`[${this.name}] Tools configured:`, Object.keys(tools));
+    console.log(`[${this.name}] Tools details:`, tools);
+    console.log(`[${this.name}] Agent description:`, this.description);
+    
+    // CRITICAL: Mastra requires description to be a non-empty string for tools to work
+    if (!this.description || this.description.trim() === '') {
+      throw new Error(`Agent ${this.name} must have a non-empty description for tools to work`);
+    }
+    
+    // For MCP agents, tools are loaded dynamically  
+    const agentConfig: any = {
       name: this.name,
-      description: this.description,
+      description: this.description, // Mastra needs both description AND instructions
       instructions: this.getInstructions(),
       model: openai(modelName),
-      tools: this.getTools(),
+    };
+    
+    console.log(`[${this.name}] Agent config before tools:`, {
+      name: agentConfig.name,
+      instructions: agentConfig.instructions?.substring(0, 100) + '...',
+      hasInstructions: !!agentConfig.instructions
     });
+    
+    // Add tools - either static tools or dynamic MCP tools
+    if (this.useApifyTools) {
+      // For MCP agents, use function-based tools to load dynamically
+      console.log(`[${this.name}] Setting up dynamic MCP tools`);
+      agentConfig.tools = async () => {
+        const apifyToolsets = await getApifyToolsets();
+        console.log(`[${this.name}] Dynamic MCP tools loaded:`, Object.keys(apifyToolsets));
+        return apifyToolsets;
+      };
+    } else {
+      // For regular agents, use static tools
+      console.log(`[${this.name}] Setting up static tools:`, Object.keys(tools));
+      agentConfig.tools = tools;
+    }
+    
+    this.agent = new Agent(agentConfig);
+    
+    console.log(`[${this.name}] Agent created successfully with ${this.useApifyTools ? 'dynamic MCP' : 'static'} tools`);
+    console.log(`[${this.name}] Agent instance:`, !!this.agent);
+    console.log(`[${this.name}] Agent model:`, this.agent?.model?.modelId || 'unknown');
   }
 
   abstract getInstructions(): string;
@@ -37,18 +75,29 @@ export abstract class BaseAgent {
 
   async chat(request: ChatRequest): Promise<AgentResponse> {
     try {
+      console.log(`[${this.name}] Starting chat with prompt:`, request.prompt.content.substring(0, 100) + '...');
+      
       // Build messages from request
       const messages = this.buildMessages(request);
       
-      // Get dynamic toolsets if needed
+      // No need to pass toolsets in options for MCP agents since they're handled in the agent config
       const options: any = {};
-      if (this.useApifyTools) {
-        const apifyToolsets = await getApifyToolsets();
-        options.toolsets = apifyToolsets;
-      }
-
+      console.log(`[${this.name}] Calling agent.generate with messages:`, messages);
+      
       // Use Mastra's generate method
       const result = await this.agent.generate(messages, options);
+      
+      console.log(`[${this.name}] Generate result type:`, typeof result);
+      console.log(`[${this.name}] Generate result keys:`, Object.keys(result || {}));
+      console.log(`[${this.name}] Generate result.text:`, result?.text?.substring(0, 200) + '...');
+      console.log(`[${this.name}] Generate result.steps:`, result?.steps?.length || 0, 'steps');
+      
+      // Log any tool calls that were made
+      if (result?.steps) {
+        result.steps.forEach((step: any, i: number) => {
+          console.log(`[${this.name}] Step ${i}:`, step.type, step.toolName || 'no tool');
+        });
+      }
 
       return this.parseResponse(result);
     } catch (error) {
@@ -60,31 +109,46 @@ export abstract class BaseAgent {
     }
   }
 
-  protected buildMessages(request: ChatRequest): string {
-    // Build a simple string from chat history and current prompt
-    let fullMessage = '';
+  protected buildMessages(request: ChatRequest): Array<{role: string, content: string}> {
+    // Build proper Mastra message format
+    const messages: Array<{role: string, content: string}> = [];
     
     if (request.chatHistory) {
       request.chatHistory.forEach(msg => {
-        fullMessage += `${msg.role}: ${msg.content}\n`;
+        messages.push({
+          role: msg.role,
+          content: msg.content
+        });
       });
     }
     
-    fullMessage += `user: ${request.prompt.content}`;
+    messages.push({
+      role: 'user',
+      content: request.prompt.content
+    });
     
-    return fullMessage;
+    return messages;
   }
 
   async streamVNext(messages: any, options?: any) {
-    // Get dynamic toolsets if needed
-    const enhancedOptions = { ...options };
-    if (this.useApifyTools) {
-      const apifyToolsets = await getApifyToolsets();
-      enhancedOptions.toolsets = { ...enhancedOptions.toolsets, ...apifyToolsets };
-    }
-
+    // For MCP agents, tools are already configured in the agent constructor
+    // No need to pass toolsets in options
+    console.log(`[${this.name}] Starting streamVNext with messages:`, messages);
+    console.log(`[${this.name}] Agent has tools:`, this.agent._tools ? Object.keys(this.agent._tools) : 'NO TOOLS PROPERTY');
+    console.log(`[${this.name}] Agent tools property:`, this.agent.tools ? 'HAS TOOLS' : 'NO TOOLS');
+    
+    // Force log the actual agent configuration
+    console.log(`[${this.name}] Raw agent config:`, {
+      name: this.agent.name,
+      description: this.agent.description,
+      hasTools: !!this.agent.tools,
+    });
+    
     // Delegate to the underlying Mastra agent's streamVNext method
-    return await this.agent.streamVNext(messages, enhancedOptions);
+    const result = await this.agent.streamVNext(messages, options || {});
+    
+    console.log(`[${this.name}] streamVNext completed`);
+    return result;
   }
 
   protected parseResponse(result: any): AgentResponse {

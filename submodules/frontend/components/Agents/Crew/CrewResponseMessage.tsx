@@ -522,32 +522,44 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
           </HStack>
           
           <VStack align="stretch" spacing={2} fontSize="xs">
-            {metadata.selected_agent && (
+            {(metadata.selected_agent || metadata.selectedAgent) && (
               <HStack justify="space-between">
                 <Text color="gray.400">Selected Agent:</Text>
-                <Badge colorScheme="blue" fontSize="xs">{metadata.selected_agent}</Badge>
+                <Badge colorScheme="blue" fontSize="xs">{metadata.selected_agent || metadata.selectedAgent}</Badge>
               </HStack>
             )}
             
-            {metadata.selection_method && (
+            {(metadata.selection_method || metadata.selectionMethod) && (
               <HStack justify="space-between">
                 <Text color="gray.400">Selection Method:</Text>
                 <Badge 
-                  colorScheme={metadata.selection_method === 'user_selected' ? 'green' : 
-                             metadata.selection_method === 'intelligent_fallback' ? 'orange' : 'purple'} 
+                  colorScheme={(metadata.selection_method || metadata.selectionMethod) === 'user_selected' ? 'green' : 
+                             (metadata.selection_method || metadata.selectionMethod) === 'llm_intelligent' ? 'purple' :
+                             (metadata.selection_method || metadata.selectionMethod) === 'intelligent_fallback' ? 'orange' : 'gray'} 
                   fontSize="xs"
                 >
-                  {metadata.selection_method.replace('_', ' ')}
+                  {(metadata.selection_method || metadata.selectionMethod)?.replace(/_/g, ' ')}
                 </Badge>
               </HStack>
             )}
             
             {metadata.user_requested_agents && metadata.user_requested_agents.length > 0 && (
               <HStack justify="space-between" align="start">
-                <Text color="gray.400">Requested Agents:</Text>
+                <Text color="gray.400">User Requested Agents:</Text>
                 <VStack align="end" spacing={1}>
                   {metadata.user_requested_agents.map((agent, idx) => (
                     <Badge key={idx} colorScheme="yellow" fontSize="xs">{agent}</Badge>
+                  ))}
+                </VStack>
+              </HStack>
+            )}
+            
+            {metadata.selected_agents && metadata.selected_agents.length > 0 && (
+              <HStack justify="space-between" align="start">
+                <Text color="gray.400">Selected Agents:</Text>
+                <VStack align="end" spacing={1}>
+                  {metadata.selected_agents.map((agent, idx) => (
+                    <Badge key={idx} colorScheme="green" fontSize="xs">{agent}</Badge>
                   ))}
                 </VStack>
               </HStack>
@@ -578,6 +590,15 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
                   </Box>
                 </Box>
               </Box>
+            )}
+            
+            {metadata.token_usage && (
+              <HStack justify="space-between">
+                <Text color="gray.400">Token Usage:</Text>
+                <Text color="gray.300" fontSize="xs">
+                  {metadata.token_usage.total_tokens} total ({metadata.token_usage.prompt_tokens} prompt + {metadata.token_usage.completion_tokens} completion)
+                </Text>
+              </HStack>
             )}
           </VStack>
         </VStack>

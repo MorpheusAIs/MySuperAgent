@@ -1,6 +1,6 @@
 import React, { FC, useState, useEffect, useMemo, useCallback } from "react";
-import { Box, VStack, Text, Button, HStack, Badge, Tabs, TabList, TabPanels, Tab, TabPanel, useToast, Input, InputGroup, InputLeftElement, Select, Flex } from "@chakra-ui/react";
-import { ChatIcon, TimeIcon, RepeatIcon, CalendarIcon, SearchIcon } from "@chakra-ui/icons";
+import { Box, VStack, Text, Button, HStack, Badge, Tabs, TabList, TabPanels, Tab, TabPanel, useToast, Input, InputGroup, InputLeftElement, Select, IconButton, Tooltip, Divider } from "@chakra-ui/react";
+import { ChatIcon, TimeIcon, RepeatIcon, CalendarIcon, SearchIcon, TriangleUpIcon, SettingsIcon, CheckCircleIcon, SmallCloseIcon } from "@chakra-ui/icons";
 import { Job } from "@/services/Database/db";
 import JobsAPI from "@/services/API/jobs";
 import { useWalletAddress } from "@/services/Wallet/utils";
@@ -8,6 +8,7 @@ import styles from "./index.module.css";
 
 interface JobsListProps {
   onJobClick: (jobId: string) => void;
+  onRunScheduledJob?: (originalJobId: string, newJobId: string, initialMessage: string) => void;
   isLoading?: boolean;
   refreshKey?: number;
 }
@@ -90,23 +91,21 @@ const PaginationControls: FC<{
   if (totalPages <= 1) return null;
   
   return (
-    <HStack spacing={2} justify="center" mt={4}>
+    <HStack spacing={3} justify="center" className={styles.paginationControls}>
       <Button 
-        size="xs" 
         onClick={() => onPageChange(currentPage - 1)} 
         isDisabled={currentPage === 1}
-        variant="ghost"
+        className={styles.paginationButton}
       >
         Previous
       </Button>
-      <Text fontSize="xs" color="gray.500">
+      <Text className={styles.paginationText}>
         {currentPage} / {totalPages}
       </Text>
       <Button 
-        size="xs" 
         onClick={() => onPageChange(currentPage + 1)} 
         isDisabled={currentPage === totalPages}
-        variant="ghost"
+        className={styles.paginationButton}
       >
         Next
       </Button>
@@ -114,9 +113,15 @@ const PaginationControls: FC<{
   );
 };
 
-const ScheduledJobItem: FC<{ job: Job; onToggle: (jobId: string) => void }> = ({ job, onToggle }) => {
+const ScheduledJobItem: FC<{ 
+  job: Job; 
+  onToggle: (jobId: string) => void;
+  onRun: (jobId: string) => void;
+  onEdit?: (jobId: string) => void;
+}> = ({ job, onToggle, onRun, onEdit }) => {
   const nextRun = job.next_run_time ? new Date(job.next_run_time) : null;
   const isOverdue = nextRun && nextRun < new Date() && job.is_active;
+  const now = new Date();
   
   const formatScheduleDescription = (job: Job): string => {
     if (!job.schedule_type) return 'Unknown';
@@ -124,6 +129,8 @@ const ScheduledJobItem: FC<{ job: Job; onToggle: (jobId: string) => void }> = ({
     switch (job.schedule_type) {
       case 'once':
         return 'One time';
+      case 'hourly':
+        return 'Hourly';
       case 'daily':
         return 'Daily';
       case 'weekly':
@@ -136,27 +143,39 @@ const ScheduledJobItem: FC<{ job: Job; onToggle: (jobId: string) => void }> = ({
         return job.schedule_type;
     }
   };
+
+  const getTimeUntilNext = (): string => {
+    if (!nextRun || !job.is_active) return '';
+    
+    const diff = nextRun.getTime() - now.getTime();
+    if (diff <= 0) return 'Overdue';
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) return `in ${days}d ${hours}h`;
+    if (hours > 0) return `in ${hours}h ${minutes}m`;
+    return `in ${minutes}m`;
+  };
   
   return (
-    <Button
-      key={job.id}
-      className={styles.jobItem}
-      onClick={() => onToggle(job.id)}
-      variant="ghost"
-      size="lg"
-      h="auto"
+    <Box
+      className={styles.scheduledJobItem}
+      border="1px solid"
+      borderColor={job.is_active ? (isOverdue ? "red.400" : "blue.400") : "gray.600"}
+      borderRadius="12px"
       p={4}
-      justifyContent="flex-start"
-      _hover={{ bg: "rgba(255, 255, 255, 0.02)" }}
-      _active={{ bg: "rgba(255, 255, 255, 0.01)" }}
-      w="100%"
-      overflow="hidden"
+      bg="rgba(255, 255, 255, 0.02)"
+      _hover={{ bg: "rgba(255, 255, 255, 0.04)" }}
+      transition="all 0.2s ease"
     >
-      <VStack align="stretch" spacing={2} width="100%">
+      <VStack align="stretch" spacing={3} width="100%">
+        {/* Header Row */}
         <HStack justify="space-between" align="flex-start" spacing={3}>
           <VStack align="flex-start" spacing={1} flex={1} minW={0}>
             <HStack spacing={2} w="100%">
-              <RepeatIcon w={4} h={4} color="blue.400" />
+              <RepeatIcon w={4} h={4} color={job.is_active ? "blue.400" : "gray.500"} />
               <Text
                 fontSize="md"
                 fontWeight="semibold"
@@ -175,49 +194,115 @@ const ScheduledJobItem: FC<{ job: Job; onToggle: (jobId: string) => void }> = ({
               noOfLines={2}
               w="100%"
             >
-              {job.description || job.initial_message.substring(0, 100) + '...'}
+              {job.description || job.initial_message.substring(0, 120) + '...'}
             </Text>
           </VStack>
+          
+          {/* Status Badge */}
           <Badge 
             colorScheme={job.is_active ? (isOverdue ? "red" : "blue") : "gray"} 
             variant="subtle" 
             size="sm" 
             flexShrink={0}
           >
-            {!job.is_active ? 'inactive' : isOverdue ? 'overdue' : 'scheduled'}
+            {!job.is_active ? 'inactive' : isOverdue ? 'overdue' : 'active'}
           </Badge>
         </HStack>
         
-        <HStack justify="space-between" fontSize="xs" color="gray.600" w="100%">
-          <HStack spacing={4} flexShrink={0}>
-            <HStack spacing={1}>
+        <Divider borderColor="rgba(255, 255, 255, 0.1)" />
+        
+        {/* Schedule Details */}
+        <VStack align="stretch" spacing={2}>
+          <HStack justify="space-between" fontSize="sm">
+            <HStack spacing={2} color="gray.400">
               <CalendarIcon w={3} h={3} />
-              <Text>{formatScheduleDescription(job)}</Text>
+              <Text fontWeight="medium">{formatScheduleDescription(job)}</Text>
             </HStack>
-            {nextRun && (
-              <HStack spacing={1}>
-                <TimeIcon w={3} h={3} />
-                <Text>
-                  Next: {nextRun.toLocaleDateString()} {nextRun.toLocaleTimeString()}
-                </Text>
-              </HStack>
+            {job.run_count > 0 && (
+              <Text fontSize="xs" color="gray.500">
+                Executed {job.run_count}{job.max_runs ? `/${job.max_runs}` : ''} times
+              </Text>
             )}
           </HStack>
-        </HStack>
+          
+          {nextRun && job.is_active && (
+            <HStack justify="space-between" fontSize="sm">
+              <HStack spacing={2} color="gray.400">
+                <TimeIcon w={3} h={3} />
+                <Text>Next run: {nextRun.toLocaleDateString()} at {nextRun.toLocaleTimeString()}</Text>
+              </HStack>
+              <Text 
+                fontSize="xs" 
+                color={isOverdue ? "red.400" : "blue.400"}
+                fontWeight="medium"
+              >
+                {getTimeUntilNext()}
+              </Text>
+            </HStack>
+          )}
+          
+          {job.last_run_at && (
+            <HStack spacing={2} fontSize="xs" color="gray.600">
+              <Text>Last run: {new Date(job.last_run_at).toLocaleDateString()} at {new Date(job.last_run_at).toLocaleTimeString()}</Text>
+            </HStack>
+          )}
+        </VStack>
         
-        {job.run_count > 0 && (
-          <Text
-            fontSize="xs"
-            color="gray.600"
-            textAlign="left"
-            w="100%"
-          >
-            Executed {job.run_count} time{job.run_count !== 1 ? 's' : ''}
-            {job.max_runs && ` of ${job.max_runs}`}
-          </Text>
-        )}
+        <Divider borderColor="rgba(255, 255, 255, 0.1)" />
+        
+        {/* Action Buttons */}
+        <HStack spacing={2} justify="flex-end">
+          {job.is_active && (
+            <Tooltip label="Run now" placement="top">
+              <IconButton
+                aria-label="Run job now"
+                icon={<TriangleUpIcon />}
+                size="sm"
+                variant="ghost"
+                colorScheme="green"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRun(job.id);
+                }}
+                className={styles.actionButton}
+              />
+            </Tooltip>
+          )}
+          
+          {onEdit && (
+            <Tooltip label="Edit schedule" placement="top">
+              <IconButton
+                aria-label="Edit schedule"
+                icon={<SettingsIcon />}
+                size="sm"
+                variant="ghost"
+                colorScheme="blue"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(job.id);
+                }}
+                className={styles.actionButton}
+              />
+            </Tooltip>
+          )}
+          
+          <Tooltip label={job.is_active ? "Deactivate" : "Activate"} placement="top">
+            <IconButton
+              aria-label={job.is_active ? "Deactivate job" : "Activate job"}
+              icon={job.is_active ? <SmallCloseIcon /> : <CheckCircleIcon />}
+              size="sm"
+              variant="ghost"
+              colorScheme={job.is_active ? "red" : "green"}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle(job.id);
+              }}
+              className={styles.actionButton}
+            />
+          </Tooltip>
+        </HStack>
       </VStack>
-    </Button>
+    </Box>
   );
 };
 
@@ -304,7 +389,7 @@ const JobItem: FC<{ job: Job; onClick: (jobId: string) => void; messageCount?: n
   );
 };
 
-export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading, refreshKey = 0 }) => {
+export const JobsList: FC<JobsListProps> = ({ onJobClick, onRunScheduledJob, isLoading, refreshKey = 0 }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [scheduledJobs, setScheduledJobs] = useState<Job[]>([]);
@@ -321,45 +406,45 @@ export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading, refreshKey 
   const ITEMS_PER_PAGE = 10;
 
   // Load jobs and scheduled jobs
+  const loadAllData = useCallback(async () => {
+    const walletAddress = getAddress();
+    if (!walletAddress) {
+      // No wallet connected, reset state
+      setJobs([]);
+      setScheduledJobs([]);
+      setJobsLoading(false);
+      setScheduledJobsLoading(false);
+      return;
+    }
+    
+    // Load regular jobs
+    setJobsLoading(true);
+    try {
+      const jobsList = await JobsAPI.getJobs(walletAddress);
+      setJobs(jobsList);
+    } catch (error: any) {
+      console.error('Error loading jobs:', error);
+      setJobs([]);
+    } finally {
+      setJobsLoading(false);
+    }
+
+    // Load scheduled jobs
+    setScheduledJobsLoading(true);
+    try {
+      const scheduledJobsList = await JobsAPI.getScheduledJobs(walletAddress);
+      setScheduledJobs(scheduledJobsList);
+    } catch (error: any) {
+      console.error('Error loading scheduled jobs:', error);
+      setScheduledJobs([]);
+    } finally {
+      setScheduledJobsLoading(false);
+    }
+  }, [getAddress]);
+
   useEffect(() => {
-    const loadData = async () => {
-      const walletAddress = getAddress();
-      if (!walletAddress) {
-        // No wallet connected, reset state
-        setJobs([]);
-        setScheduledJobs([]);
-        setJobsLoading(false);
-        setScheduledJobsLoading(false);
-        return;
-      }
-      
-      // Load regular jobs
-      setJobsLoading(true);
-      try {
-        const jobsList = await JobsAPI.getJobs(walletAddress);
-        setJobs(jobsList);
-      } catch (error: any) {
-        console.error('Error loading jobs:', error);
-        setJobs([]);
-      } finally {
-        setJobsLoading(false);
-      }
-
-      // Load scheduled jobs
-      setScheduledJobsLoading(true);
-      try {
-        const scheduledJobsList = await JobsAPI.getScheduledJobs(walletAddress);
-        setScheduledJobs(scheduledJobsList);
-      } catch (error: any) {
-        console.error('Error loading scheduled jobs:', error);
-        setScheduledJobs([]);
-      } finally {
-        setScheduledJobsLoading(false);
-      }
-    };
-
-    loadData();
-  }, [getAddress, refreshKey]); // Add refreshKey to trigger reload when jobs are created
+    loadAllData();
+  }, [loadAllData, refreshKey]); // Add refreshKey to trigger reload when jobs are created
   
   // Filter jobs based on search and status
   const filterJobs = useCallback((jobsList: Job[]) => {
@@ -396,7 +481,7 @@ export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading, refreshKey 
   const previousTotalPages = Math.ceil(allPreviousJobs.length / ITEMS_PER_PAGE);
   const scheduledTotalPages = Math.ceil(allActiveScheduledJobs.length / ITEMS_PER_PAGE);
 
-  const handleScheduledJobToggle = async (jobId: string) => {
+  const handleScheduledJobToggle = useCallback(async (jobId: string) => {
     try {
       const walletAddress = getAddress();
       if (!walletAddress) {
@@ -416,9 +501,8 @@ export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading, refreshKey 
           wallet_address: walletAddress,
           is_active: !job.is_active 
         });
-        // Refresh scheduled jobs
-        const updatedJobs = await JobsAPI.getScheduledJobs(walletAddress);
-        setScheduledJobs(updatedJobs);
+        // Refresh all data
+        await loadAllData();
         
         toast({
           title: `Job ${job.is_active ? 'deactivated' : 'activated'}`,
@@ -436,7 +520,61 @@ export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading, refreshKey 
         isClosable: true,
       });
     }
-  };
+  }, [getAddress, loadAllData, scheduledJobs, toast]);
+
+  const handleRunJob = useCallback(async (jobId: string) => {
+    try {
+      const walletAddress = getAddress();
+      if (!walletAddress) {
+        toast({
+          title: 'Wallet not connected',
+          description: 'Please connect your wallet to run jobs',
+          status: 'warning',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+      
+      const { newJob, scheduledJob } = await JobsAPI.runJob(walletAddress, jobId);
+      
+      // Refresh all data
+      await loadAllData();
+      
+      // If parent provided a callback to handle running, call it
+      if (onRunScheduledJob) {
+        onRunScheduledJob(jobId, newJob.id, newJob.initial_message);
+      }
+      
+      toast({
+        title: 'Job executed successfully',
+        description: `Created new job instance: ${newJob.name}`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error running scheduled job:', error);
+      toast({
+        title: 'Error running job',
+        description: error instanceof Error ? error.message : 'Failed to run job',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  }, [getAddress, loadAllData, onRunScheduledJob, toast]);
+
+  const handleEditSchedule = useCallback(async (jobId: string) => {
+    // TODO: Implement schedule editing modal
+    toast({
+      title: 'Schedule Editing',
+      description: 'Schedule editing functionality coming soon!',
+      status: 'info',
+      duration: 2000,
+      isClosable: true,
+    });
+  }, [toast]);
   
   if (jobs.length === 0 && activeScheduledJobs.length === 0 && !isLoading && !scheduledJobsLoading) {
     return (
@@ -450,6 +588,46 @@ export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading, refreshKey 
 
   return (
     <Box className={styles.jobsContainer}>
+      {/* Search and Filter Controls */}
+      <Box className={styles.searchFilterContainer}>
+        <InputGroup size="sm" flex={1}>
+          <InputLeftElement pointerEvents="none">
+            <SearchIcon color="gray.500" />
+          </InputLeftElement>
+          <Input
+            placeholder="Search jobs..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              // Reset pages when searching
+              setCurrentPage(1);
+              setScheduledPage(1);
+              setPreviousPage(1);
+            }}
+            className={styles.searchInput}
+          />
+        </InputGroup>
+        <Select
+          size="sm"
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            // Reset pages when filtering
+            setCurrentPage(1);
+            setScheduledPage(1);
+            setPreviousPage(1);
+          }}
+          width="150px"
+          className={styles.statusFilter}
+        >
+          <option value="all">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="running">Running</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+        </Select>
+      </Box>
+      
       <Tabs 
         index={activeTab} 
         onChange={setActiveTab}
@@ -540,7 +718,13 @@ export const JobsList: FC<JobsListProps> = ({ onJobClick, isLoading, refreshKey 
                 <>
                   <VStack spacing={2} width="100%" align="stretch" pb={2}>
                     {activeScheduledJobs.map((job) => (
-                      <ScheduledJobItem key={job.id} job={job} onToggle={handleScheduledJobToggle} />
+                      <ScheduledJobItem 
+                        key={job.id} 
+                        job={job} 
+                        onToggle={handleScheduledJobToggle}
+                        onRun={handleRunJob}
+                        onEdit={handleEditSchedule}
+                      />
                     ))}
                   </VStack>
                   <PaginationControls 

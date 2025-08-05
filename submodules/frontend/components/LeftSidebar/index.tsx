@@ -23,6 +23,7 @@ import { ApiCredentialsButton } from "@/components/Credentials/Button";
 import { CDPWalletsButton } from "@/components/CDPWallets/Button";
 import { SettingsButton } from "@/components/Settings";
 import { SyncButton } from "@/components/Sync/Button";
+import { SchedulingPreferencesButton } from "@/components/UserPreferences/Button";
 import { StyledTooltip } from "../Common/StyledTooltip";
 import styles from "./index.module.css";
 
@@ -104,6 +105,20 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                         opacity={account ? 1 : 0.5}
                       >
                         <SettingsButton />
+                      </Box>
+                    </div>
+                  </Tooltip>
+                  <Tooltip
+                    isDisabled={!!account}
+                    label="Configure your default scheduling preferences and job automation settings. Requires wallet connection for personalized settings."
+                    placement="right"
+                  >
+                    <div className={styles.menuItem}>
+                      <Box
+                        pointerEvents={account ? "auto" : "none"}
+                        opacity={account ? 1 : 0.5}
+                      >
+                        <SchedulingPreferencesButton />
                       </Box>
                     </div>
                   </Tooltip>
@@ -200,10 +215,10 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                     ))}
                   </Select>
                 </Box>
-                <div className={styles.creditsContainer}>
+                {/* <div className={styles.creditsContainer}>
                   <Text className={styles.creditsLabel}>Morpheus Credits Balance</Text>
                   <Text className={styles.creditsAmount}>1,250 MOR</Text>
-                </div>
+                </div> */}
               </Box>
             </VStack>
 

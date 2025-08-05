@@ -148,6 +148,19 @@ export class JobsAPI {
       throw new Error(error.response?.data?.error || 'Failed to fetch scheduled jobs');
     }
   }
+
+  static async runJob(walletAddress: string, jobId: string): Promise<{ newJob: Job; scheduledJob: Job }> {
+    try {
+      const response = await axios.post(`${BASE_URL}/api/v1/jobs/run`, { jobId }, {
+        headers: this.getHeaders(walletAddress)
+      });
+      
+      return { newJob: response.data.newJob, scheduledJob: response.data.scheduledJob };
+    } catch (error: any) {
+      console.error('Error running scheduled job:', error);
+      throw new Error(error.response?.data?.error || 'Failed to run scheduled job');
+    }
+  }
 }
 
 export default JobsAPI;

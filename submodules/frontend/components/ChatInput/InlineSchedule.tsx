@@ -178,7 +178,7 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
           onChange={(e) => setScheduleType(e.target.value as any)}
           size="sm"
           className={styles.select}
-          w="90px"
+          w="100px"
         >
           <option value="once">Once</option>
           <option value="hourly">Hourly</option>
@@ -187,21 +187,8 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
           <option value="custom">Custom</option>
         </Select>
 
-        {/* Show date picker for 'once' */}
-        {scheduleType === 'once' && (
-          <Input
-            type="date"
-            value={scheduleDate}
-            onChange={(e) => setScheduleDate(e.target.value)}
-            min={getMinDateTime()}
-            size="sm"
-            className={styles.input}
-            w="130px"
-          />
-        )}
-
-        {/* Show time for all except hourly */}
-        {scheduleType !== 'hourly' && (
+        {/* Show time for daily and weekly only on first row */}
+        {(scheduleType === 'daily' || scheduleType === 'weekly') && (
           <>
             <Text color="gray.400" fontSize="sm">@</Text>
             <Input
@@ -210,26 +197,8 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
               onChange={(e) => setScheduleTime(e.target.value)}
               size="sm"
               className={styles.input}
-              w="120px"
+              w="130px"
             />
-          </>
-        )}
-
-        {/* Show interval for custom */}
-        {scheduleType === 'custom' && (
-          <>
-            <Text color="gray.400" fontSize="sm">every</Text>
-            <Input
-              type="number"
-              value={intervalDays}
-              onChange={(e) => setIntervalDays(parseInt(e.target.value) || 1)}
-              min={1}
-              max={365}
-              size="sm"
-              className={styles.input}
-              w="60px"
-            />
-            <Text color="gray.400" fontSize="sm">days</Text>
           </>
         )}
 
@@ -264,6 +233,30 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
         </Button>
       </HStack>
 
+      {/* Second row for 'once' - date and time */}
+      {scheduleType === 'once' && (
+        <HStack spacing={2} align="center" mt={2}>
+          <Input
+            type="date"
+            value={scheduleDate}
+            onChange={(e) => setScheduleDate(e.target.value)}
+            min={getMinDateTime()}
+            size="sm"
+            className={styles.input}
+            w="140px"
+          />
+          <Text color="gray.400" fontSize="sm">@</Text>
+          <Input
+            type="time"
+            value={scheduleTime}
+            onChange={(e) => setScheduleTime(e.target.value)}
+            size="sm"
+            className={styles.input}
+            w="150px"
+          />
+        </HStack>
+      )}
+
       {/* Second row for weekly options */}
       {scheduleType === 'weekly' && (
         <HStack spacing={2} align="center" mt={2}>
@@ -294,6 +287,26 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
       {/* Second row for custom options */}
       {scheduleType === 'custom' && (
         <HStack spacing={2} align="center" mt={2}>
+          <Text color="gray.400" fontSize="sm">every</Text>
+          <Input
+            type="number"
+            value={intervalDays}
+            onChange={(e) => setIntervalDays(parseInt(e.target.value) || 1)}
+            min={1}
+            max={365}
+            size="sm"
+            className={styles.input}
+            w="70px"
+          />
+          <Text color="gray.400" fontSize="sm">days @</Text>
+          <Input
+            type="time"
+            value={scheduleTime}
+            onChange={(e) => setScheduleTime(e.target.value)}
+            size="sm"
+            className={styles.input}
+            w="130px"
+          />
           <Input
             type="date"
             value={scheduleDate}

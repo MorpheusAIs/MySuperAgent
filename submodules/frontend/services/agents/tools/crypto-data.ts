@@ -7,7 +7,7 @@ export const cryptoPriceTool = createTool({
   inputSchema: z.object({
     coin_name: z.string().describe('The name of the cryptocurrency (e.g., bitcoin, ethereum)'),
   }),
-  execute: async ({ coin_name }) => {
+  execute: async ({ context: { coin_name } }) => {
     try {
       const response = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${coin_name}&vs_currencies=usd&include_market_cap=true&include_24hr_change=true`
@@ -41,7 +41,7 @@ export const cryptoMarketCapTool = createTool({
   inputSchema: z.object({
     coin_name: z.string().describe('The name of the cryptocurrency'),
   }),
-  execute: async ({ coin_name }) => {
+  execute: async ({ context: { coin_name } }) => {
     try {
       const response = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${coin_name}&vs_currencies=usd&include_market_cap=true`
@@ -76,7 +76,7 @@ export const defiTvlTool = createTool({
   inputSchema: z.object({
     protocol_name: z.string().describe('The name of the DeFi protocol'),
   }),
-  execute: async ({ protocol_name }) => {
+  execute: async ({ context: { protocol_name } }) => {
     try {
       const response = await fetch(`https://api.llama.fi/protocol/${protocol_name}`);
       

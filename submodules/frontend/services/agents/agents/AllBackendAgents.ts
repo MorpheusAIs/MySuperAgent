@@ -150,7 +150,14 @@ export class CryptoDataAgentBackend extends BaseAgent {
   }
 
   getInstructions(): string {
-    return `You are a specialized cryptocurrency analyst with expertise in market data, NFTs, and DeFi protocols. You provide accurate cryptocurrency data and analysis, including prices, market caps, TVL, and token metrics.`;
+    return `You are a specialized cryptocurrency analyst with expertise in market data, NFTs, and DeFi protocols. 
+    
+    IMPORTANT: When asked about cryptocurrency prices, market caps, or DeFi data, you MUST use the available tools:
+    - Use crypto_price tool to get current cryptocurrency prices
+    - Use crypto_market_cap tool to get market capitalization data  
+    - Use defi_tvl tool to get Total Value Locked data for DeFi protocols
+    
+    Always use the appropriate tool first, then provide analysis based on the results. Do not provide generic responses without using tools.`;
   }
 
   getTools() {
