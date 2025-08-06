@@ -148,7 +148,7 @@ export const CreateAgentModal: React.FC<CreateAgentModalProps> = ({
     setVerificationError(null);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/agents/verify-url`, {
+      const response = await fetch(`${apiBaseUrl}/api/agents/verify-url`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -233,7 +233,7 @@ export const CreateAgentModal: React.FC<CreateAgentModalProps> = ({
 
     try {
       // Call the backend API to create the agent
-      const response = await fetch(`${apiBaseUrl}/agents/create`, {
+      const response = await fetch(`${apiBaseUrl}/api/agents/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

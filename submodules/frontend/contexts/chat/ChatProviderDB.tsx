@@ -16,6 +16,7 @@ import {
   StreamingEvent,
 } from "@/services/ChatManagement/api";
 import { getMessagesHistory } from "@/services/ChatManagement/storage";
+import { addMessageToHistory } from "@/services/ChatManagement/messages";
 import JobsAPI from "@/services/API/jobs";
 import { useWalletAddress } from "@/services/Wallet/utils";
 import { Job, Message } from "@/services/Database/db";
@@ -76,8 +77,8 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
       try {
         const walletAddress = getAddress();
         if (!walletAddress) {
-          // No wallet connected, don't load data
-          return;
+          // No wallet connected, fall back to localStorage
+          return await loadLocalStorageData();
         }
         const jobs = await JobsAPI.getJobs(walletAddress);
         
@@ -145,9 +146,8 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
       }
     };
 
-    if (address) {
-      loadInitialData();
-    }
+    // Load data regardless of wallet connection
+    loadInitialData();
   }, [address, getAddress]);
 
   const setCurrentConversation = useCallback((conversationId: string) => {
@@ -235,14 +235,15 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
       conversationId?: string
     ) => {
       const walletAddress = getAddress();
-      if (!walletAddress) {
-        throw new Error("Please connect your wallet to send messages");
-      }
-      
       const currentConvId = conversationId || state.currentConversationId;
       
       if (!currentConvId) {
         throw new Error("No active conversation");
+      }
+
+      // If no wallet is connected, fall back to localStorage-based messaging
+      if (!walletAddress) {
+        return await sendMessageWithLocalStorage(message, file, useResearch, currentConvId);
       }
 
       try {
@@ -441,6 +442,215 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
       }
     },
     [state.currentConversationId, state.messages, getAddress]
+  );
+
+  // Load initial data from localStorage when no wallet is connected
+  const loadLocalStorageData = useCallback(async () => {
+    try {
+      const { getStorageData } = await import("@/services/LocalStorage/core");
+      
+      const data = getStorageData();
+      
+      // Load messages for each conversation
+      Object.entries(data.conversations).forEach(([convId, conversation]) => {
+        const messages = getMessagesHistory(convId);
+        
+        dispatch({
+          type: "SET_MESSAGES",
+          payload: { conversationId: convId, messages },
+        });
+
+        dispatch({
+          type: "SET_CONVERSATION_TITLE",
+          payload: { conversationId: convId, title: conversation.name },
+        });
+      });
+
+      // Set current conversation to the default or first available
+      const conversationIds = Object.keys(data.conversations);
+      if (conversationIds.length > 0) {
+        const currentConv = conversationIds.includes("default") ? "default" : conversationIds[0];
+        dispatch({
+          type: "SET_CURRENT_CONVERSATION",
+          payload: currentConv,
+        });
+      }
+    } catch (error) {
+      console.error("Error loading localStorage data:", error);
+    }
+  }, []);
+
+  // Fallback function for sending messages when no wallet is connected
+  const sendMessageWithLocalStorage = useCallback(
+    async (
+      message: string,
+      file: File | null,
+      useResearch: boolean = true,
+      conversationId: string
+    ) => {
+      try {
+        dispatch({ type: "SET_LOADING", payload: true });
+        dispatch({ type: "SET_ERROR", payload: null });
+
+        // Add optimistic user message
+        const optimisticUserMessage: ChatMessage = {
+          role: "user",
+          content: message,
+          timestamp: Date.now(),
+        };
+
+        dispatch({
+          type: "ADD_OPTIMISTIC_MESSAGE",
+          payload: { conversationId, message: optimisticUserMessage },
+        });
+
+        // Save user message to localStorage
+        addMessageToHistory(optimisticUserMessage, conversationId);
+
+        // Handle file upload if present
+        if (file) {
+          await uploadFile(file, getHttpClient(), conversationId);
+        }
+
+        // Prepare message for API
+        const messageToSend = file ? `${message}\n\nFile: ${file.name}` : message;
+
+        // Stream the response
+        const httpClient = getHttpClient();
+        await writeMessageStream(
+          httpClient,
+          conversationId,
+          messageToSend,
+          useResearch,
+          {
+            onStart: () => {
+              dispatch({
+                type: "SET_STREAMING_STATE",
+                payload: {
+                  status: "dispatching",
+                  progress: 0,
+                  subtask: "Initializing request...",
+                  agents: [],
+                  output: "",
+                  isStreaming: true,
+                  streamingContent: "",
+                },
+              });
+            },
+            onProgress: (event: StreamingEvent) => {
+              dispatch({
+                type: "UPDATE_STREAMING_PROGRESS",
+                payload: {
+                  status: event.status,
+                  progress: event.progress || 0,
+                  subtask: event.subtask,
+                  agents: event.agents,
+                  output: event.output,
+                  currentAgentIndex: event.currentAgentIndex,
+                  totalAgents: event.totalAgents,
+                  telemetry: event.telemetry,
+                },
+              });
+            },
+            onStreamContent: (content: string) => {
+              dispatch({
+                type: "SET_STREAMING_CONTENT",
+                payload: { content, isStreaming: true },
+              });
+            },
+            onComplete: async (finalResponse: ChatMessage) => {
+              // Save assistant response to localStorage
+              addMessageToHistory(finalResponse, conversationId);
+
+              dispatch({
+                type: "ADD_OPTIMISTIC_MESSAGE",
+                payload: { conversationId, message: finalResponse },
+              });
+
+              dispatch({
+                type: "SET_STREAMING_CONTENT",
+                payload: { content: "", isStreaming: false },
+              });
+
+              dispatch({
+                type: "SET_STREAMING_STATE",
+                payload: {
+                  status: "idle",
+                  progress: 100,
+                  subtask: "",
+                  agents: [],
+                  output: "",
+                  isStreaming: false,
+                  streamingContent: "",
+                },
+              });
+
+              // Generate title if this is a new conversation
+              if (!titleGenerationAttempted.current.has(conversationId)) {
+                titleGenerationAttempted.current.add(conversationId);
+                
+                if (!pendingTitleGeneration.current.has(conversationId)) {
+                  pendingTitleGeneration.current.add(conversationId);
+                  
+                  try {
+                    const messages = getMessagesHistory(conversationId);
+                    const generatedTitle = await generateConversationTitle(messages, httpClient, conversationId);
+                    
+                    dispatch({
+                      type: "SET_CONVERSATION_TITLE",
+                      payload: { conversationId, title: generatedTitle },
+                    });
+                  } catch (titleError) {
+                    console.error("Failed to generate title:", titleError);
+                  } finally {
+                    pendingTitleGeneration.current.delete(conversationId);
+                  }
+                }
+              }
+            },
+            onError: async (error: any) => {
+              console.error("Streaming error:", error);
+              
+              // Save error message to localStorage
+              const errorMessage: ChatMessage = {
+                role: "assistant",
+                content: "I encountered an error while processing your request. Please try again.",
+                error_message: error.message || "Unknown error occurred",
+                timestamp: Date.now(),
+              };
+              
+              addMessageToHistory(errorMessage, conversationId);
+
+              dispatch({
+                type: "ADD_OPTIMISTIC_MESSAGE",
+                payload: { conversationId, message: errorMessage },
+              });
+
+              dispatch({
+                type: "SET_STREAMING_STATE",
+                payload: {
+                  status: "idle",
+                  progress: 0,
+                  subtask: "",
+                  agents: [],
+                  output: "",
+                  isStreaming: false,
+                  streamingContent: "",
+                },
+              });
+
+              dispatch({ type: "SET_ERROR", payload: error.message || "Unknown error occurred" });
+            },
+          }
+        );
+      } catch (error: any) {
+        console.error("Send message error:", error);
+        dispatch({ type: "SET_ERROR", payload: error.message || "Failed to send message" });
+      } finally {
+        dispatch({ type: "SET_LOADING", payload: false });
+      }
+    },
+    [getAddress]
   );
 
   const setCurrentView = useCallback((view: 'jobs' | 'chat') => {

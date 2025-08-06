@@ -115,7 +115,7 @@ export const sendSwapStatus = async (
 
 export const getAvailableAgents = async (backendClient: Axios) => {
   try {
-    const response = await backendClient.get("/agents/available");
+    const response = await backendClient.get("/api/agents/available");
     return response.data;
   } catch (error) {
     console.error("Failed to fetch available agents:", error);
@@ -128,7 +128,7 @@ export const setSelectedAgents = async (
   agents: string[]
 ) => {
   try {
-    const response = await backendClient.post("/agents/selected", {
+    const response = await backendClient.post("/api/agents/selected", {
       agents,
     });
     return response.data;
