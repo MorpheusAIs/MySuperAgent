@@ -93,6 +93,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       };
     }
 
+
     case "SET_CURRENT_VIEW":
       return {
         ...state,

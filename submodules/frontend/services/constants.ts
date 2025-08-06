@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getAvailableAgents } from "@/services/apiHooks";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8888";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export default BASE_URL;
 
@@ -50,7 +50,6 @@ export const DCA_AVAILABLE_FREQUENCIES = [
   { value: "daily", label: "Daily" },
   { value: "weekly", label: "Weekly" },
   { value: "biweekly", label: "Bi-weekly" },
-  { value: "monthly", label: "Monthly" },
 ];
 
 // export enum AGENT_TYPES {

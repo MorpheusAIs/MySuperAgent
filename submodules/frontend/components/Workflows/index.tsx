@@ -68,7 +68,6 @@ const frequencies = [
   { value: "daily", label: "Daily" },
   { value: "weekly", label: "Weekly" },
   { value: "biweekly", label: "Bi-weekly" },
-  { value: "monthly", label: "Monthly" },
 ];
 
 const FREQUENCIES = {
@@ -77,7 +76,6 @@ const FREQUENCIES = {
   daily: 86400,
   weekly: 604800,
   biweekly: 1209600,
-  monthly: 2592000,
 };
 
 export const Workflows: React.FC = () => {

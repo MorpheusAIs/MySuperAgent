@@ -14,8 +14,10 @@ import {
   generateConversationTitle,
   writeMessageStream,
   StreamingEvent,
+  StreamingCallbacks,
 } from "@/services/ChatManagement/api";
 import { getMessagesHistory } from "@/services/ChatManagement/storage";
+import { addMessageToHistory } from "@/services/ChatManagement/messages";
 import { getStorageData, cleanupCorruptedMessages } from "@/services/LocalStorage/core";
 import { deleteConversation } from "@/services/ChatManagement/conversations";
 import { chatReducer, initialState } from "@/contexts/chat/ChatReducer";
@@ -67,7 +69,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
           });
         });
       } catch (error) {
-        console.error("Failed to load initial data:", error);
+        // Handle initialization error silently
       }
     };
 
@@ -107,10 +109,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
             }
           }
         } catch (error) {
-          console.error(
-            `Failed to load conversation ${conversationId}:`,
-            error
-          );
+          // Handle conversation loading error silently
           dispatch({
             type: "SET_ERROR",
             payload: "Failed to load conversation",
@@ -151,7 +150,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
       // but ensure we don't trigger this logic repeatedly for the same conversation
       maybeGenerateTitle(currentConversationId, messages);
     } catch (error) {
-      console.error("Failed to refresh conversation data:", error);
+      // Handle refresh error silently
       dispatch({
         type: "SET_ERROR",
         payload: "Failed to refresh conversation",
@@ -183,7 +182,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         }
       });
     } catch (error) {
-      console.error("Failed to refresh all conversation titles:", error);
+      // Handle title refresh error silently
       dispatch({
         type: "SET_ERROR",
         payload: "Failed to refresh conversation titles",
@@ -227,7 +226,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
               }
             })
             .catch((error) => {
-              console.error("Failed to generate conversation title:", error);
+              // Handle title generation error silently
             })
             .finally(() => {
               // Clean up pending request tracking
@@ -286,95 +285,83 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
               },
             });
 
-            await writeMessageStream(
-              message,
-              getHttpClient(),
-              chainId,
-              address || "",
-              targetConversationId,
-              (event: StreamingEvent) => {
+            const handleStart = () => {
+              dispatch({ type: "SET_LOADING", payload: false });
+            };
+            
+            const handleProgress = (event: StreamingEvent) => {
                 // Handle streaming events
-                console.log("Received streaming event:", event);
 
                 // Turn off loading when first event arrives
                 dispatch({ type: "SET_LOADING", payload: false });
 
                 switch (event.type) {
-                  case "subtask_dispatch":
+                  case "connected":
+                    break;
+                  case "chunk":
+                    // Handle streaming text chunks - show progress with content
                     dispatch({
                       type: "UPDATE_STREAMING_PROGRESS",
                       payload: {
                         status: "processing",
-                        subtask: event.data.subtask,
-                        agents: event.data.agents,
-                        currentAgentIndex: event.data.current_agent_index,
-                        totalAgents: event.data.total_agents,
+                        output: event.output,
                       },
                     });
                     break;
-                  case "subtask_result":
+                  case "complete":
+                    // Final completion event - add the message to chat
+                    
+                    // Reset streaming state
                     dispatch({
-                      type: "UPDATE_STREAMING_PROGRESS",
+                      type: "SET_STREAMING_STATE",
                       payload: {
-                        status: "processing",
-                        subtask: event.data.subtask,
-                        output: event.data.output,
-                        agents: event.data.agents,
-                        telemetry: {
-                          processing_time: event.data.processing_time
-                            ? {
-                                duration: event.data.processing_time,
-                              }
-                            : undefined,
-                          token_usage: event.data.token_usage,
+                        status: "idle",
+                        progress: 0,
+                        telemetry: undefined,
+                        subtask: undefined,
+                        agents: undefined,
+                        output: undefined,
+                        currentAgentIndex: undefined,
+                        totalAgents: undefined,
+                      },
+                    });
+
+                    // Turn off loading
+                    dispatch({ type: "SET_LOADING", payload: false });
+
+                    // Add the final message to chat AND save to localStorage
+                    if (event.output) {
+                      const finalMessage: ChatMessage = {
+                        role: "assistant",
+                        content: event.output,
+                        timestamp: Date.now(),
+                        metadata: undefined,
+                      };
+                      
+                      // Save to localStorage first so refreshMessages includes it
+                      addMessageToHistory(finalMessage, targetConversationId);
+                      
+                      // Then add to state
+                      dispatch({
+                        type: "ADD_OPTIMISTIC_MESSAGE",
+                        payload: {
+                          conversationId: targetConversationId,
+                          message: finalMessage,
                         },
-                        currentAgentIndex: event.data.current_agent_index,
-                        totalAgents: event.data.total_agents,
-                      },
-                    });
-                    break;
-                  case "synthesis_start":
-                    dispatch({
-                      type: "UPDATE_STREAMING_PROGRESS",
-                      payload: {
-                        status: "synthesizing",
-                      },
-                    });
-                    break;
-                  // Handle synthetic events from event: lines
-                  case "flow_start":
-                    dispatch({
-                      type: "UPDATE_STREAMING_PROGRESS",
-                      payload: {
-                        status: "processing",
-                        progress: 10,
-                      },
-                    });
-                    break;
-                  case "flow_end":
-                    dispatch({
-                      type: "UPDATE_STREAMING_PROGRESS",
-                      payload: {
-                        status: "processing",
-                        progress: 85,
-                      },
-                    });
+                      });
+                    }
                     break;
                   case "parse_error":
-                    // Log parse errors but don't show to user
-                    console.warn("SSE parse error:", event.data.message);
+                    // Parse errors are handled internally
                     break;
                   default:
-                    // Log unhandled events but don't break
-                    console.log("Unhandled streaming event type:", event.type);
+                    // Unhandled events are ignored
+                    break;
                 }
-              },
-              (response: ChatMessage) => {
+            };
+            
+            const handleComplete = (response: ChatMessage) => {
                 // Completion handler - response now includes metadata with subtask_outputs
-                console.log(
-                  "Stream complete, adding message with metadata:",
-                  response
-                );
 
                 // Reset streaming state
                 dispatch({
@@ -402,36 +389,27 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
                     message: response,
                   },
                 });
-
-                refreshMessages();
-              },
-              (error: Error) => {
-                // Error handler
-                console.error("Streaming error:", error);
-
-
-                // Don't show parse errors to user - they're handled internally
-                if (!error.message.includes("parse")) {
-                  dispatch({ type: "SET_ERROR", payload: error.message });
-                }
-
+              };
+            
+            const handleError = (error: any) => {
+                // Handle streaming error
+                dispatch({ type: "SET_ERROR", payload: "Streaming failed" });
                 dispatch({ type: "SET_LOADING", payload: false });
+            };
 
-                // Reset streaming state on error
-                dispatch({
-                  type: "SET_STREAMING_STATE",
-                  payload: {
-                    status: "idle",
-                    progress: 0,
-                    telemetry: undefined,
-                    subtask: undefined,
-                    agents: undefined,
-                    output: undefined,
-                    currentAgentIndex: undefined,
-                    totalAgents: undefined,
-                  },
-                });
-              }
+            const callbacks: StreamingCallbacks = {
+              onStart: handleStart,
+              onProgress: handleProgress,
+              onComplete: handleComplete,
+              onError: handleError
+            };
+
+            await writeMessageStream(
+              getHttpClient(),
+              targetConversationId,
+              message,
+              true,
+              callbacks
             );
           } else {
             // Non-streaming flow
@@ -454,7 +432,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
           await refreshMessages();
         }
       } catch (error) {
-        console.error("Failed to send message:", error);
+        // Handle message sending error silently
         dispatch({ type: "SET_ERROR", payload: "Failed to send message" });
 
         // Always ensure loading is turned off
@@ -501,7 +479,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
           });
         }
       } catch (error) {
-        console.error("Failed to delete conversation:", error);
+        // Handle conversation deletion error silently
         dispatch({
           type: "SET_ERROR",
           payload: "Failed to delete conversation",
@@ -517,6 +495,12 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     dispatch({ type: "SET_CURRENT_VIEW", payload: view });
   }, []);
 
+  const refreshJobs = useCallback(async () => {
+    // Placeholder for job refresh functionality
+    // This can be implemented when jobs management is needed
+    // Job refresh functionality to be implemented
+  }, []);
+
   // Context value
   const value = {
     state,
@@ -524,6 +508,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     sendMessage,
     refreshMessages,
     refreshAllTitles,
+    refreshJobs,
     deleteChat,
     setCurrentView,
   };

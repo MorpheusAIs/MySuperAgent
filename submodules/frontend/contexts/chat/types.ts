@@ -20,6 +20,8 @@ export interface StreamingState {
   telemetry?: TelemetryData;
   currentAgentIndex?: number;
   totalAgents?: number;
+  streamingContent?: string;
+  isStreaming?: boolean;
 }
 
 export interface ChatState {
@@ -57,6 +59,10 @@ export type ChatAction =
       payload: Partial<StreamingState>;
     }
   | {
+      type: "SET_STREAMING_CONTENT";
+      payload: { content: string; isStreaming: boolean };
+    }
+  | {
       type: "SET_CURRENT_VIEW";
       payload: 'jobs' | 'chat';
     };
@@ -72,6 +78,7 @@ export interface ChatContextType {
   ) => Promise<void>;
   refreshMessages: () => Promise<void>;
   refreshAllTitles: () => Promise<void>;
+  refreshJobs: () => Promise<void>;
   deleteChat: (conversationId: string) => Promise<void>;
   setCurrentView: (view: 'jobs' | 'chat') => void;
 }

@@ -10,6 +10,45 @@ import { trackEvent, trackError, trackTiming } from "@/services/analytics";
 // LocalStorage key for selected agents
 const SELECTED_AGENTS_KEY = "selectedAgents";
 
+// Define streaming event callback types
+export interface StreamingEvent {
+  type: string;
+  timestamp: string;
+  data: {
+    message?: string;
+    subtask?: string;
+    output?: string;
+    agents?: string[];
+    task?: string;
+    agent?: string;
+    final_answer?: string;
+    processing_time?: number;
+    token_usage?: {
+      prompt?: number;
+      response?: number;
+      total?: number;
+    };
+    current_agent_index?: number;
+    total_agents?: number;
+  };
+  status?: 'idle' | 'dispatching' | 'processing' | 'synthesizing' | 'complete';
+  progress?: number;
+  subtask?: string;
+  agents?: string[];
+  output?: string;
+  currentAgentIndex?: number;
+  totalAgents?: number;
+  telemetry?: any;
+}
+
+export interface StreamingCallbacks {
+  onStart?: () => void;
+  onProgress?: (event: StreamingEvent) => void;
+  onStreamContent?: (content: string) => void;
+  onComplete?: (response: ChatMessage) => void;
+  onError?: (error: any) => void;
+}
+
 /**
  * Send a message to the backend API and handle the response
  */
@@ -33,16 +72,13 @@ export const writeMessage = async (
   // Add user message to local storage
   addMessageToHistory(newMessage, convId);
 
-  // Get selected agents from localStorage
+  // Don't auto-load ALL agents from localStorage as selectedAgents
+  // selectedAgents should only be set when user explicitly chooses specific agents for a request
+  // The localStorage agents are just UI preferences for which agents are available
   let selectedAgents: string[] = [];
-  try {
-    const savedAgents = localStorage.getItem(SELECTED_AGENTS_KEY);
-    if (savedAgents) {
-      selectedAgents = JSON.parse(savedAgents);
-    }
-  } catch (err) {
-    console.error("Error loading selected agents from localStorage:", err);
-  }
+  
+  // TODO: In the future, allow users to explicitly select specific agents for individual requests
+  // For now, let the orchestrator choose the best agent intelligently
 
   // Track message sent event
   trackEvent('agent.message_sent', {
@@ -61,11 +97,10 @@ export const writeMessage = async (
         role: "user",
         content: message,
       },
-      chat_history: currentHistory,
-      chain_id: String(chainId),
-      wallet_address: address,
-      use_research: useResearch,
-      selected_agents: selectedAgents,
+      chatHistory: currentHistory,
+      conversationId: convId,
+      useResearch: useResearch,
+      selectedAgents: selectedAgents,
     });
 
     // Process response
@@ -224,35 +259,145 @@ export const generateConversationTitle = async (
   }
 };
 
-/**
- * Interface for streaming progress events
- */
-export interface StreamingEvent {
-  type: string;
-  timestamp: string;
-  data: {
-    message?: string;
-    subtask?: string;
-    output?: string;
-    agents?: string[];
-    task?: string;
-    agent?: string;
-    final_answer?: string;
-    processing_time?: number;
-    token_usage?: {
-      prompt?: number;
-      response?: number;
-      total?: number;
-    };
-    current_agent_index?: number;
-    total_agents?: number;
-  };
-}
 
 /**
  * Send a message with streaming support for research mode
  */
+/**
+ * Stream a message to the backend API with proper callback handling
+ * This version matches the ChatProviderDB usage pattern
+ */
 export const writeMessageStream = async (
+  httpClient: any,
+  conversationId: string,
+  message: string,
+  useResearch: boolean = true,
+  callbacks: StreamingCallbacks
+): Promise<void> => {
+  if (!httpClient || !httpClient.defaults?.baseURL) {
+    const error = new Error("HTTP client is not properly configured");
+    callbacks.onError?.(error);
+    return;
+  }
+
+  const baseUrl = httpClient.defaults.baseURL;
+  
+  // Don't auto-load ALL agents from localStorage as selectedAgents
+  // selectedAgents should only be set when user explicitly chooses specific agents for a request
+  // The localStorage agents are just UI preferences for which agents are available
+  let selectedAgents: string[] = [];
+  
+  // TODO: In the future, allow users to explicitly select specific agents for individual requests
+  // For now, let the orchestrator choose the best agent intelligently
+
+  // Track research initiated event
+  console.log('[ANALYTICS DEBUG] Selected agents for research:', selectedAgents);
+  trackEvent('research.initiated', {
+    conversationId,
+    selectedAgents: selectedAgents,
+    agentCount: selectedAgents.length,
+    messageLength: message.length,
+  });
+
+  callbacks.onStart?.();
+
+  try {
+    const response = await fetch(`${baseUrl}/api/v1/chat/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: {
+          role: "user",
+          content: message,
+        },
+        conversationId: conversationId,
+        useResearch: useResearch,
+        selectedAgents: selectedAgents,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("Response body is not readable");
+    }
+
+    const decoder = new TextDecoder();
+    let finalAnswer = "";
+    let contributingAgents: string[] = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+
+      for (const line of lines) {
+        if (line.trim() === '' || !line.startsWith('data: ')) continue;
+        
+        const data = line.slice(6); // Remove 'data: ' prefix
+        if (data === '[DONE]') continue;
+
+        try {
+          const event = JSON.parse(data);
+          
+          // Handle different event types
+          if (event.type === 'stream_complete') {
+            finalAnswer = event.data.final_answer || finalAnswer;
+            
+            const assistantMessage: ChatMessage = {
+              role: "assistant",
+              content: finalAnswer || "Request completed.",
+              timestamp: Date.now(),
+              agentName: "basic_crew",
+              metadata: {
+                collaboration: "orchestrated",
+                contributing_agents: contributingAgents,
+                selected_agents: selectedAgents,
+                user_requested_agents: selectedAgents,
+              },
+            };
+
+            callbacks.onComplete?.(assistantMessage);
+            return;
+          } else if (event.type === 'error') {
+            const errorMsg = event.message || event.data?.message || "Stream error";
+            callbacks.onError?.(new Error(errorMsg));
+            return;
+          } else {
+            // Handle progress events
+            callbacks.onProgress?.(event);
+            
+            // Track contributing agents
+            if (event.data?.agents) {
+              event.data.agents.forEach((agent: string) => {
+                if (!contributingAgents.includes(agent)) {
+                  contributingAgents.push(agent);
+                }
+              });
+            }
+          }
+        } catch (parseError) {
+          console.error("Error parsing streaming data:", data, parseError);
+        }
+      }
+    }
+  } catch (error: any) {
+    console.error("Failed to stream message:", error);
+    callbacks.onError?.(error);
+  }
+};
+
+/**
+ * Legacy writeMessageStream function - kept for backward compatibility
+ */
+export const writeMessageStreamLegacy = async (
   message: string,
   backendClient: any,
   chainId: number,
@@ -274,21 +419,20 @@ export const writeMessageStream = async (
   // Add user message to local storage
   addMessageToHistory(newMessage, convId);
 
-  // Get selected agents from localStorage
+  // Don't auto-load ALL agents from localStorage as selectedAgents
+  // selectedAgents should only be set when user explicitly chooses specific agents for a request
+  // The localStorage agents are just UI preferences for which agents are available
   let selectedAgents: string[] = [];
-  try {
-    const savedAgents = localStorage.getItem(SELECTED_AGENTS_KEY);
-    if (savedAgents) {
-      selectedAgents = JSON.parse(savedAgents);
-    }
-  } catch (err) {
-    console.error("Error loading selected agents from localStorage:", err);
-  }
+  
+  // TODO: In the future, allow users to explicitly select specific agents for individual requests
+  // For now, let the orchestrator choose the best agent intelligently
 
   // Track research initiated event
+  console.log('[ANALYTICS DEBUG] Selected agents for research (legacy):', selectedAgents);
   trackEvent('research.initiated', {
     conversationId,
-    selectedAgents,
+    selectedAgents: selectedAgents,
+    agentCount: selectedAgents.length,
     messageLength: message.length,
   });
 
@@ -309,11 +453,10 @@ export const writeMessageStream = async (
           role: "user",
           content: message,
         },
-        chat_history: currentHistory,
-        chain_id: String(chainId),
-        wallet_address: address,
-        use_research: true,
-        selected_agents: selectedAgents,
+        chatHistory: currentHistory,
+        conversationId: convId,
+        useResearch: true,
+        selectedAgents: selectedAgents,
       }),
     });
 
@@ -491,10 +634,21 @@ export const writeMessageStream = async (
                 break;
               case "stream_complete":
                 // Create final assistant message with metadata including telemetry
+                console.log('[FINAL RESPONSE DEBUG] Stream complete event data:', event.data);
+                console.log('[FINAL RESPONSE DEBUG] Contributing agents:', contributingAgents);
+                console.log('[FINAL RESPONSE DEBUG] Selected agents from request:', selectedAgents);
+                console.log('[FINAL RESPONSE DEBUG] Subtask outputs:', subtaskOutputs);
+                
                 const metadata: any = {
                   collaboration: "orchestrated",
                   contributing_agents: contributingAgents,
                   subtask_outputs: subtaskOutputs,
+                  selected_agents: selectedAgents,
+                  user_requested_agents: selectedAgents,
+                  // Extract from event data if available
+                  selected_agent: event.data.selected_agent,
+                  selection_method: event.data.selection_method,
+                  available_agents: event.data.available_agents,
                   // Add global telemetry in the format CrewResponseMessage expects
                   token_usage: globalTelemetry.total_token_usage.total > 0 ? {
                     total_tokens: globalTelemetry.total_token_usage.total,
@@ -519,9 +673,11 @@ export const writeMessageStream = async (
                   role: "assistant",
                   content: finalAnswer || "Request completed.",
                   timestamp: Date.now(),
-                  agentName: "basic_crew",
+                  agentName: metadata.selected_agent || "basic_crew",
                   metadata,
                 };
+                
+                console.log('[FINAL RESPONSE DEBUG] Final assistant message:', assistantMessage);
 
                 // Add to history and notify completion
                 addMessageToHistory(assistantMessage, convId);
@@ -544,7 +700,7 @@ export const writeMessageStream = async (
                 onComplete(assistantMessage);
                 return;
               case "error":
-                const errorMsg = event.data.message || "Stream error";
+                const errorMsg = event.message || event.data?.message || "Stream error";
                 trackError('research.streaming', new Error(errorMsg), {
                   conversationId,
                   selectedAgents,

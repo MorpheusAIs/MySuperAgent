@@ -1,0 +1,46 @@
+{
+  "name": "@openagenda/verror",
+  "description": "richer JavaScript errors",
+  "version": "3.1.4",
+  "license": "MIT",
+  "keywords": [
+    "error",
+    "errors",
+    "err",
+    "exception",
+    "exceptions",
+    "custom"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OpenAgenda/verror.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "index.js",
+  "jsnext:main": "dist/index.mjs",
+  "module": "dist/index.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "prepack": "tsup src --clean --format esm,cjs",
+    "test": "jest"
+  },
+  "dependencies": {
+    "assertion-error": "^1.1.0",
+    "depd": "^2.0.0",
+    "inherits": "^2.0.4",
+    "sprintf-js": "^1.1.2"
+  },
+  "devDependencies": {
+    "jest": "^26.1.0",
+    "tsup": "^6.7.0"
+  }
+}

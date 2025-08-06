@@ -66,7 +66,7 @@ export const MessageList: FC<MessageListProps> = ({
     if (isSubmitting || disabled) return;
     try {
       setIsSubmitting(true);
-      await onSubmit(selectedMessage, null, false);
+      await onSubmit(selectedMessage, null, true);
     } catch (error) {
       console.error("Error submitting prefilled message:", error);
     } finally {

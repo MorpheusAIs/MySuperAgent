@@ -1,10 +1,15 @@
 import React, { FC } from "react";
 import Image from "next/image";
-import { Box, HStack, Spacer } from "@chakra-ui/react";
+import { 
+  Box, 
+  HStack, 
+  Spacer
+} from "@chakra-ui/react";
 import styles from "./index.module.css";
 import { CustomConnectButton } from "./CustomConnectButton";
 
 export const HeaderBar: FC = () => {
+
   return (
     <Box className={styles.headerBar}>
       <HStack spacing={0} width="100%" px={4}>

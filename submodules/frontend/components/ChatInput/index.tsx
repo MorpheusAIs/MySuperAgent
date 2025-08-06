@@ -1,10 +1,12 @@
 import React, { FC, useState, useEffect, useRef } from "react";
 import { Textarea, IconButton, useMediaQuery, Button } from "@chakra-ui/react";
-import { AddIcon, LinkIcon, QuestionOutlineIcon } from "@chakra-ui/icons";
+import { AddIcon, QuestionOutlineIcon } from "@chakra-ui/icons";
 import { SendIcon } from "../CustomIcon/SendIcon";
 import { Command } from "./Commands";
 import { CommandsPortal } from "./CommandsPortal";
 import { ToolsButton } from "@/components/Tools/ToolsButton";
+import { ScheduleButton } from "@/components/ScheduleButton";
+import { InlineSchedule } from "./InlineSchedule";
 import { isFeatureEnabled } from "@/services/featureFlags";
 import styles from "./index.module.css";
 import BASE_URL from "@/services/constants";
@@ -37,7 +39,7 @@ export const ChatInput: FC<ChatInputProps> = ({
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
   const [isMobile] = useMediaQuery("(max-width: 768px)");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [useResearch, setUseResearch] = useState(true);
+  const [showSchedule, setShowSchedule] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,8 +78,11 @@ export const ChatInput: FC<ChatInputProps> = ({
   useEffect(() => {
     fetch(`${BASE_URL}/agents/commands`)
       .then((res) => res.json())
-      .then((data) => setCommands(data.commands))
-      .catch((error) => console.error("Error fetching commands:", error));
+      .then((data) => setCommands(data.commands || []))
+      .catch((error) => {
+        console.error("Error fetching commands:", error);
+        setCommands([]); // Set empty array on error
+      });
   }, []);
 
   // Filter commands based on input
@@ -142,9 +147,10 @@ export const ChatInput: FC<ChatInputProps> = ({
       // Clear input immediately to improve UX
       setMessage("");
       setFile(null);
+      setShowSchedule(false);
 
-      // Submit the message with all flags
-      await onSubmit(messageToSend, fileToSend, useResearch);
+      // Submit the message with research always enabled
+      await onSubmit(messageToSend, fileToSend, true);
     } catch (error) {
       console.error("Error submitting message:", error);
     } finally {
@@ -152,9 +158,15 @@ export const ChatInput: FC<ChatInputProps> = ({
     }
   };
 
-  const toggleResearch = () => {
-    setUseResearch((prev) => !prev);
+  const handleToggleSchedule = () => {
+    setShowSchedule(!showSchedule);
   };
+
+  const handleScheduleJobCreated = (jobId: string) => {
+    setShowSchedule(false);
+    setMessage("");
+  };
+
 
   return (
     <>
@@ -212,18 +224,6 @@ export const ChatInput: FC<ChatInputProps> = ({
                 size="sm"
                 onClick={handleFileUpload}
               />
-              {isFeatureEnabled('feature.research_mode') && (
-                <Button
-                  leftIcon={<LinkIcon />}
-                  size="sm"
-                  className={`${styles.actionButton} ${
-                    useResearch ? styles.activeButton : ""
-                  }`}
-                  onClick={toggleResearch}
-                >
-                  Research
-                </Button>
-              )}
               {isFeatureEnabled('feature.prefilled_options') && (
                 <Button
                   leftIcon={<QuestionOutlineIcon />}
@@ -236,6 +236,12 @@ export const ChatInput: FC<ChatInputProps> = ({
                   Help
                 </Button>
               )}
+              <ScheduleButton
+                message={message}
+                disabled={isSubmitting || disabled || !message.trim()}
+                isExpanded={showSchedule}
+                onToggle={handleToggleSchedule}
+              />
             </div>
 
             {/* Right aligned tools button */}
@@ -245,6 +251,15 @@ export const ChatInput: FC<ChatInputProps> = ({
               </div>
             )}
           </div>
+
+          {/* Inline Schedule Component */}
+          {showSchedule && (
+            <InlineSchedule
+              message={message}
+              onJobCreated={handleScheduleJobCreated}
+              onClose={() => setShowSchedule(false)}
+            />
+          )}
         </div>
 
         {/* Hidden file input */}
