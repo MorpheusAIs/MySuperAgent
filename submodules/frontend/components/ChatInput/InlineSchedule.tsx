@@ -54,15 +54,40 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
       const walletAddress = getAddress();
       
       if (!walletAddress) {
-        toast({
-          title: 'Wallet not connected',
-          description: 'Please connect your wallet to schedule jobs',
-          status: 'warning',
-          duration: 3000,
-          isClosable: true,
-        });
-        setIsLoading(false);
-        return;
+        // Without wallet, we'll create a localStorage-based conversation instead
+        console.log("No wallet connected - creating local conversation instead of scheduled job");
+        
+        try {
+          // Import localStorage utilities
+          const { createNewConversation } = await import("@/services/ChatManagement/conversations");
+          
+          // Create a new localStorage conversation
+          const newConversationId = createNewConversation();
+          
+          toast({
+            title: 'Conversation created! 💬',
+            description: `"${jobName}" saved locally (requires wallet for scheduling)`,
+            status: 'info',
+            duration: 3000,
+            isClosable: true,
+          });
+
+          if (onJobCreated) onJobCreated(newConversationId);
+          if (onClose) onClose();
+          setIsLoading(false);
+          return;
+        } catch (error) {
+          console.error('Error creating local conversation:', error);
+          toast({
+            title: 'Error creating conversation',
+            description: 'An error occurred while creating the conversation',
+            status: 'error',
+            duration: 3000,
+            isClosable: true,
+          });
+          setIsLoading(false);
+          return;
+        }
       }
       
       // Create base schedule time

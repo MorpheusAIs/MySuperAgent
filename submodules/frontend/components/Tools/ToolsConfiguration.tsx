@@ -97,7 +97,7 @@ export const ToolsConfigurationModal: React.FC<
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${apiBaseUrl}/agents/available`);
+      const response = await fetch(`${apiBaseUrl}/api/agents/available`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch agents: ${response.statusText}`);

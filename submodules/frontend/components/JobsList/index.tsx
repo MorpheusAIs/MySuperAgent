@@ -405,15 +405,58 @@ export const JobsList: FC<JobsListProps> = ({ onJobClick, onRunScheduledJob, isL
   
   const ITEMS_PER_PAGE = 10;
 
+  // Load localStorage conversations when no wallet is connected
+  const loadLocalStorageConversations = useCallback(async () => {
+    setJobsLoading(true);
+    setScheduledJobsLoading(false);
+    
+    try {
+      const { getStorageData } = await import("@/services/LocalStorage/core");
+      const data = getStorageData();
+      
+      // Convert localStorage conversations to Job-like objects
+      const localJobs: Job[] = Object.entries(data.conversations).map(([id, conversation]) => ({
+        id,
+        name: conversation.name,
+        description: '',
+        initial_message: conversation.messages?.[0]?.content || 'No messages yet',
+        status: 'completed' as const,
+        created_at: new Date(conversation.createdAt || Date.now()),
+        updated_at: new Date(conversation.createdAt || Date.now()),
+        completed_at: new Date(conversation.createdAt || Date.now()),
+        is_scheduled: false,
+        has_uploaded_file: conversation.hasUploadedFile || false,
+        wallet_address: '',
+        run_count: 0,
+        is_active: true,
+        schedule_type: null,
+        schedule_time: null,
+        next_run_time: null,
+        interval_days: null,
+        max_runs: null,
+        weekly_days: null,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        last_run_at: null
+      }));
+      
+      setJobs(localJobs);
+      setScheduledJobs([]);
+    } catch (error: any) {
+      console.error('Error loading localStorage conversations:', error);
+      setJobs([]);
+      setScheduledJobs([]);
+    } finally {
+      setJobsLoading(false);
+      setScheduledJobsLoading(false);
+    }
+  }, []);
+
   // Load jobs and scheduled jobs
   const loadAllData = useCallback(async () => {
     const walletAddress = getAddress();
     if (!walletAddress) {
-      // No wallet connected, reset state
-      setJobs([]);
-      setScheduledJobs([]);
-      setJobsLoading(false);
-      setScheduledJobsLoading(false);
+      // No wallet connected, load localStorage conversations
+      await loadLocalStorageConversations();
       return;
     }
     
@@ -440,7 +483,7 @@ export const JobsList: FC<JobsListProps> = ({ onJobClick, onRunScheduledJob, isL
     } finally {
       setScheduledJobsLoading(false);
     }
-  }, [getAddress]);
+  }, [getAddress, loadLocalStorageConversations]);
 
   useEffect(() => {
     loadAllData();

@@ -28,14 +28,30 @@ export default async function handler(
       
       return res.status(200).json({ commands });
     } catch (agentError) {
-      console.warn('AgentRegistry not available, returning empty commands:', agentError);
-      // Return empty commands array as fallback
-      return res.status(200).json({ commands: [] });
+      console.warn('AgentRegistry not available, providing basic commands:', agentError);
+      // Return basic commands as fallback when AgentRegistry is not available
+      const basicCommands = [
+        {
+          command: '@default',
+          description: 'General purpose AI assistant',
+          agent: 'default',
+        },
+        {
+          command: '@research',
+          description: 'Research and web search assistant',
+          agent: 'research',
+        },
+        {
+          command: '@crypto',
+          description: 'Cryptocurrency data and analysis',
+          agent: 'crypto',
+        }
+      ];
+      return res.status(200).json({ commands: basicCommands });
     }
   } catch (error) {
     console.error('Error fetching agent commands:', error);
-    return res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Internal server error' 
-    });
+    // Even in case of complete failure, return empty commands to prevent 404
+    return res.status(200).json({ commands: [] });
   }
 }

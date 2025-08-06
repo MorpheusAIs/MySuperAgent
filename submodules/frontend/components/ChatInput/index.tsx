@@ -76,7 +76,7 @@ export const ChatInput: FC<ChatInputProps> = ({
 
   // Fetch commands
   useEffect(() => {
-    fetch(`${BASE_URL}/agents/commands`)
+    fetch(`${BASE_URL}/api/agents/commands`)
       .then((res) => res.json())
       .then((data) => setCommands(data.commands || []))
       .catch((error) => {

@@ -64,8 +64,9 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
       try {
         const walletAddress = getAddress();
         if (!walletAddress) {
-          console.error("No wallet connected - cannot create job");
-          throw new Error("Please connect your wallet to create jobs");
+          // No wallet connected, create a localStorage-based conversation
+          console.log("No wallet connected - creating local conversation");
+          return await handleLocalStorageJob(message, file, useResearch);
         }
         const shouldAutoSchedule = userPreferences?.auto_schedule_jobs || false;
         
@@ -150,6 +151,45 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
         console.error("Error sending message:", error);
         setLocalLoading(false);
       }
+    }
+  };
+
+  const handleLocalStorageJob = async (
+    message: string,
+    file: File | null,
+    useResearch: boolean = true
+  ) => {
+    try {
+      // Import localStorage utilities
+      const { createNewConversation } = await import("@/services/ChatManagement/conversations");
+      
+      // Create a new localStorage conversation
+      const newConversationId = createNewConversation();
+      
+      // Switch to this new conversation
+      await setCurrentConversation(newConversationId);
+      
+      // Refresh the jobs list to show the new conversation
+      refreshJobsList();
+      
+      // Send the message in the background (non-blocking)
+      sendMessage(message, file, useResearch, newConversationId)
+        .then(() => {
+          console.log("Message sent successfully for conversation:", newConversationId);
+          // Refresh jobs list after message is sent to update status
+          refreshJobsList();
+        })
+        .catch((error) => {
+          console.error("Error sending message:", error);
+          // Refresh even on error to show the failed status
+          refreshJobsList();
+        });
+      
+      // Return immediately for non-blocking behavior
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error creating local conversation:", error);
+      throw error;
     }
   };
   
