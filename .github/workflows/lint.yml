@@ -19,22 +19,47 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
       - name: Install dependencies
         run: |
           cd submodules/frontend
-          npm ci
+          pnpm install --frozen-lockfile
+
+      - name: Setup environment variables for build
+        run: |
+          cd submodules/frontend
+          echo "NEXT_PUBLIC_API_URL=http://localhost:3000" > .env.local
+          echo "NODE_ENV=production" >> .env.local
+          echo "DATABASE_URL=postgresql://test:test@localhost:5432/testdb" >> .env.local
 
       - name: Run TypeScript/JavaScript linter
         run: |
           cd submodules/frontend
-          npm run lint
+          pnpm run lint
 
       - name: Run TypeScript type check
         run: |
           cd submodules/frontend
-          npx tsc --noEmit
+          pnpm exec tsc --noEmit
 
       - name: Run build check
         run: |
           cd submodules/frontend
-          npm run build
+          pnpm run build
