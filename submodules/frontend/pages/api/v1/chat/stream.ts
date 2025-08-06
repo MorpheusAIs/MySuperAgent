@@ -4,6 +4,7 @@ import { AgentRegistry } from '@/services/agents/core/AgentRegistry';
 import { orchestrator } from '@/services/agents/orchestrator';
 import { initializeAgents } from '@/services/agents/initialize';
 import { v4 as uuidv4 } from 'uuid';
+import { ValidationError, createSafeErrorResponse, validateRequired } from '@/services/utils/errors';
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,11 +22,15 @@ export default async function handler(
       chatRequest.requestId = uuidv4();
     }
     
-    // Check if request has required fields
-    if (!chatRequest.prompt?.content) {
-      return res.status(400).json({ 
-        error: 'Missing prompt content' 
-      });
+    // Validate required fields
+    try {
+      validateRequired(chatRequest, ['prompt'] as (keyof ChatRequest)[]);
+      if (!chatRequest.prompt?.content) {
+        throw new ValidationError('Missing prompt content');
+      }
+    } catch (error) {
+      const { error: errorMessage, statusCode } = createSafeErrorResponse(error);
+      return res.status(statusCode).json({ error: errorMessage });
     }
 
     // Ensure agents are initialized

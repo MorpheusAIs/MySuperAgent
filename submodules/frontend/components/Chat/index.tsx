@@ -92,7 +92,7 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
 
             // Calculate next run time
             const nextRunTime = JobsAPI.calculateNextRunTime(
-              userPreferences.default_schedule_type as 'once' | 'daily' | 'weekly' | 'monthly' | 'custom',
+              userPreferences.default_schedule_type as 'once' | 'daily' | 'weekly' | 'custom',
               scheduleDateTime,
               userPreferences.default_schedule_type === 'custom' ? 1 : undefined
             );
@@ -101,7 +101,7 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
             await JobsAPI.updateJob(newJob.id, {
               wallet_address: walletAddress,
               is_scheduled: true,
-              schedule_type: userPreferences.default_schedule_type as 'once' | 'daily' | 'weekly' | 'monthly' | 'custom',
+              schedule_type: userPreferences.default_schedule_type as 'once' | 'daily' | 'weekly' | 'custom',
               schedule_time: scheduleDateTime,
               next_run_time: nextRunTime,
               interval_days: userPreferences.default_schedule_type === 'custom' ? 1 : null,

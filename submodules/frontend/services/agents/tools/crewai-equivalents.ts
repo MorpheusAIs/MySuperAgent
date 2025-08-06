@@ -9,7 +9,7 @@ export const braveSearchTool = createTool({
     query: z.string().describe('The search query'),
     count: z.number().optional().default(10).describe('Number of search results to return'),
   }),
-  execute: async ({ query, count = 10 }) => {
+  execute: async ({ context: { query, count = 10 } }) => {
     try {
       const braveApiKey = process.env.BRAVE_API_KEY;
       if (!braveApiKey) {
@@ -54,7 +54,7 @@ export const codeInterpreterTool = createTool({
   inputSchema: z.object({
     code: z.string().describe('Python code to execute'),
   }),
-  execute: async ({ code }) => {
+  execute: async ({ context: { code } }) => {
     // Note: In production, this should connect to a secure Python execution environment
     return `Code execution requested:\n\n\`\`\`python\n${code}\n\`\`\`\n\nNote: Code execution requires a secure Python environment. This would execute in a sandboxed container in production.`;
   },
@@ -69,7 +69,7 @@ export const dalleTool = createTool({
     size: z.enum(['256x256', '512x512', '1024x1024', '1792x1024', '1024x1792']).optional().default('1024x1024'),
     quality: z.enum(['standard', 'hd']).optional().default('standard'),
   }),
-  execute: async ({ prompt, size = '1024x1024', quality = 'standard' }) => {
+  execute: async ({ context: { prompt, size = '1024x1024', quality = 'standard' } }) => {
     try {
       const openaiApiKey = process.env.OPENAI_API_KEY;
       if (!openaiApiKey) {
@@ -117,7 +117,7 @@ export const visionTool = createTool({
     image_url: z.string().url().describe('URL of the image to analyze'),
     question: z.string().optional().describe('Specific question about the image'),
   }),
-  execute: async ({ image_url, question }) => {
+  execute: async ({ context: { image_url, question } }) => {
     try {
       const openaiApiKey = process.env.OPENAI_API_KEY;
       if (!openaiApiKey) {
@@ -173,7 +173,7 @@ export const websiteSearchTool = createTool({
     url: z.string().url().describe('Website URL to search'),
     query: z.string().describe('Search query to find within the website'),
   }),
-  execute: async ({ url, query }) => {
+  execute: async ({ context: { url, query } }) => {
     try {
       const response = await fetch(url, {
         headers: {
@@ -221,7 +221,7 @@ export const youtubeVideoSearchTool = createTool({
     query: z.string().describe('Search query for YouTube videos'),
     max_results: z.number().optional().default(10).describe('Maximum number of results'),
   }),
-  execute: async ({ query, max_results = 10 }) => {
+  execute: async ({ context: { query, max_results = 10 } }) => {
     try {
       const youtubeApiKey = process.env.YOUTUBE_API_KEY;
       if (!youtubeApiKey) {
@@ -261,7 +261,7 @@ export const youtubeChannelSearchTool = createTool({
     query: z.string().describe('Search query for YouTube channels'),
     max_results: z.number().optional().default(10).describe('Maximum number of results'),
   }),
-  execute: async ({ query, max_results = 10 }) => {
+  execute: async ({ context: { query, max_results = 10 } }) => {
     try {
       const youtubeApiKey = process.env.YOUTUBE_API_KEY;
       if (!youtubeApiKey) {

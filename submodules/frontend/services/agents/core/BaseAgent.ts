@@ -67,7 +67,7 @@ export abstract class BaseAgent {
     
     console.log(`[${this.name}] Agent created successfully with ${this.useApifyTools ? 'dynamic MCP' : 'static'} tools`);
     console.log(`[${this.name}] Agent instance:`, !!this.agent);
-    console.log(`[${this.name}] Agent model:`, this.agent?.model?.modelId || 'unknown');
+    console.log(`[${this.name}] Agent model:`, typeof this.agent?.model === 'object' && 'modelId' in this.agent.model ? this.agent.model.modelId : 'unknown');
   }
 
   abstract getInstructions(): string;
@@ -85,7 +85,7 @@ export abstract class BaseAgent {
       console.log(`[${this.name}] Calling agent.generate with messages:`, messages);
       
       // Use Mastra's generate method
-      const result = await this.agent.generate(messages, options);
+      const result = await this.agent.generate(messages as any, options);
       
       console.log(`[${this.name}] Generate result type:`, typeof result);
       console.log(`[${this.name}] Generate result keys:`, Object.keys(result || {}));
@@ -134,13 +134,13 @@ export abstract class BaseAgent {
     // For MCP agents, tools are already configured in the agent constructor
     // No need to pass toolsets in options
     console.log(`[${this.name}] Starting streamVNext with messages:`, messages);
-    console.log(`[${this.name}] Agent has tools:`, this.agent._tools ? Object.keys(this.agent._tools) : 'NO TOOLS PROPERTY');
+    console.log(`[${this.name}] Agent has tools:`, this.agent.tools ? Object.keys(this.agent.tools) : 'NO TOOLS PROPERTY');
     console.log(`[${this.name}] Agent tools property:`, this.agent.tools ? 'HAS TOOLS' : 'NO TOOLS');
     
     // Force log the actual agent configuration
     console.log(`[${this.name}] Raw agent config:`, {
       name: this.agent.name,
-      description: this.agent.description,
+      description: this.agent.getDescription?.(),
       hasTools: !!this.agent.tools,
     });
     

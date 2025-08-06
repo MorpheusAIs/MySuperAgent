@@ -105,7 +105,7 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
       
       const job = await JobsAPI.createJob(walletAddress, {
         name: jobName,
-        description: null,
+        description: '',
         initial_message: message,
         is_scheduled: true,
       });
@@ -117,7 +117,7 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
         next_run_time: nextRunTime,
         interval_days: scheduleType === 'custom' ? intervalDays : null,
         max_runs: maxOccurrences === 'infinite' ? null : parseInt(maxOccurrences),
-        weekly_days: scheduleType === 'weekly' ? selectedDays : null,
+        weekly_days: scheduleType === 'weekly' ? selectedDays.join(',') : null,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
 

@@ -4,7 +4,7 @@
   "version": "0.2.1",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/pre-build-fix.js && next build",
     "start": "next start",
     "lint": "next lint",
     "db-init": "node migrations/db-init.js"

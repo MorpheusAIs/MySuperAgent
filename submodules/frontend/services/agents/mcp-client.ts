@@ -43,7 +43,8 @@ export async function getApifyTools() {
       return {};
     }
     
-    await client.connect();
+    // Skip connection for now - might not be needed or have different API
+    // await client.connect();
     const tools = await client.getTools();
     return tools;
   } catch (error) {
@@ -60,7 +61,8 @@ export async function getApifyToolsets() {
       return {};
     }
     
-    await client.connect();
+    // Skip connection for now - might not be needed or have different API
+    // await client.connect();
     const toolsets = await client.getToolsets();
     return { apify: toolsets };
   } catch (error) {

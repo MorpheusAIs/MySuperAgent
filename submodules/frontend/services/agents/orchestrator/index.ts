@@ -67,45 +67,32 @@ export class Orchestrator {
 
   async streamOrchestration(request: ChatRequest, res: any): Promise<void> {
     try {
-      console.log('[ORCHESTRATOR DEBUG] Starting orchestration for request:', {
-        prompt: request.prompt.content.substring(0, 100) + '...',
-        selectedAgents: request.selectedAgents,
-        useResearch: request.useResearch
-      });
       
       // Determine which agent(s) to use for streaming
       let selectedAgent;
       let selectionMethod = 'unknown';
       
       if (request.selectedAgents && request.selectedAgents.length > 0) {
-        console.log('[ORCHESTRATOR DEBUG] Trying to use user-selected agents:', request.selectedAgents);
         // Try to find the first available agent from the selected list
         for (const agentName of request.selectedAgents) {
           selectedAgent = AgentRegistry.get(agentName);
           if (selectedAgent) {
             selectionMethod = 'user_selected';
-            console.log('[ORCHESTRATOR DEBUG] Found user-selected agent:', agentName);
             break;
-          } else {
-            console.log('[ORCHESTRATOR DEBUG] User-selected agent not found:', agentName);
           }
         }
         
         // If no selected agent is available, fall back to LLM-based intelligent selection
         if (!selectedAgent) {
-          console.log('[ORCHESTRATOR DEBUG] No user-selected agents available, falling back to LLM-based intelligent selection');
           const selectionResult = await AgentRegistry.selectBestAgentWithLLM(request.prompt.content);
           selectedAgent = selectionResult.agent;
           selectionMethod = 'llm_intelligent_fallback';
-          console.log('[ORCHESTRATOR DEBUG] LLM fallback selection reasoning:', selectionResult.reasoning);
         }
       } else {
-        console.log('[ORCHESTRATOR DEBUG] No agents pre-selected, using LLM-based intelligent selection');
         // Use LLM-based intelligent agent selection
         const selectionResult = await AgentRegistry.selectBestAgentWithLLM(request.prompt.content);
         selectedAgent = selectionResult.agent;
         selectionMethod = 'llm_intelligent';
-        console.log('[ORCHESTRATOR DEBUG] LLM selection reasoning:', selectionResult.reasoning);
       }
 
       if (!selectedAgent) {
@@ -113,7 +100,6 @@ export class Orchestrator {
       }
       
       const selectedAgentName = selectedAgent.getDefinition().name;
-      console.log('[ORCHESTRATOR DEBUG] Final selected agent:', selectedAgentName, 'Selection method:', selectionMethod);
 
       // Convert to Mastra message format
       const messages = [];
@@ -242,7 +228,6 @@ export class Orchestrator {
           } : undefined,
         };
         
-        console.log('[ORCHESTRATOR DEBUG] Final response metadata:', metadata);
 
         res.write(`data: ${JSON.stringify({
           type: 'stream_complete',
@@ -256,7 +241,6 @@ export class Orchestrator {
         res.end();
 
       } else {
-        console.log('[ORCHESTRATOR DEBUG] Agent does not support streaming, using regular chat');
         // Fallback to regular chat if streaming not available
         const response = await selectedAgent.chat({
           prompt: request.prompt,

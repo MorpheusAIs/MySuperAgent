@@ -98,7 +98,7 @@ export class JobsAPI {
   }
 
   static calculateNextRunTime(
-    scheduleType: 'once' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom',
+    scheduleType: 'once' | 'hourly' | 'daily' | 'weekly' | 'custom',
     currentTime: Date,
     intervalDays?: number
   ): Date | null {
@@ -120,9 +120,6 @@ export class JobsAPI {
         nextRun.setDate(nextRun.getDate() + 7);
         break;
       
-      case 'monthly':
-        nextRun.setMonth(nextRun.getMonth() + 1);
-        break;
       
       case 'custom':
         if (intervalDays) {

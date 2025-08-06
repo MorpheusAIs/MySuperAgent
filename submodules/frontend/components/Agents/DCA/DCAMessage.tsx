@@ -146,7 +146,6 @@ const DCAMessage = ({ content, metadata }: { content: any; metadata: any }) => {
         daily: 1,
         weekly: 7,
         biweekly: 14,
-        monthly: 30,
       }[config.frequency] || 0;
 
     const daysToComplete = totalPurchases * frequencyInDays;

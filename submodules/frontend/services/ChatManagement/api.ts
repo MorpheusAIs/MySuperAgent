@@ -14,7 +14,23 @@ const SELECTED_AGENTS_KEY = "selectedAgents";
 export interface StreamingEvent {
   type: string;
   timestamp: string;
-  data: any;
+  data: {
+    message?: string;
+    subtask?: string;
+    output?: string;
+    agents?: string[];
+    task?: string;
+    agent?: string;
+    final_answer?: string;
+    processing_time?: number;
+    token_usage?: {
+      prompt?: number;
+      response?: number;
+      total?: number;
+    };
+    current_agent_index?: number;
+    total_agents?: number;
+  };
   status?: 'idle' | 'dispatching' | 'processing' | 'synthesizing' | 'complete';
   progress?: number;
   subtask?: string;
@@ -243,30 +259,6 @@ export const generateConversationTitle = async (
   }
 };
 
-/**
- * Interface for streaming progress events
- */
-export interface StreamingEvent {
-  type: string;
-  timestamp: string;
-  data: {
-    message?: string;
-    subtask?: string;
-    output?: string;
-    agents?: string[];
-    task?: string;
-    agent?: string;
-    final_answer?: string;
-    processing_time?: number;
-    token_usage?: {
-      prompt?: number;
-      response?: number;
-      total?: number;
-    };
-    current_agent_index?: number;
-    total_agents?: number;
-  };
-}
 
 /**
  * Send a message with streaming support for research mode
@@ -302,7 +294,7 @@ export const writeMessageStream = async (
   console.log('[ANALYTICS DEBUG] Selected agents for research:', selectedAgents);
   trackEvent('research.initiated', {
     conversationId,
-    selectedAgents: selectedAgents.join(',') || 'none',
+    selectedAgents: selectedAgents,
     agentCount: selectedAgents.length,
     messageLength: message.length,
   });
@@ -439,7 +431,7 @@ export const writeMessageStreamLegacy = async (
   console.log('[ANALYTICS DEBUG] Selected agents for research (legacy):', selectedAgents);
   trackEvent('research.initiated', {
     conversationId,
-    selectedAgents: selectedAgents.join(',') || 'none',
+    selectedAgents: selectedAgents,
     agentCount: selectedAgents.length,
     messageLength: message.length,
   });

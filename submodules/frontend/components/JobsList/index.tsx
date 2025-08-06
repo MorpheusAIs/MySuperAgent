@@ -13,7 +13,7 @@ interface JobsListProps {
   refreshKey?: number;
 }
 
-const getJobStatus = (job: Job): "pending" | "running" | "completed" | "failed" => {
+const getJobStatus = (job: Job): "pending" | "running" | "completed" | "failed" | "cancelled" => {
   return job.status;
 };
 
@@ -51,7 +51,7 @@ const isPreviousJob = (job: Job) => {
   return false;
 };
 
-const getStatusColor = (status: "pending" | "running" | "completed" | "failed") => {
+const getStatusColor = (status: "pending" | "running" | "completed" | "failed" | "cancelled") => {
   switch (status) {
     case "pending":
       return "gray";
@@ -61,6 +61,8 @@ const getStatusColor = (status: "pending" | "running" | "completed" | "failed") 
       return "green";
     case "failed":
       return "red";
+    case "cancelled":
+      return "orange";
     default:
       return "gray";
   }
@@ -135,8 +137,6 @@ const ScheduledJobItem: FC<{
         return 'Daily';
       case 'weekly':
         return 'Weekly';
-      case 'monthly':
-        return 'Monthly';
       case 'custom':
         return job.interval_days ? `Every ${job.interval_days} days` : 'Custom';
       default:

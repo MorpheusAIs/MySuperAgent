@@ -1,8 +1,25 @@
 import { Pool } from 'pg';
+import { env } from '../config/env';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+// Initialize database pool with proper error handling
+let pool: Pool;
+try {
+  const config = env.getConfig();
+  pool = new Pool({
+    connectionString: config.DATABASE_URL,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
+  
+  // Handle pool errors
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+  });
+} catch (error) {
+  console.error('Failed to initialize database pool:', error);
+  throw error;
+}
 
 // Types
 export interface User {
@@ -15,7 +32,7 @@ export interface User {
 export interface UserPreferences {
   wallet_address: string;
   auto_schedule_jobs: boolean;
-  default_schedule_type: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
+  default_schedule_type: 'once' | 'daily' | 'weekly' | 'custom';
   default_schedule_time: string;
   timezone: string;
   created_at: Date;
@@ -40,6 +57,7 @@ export interface Job {
   schedule_time?: Date | null;
   next_run_time?: Date | null;
   interval_days?: number | null;
+  weekly_days?: string | null;
   is_active: boolean;
   last_run_at?: Date | null;
   run_count: number;
@@ -280,7 +298,7 @@ export class JobDB {
   }
 
   static calculateNextRunTime(
-    scheduleType: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom',
+    scheduleType: 'once' | 'daily' | 'weekly' | 'custom',
     currentTime: Date,
     intervalDays?: number
   ): Date | null {
@@ -298,9 +316,6 @@ export class JobDB {
         nextRun.setDate(nextRun.getDate() + 7);
         break;
       
-      case 'monthly':
-        nextRun.setMonth(nextRun.getMonth() + 1);
-        break;
       
       case 'custom':
         if (intervalDays) {

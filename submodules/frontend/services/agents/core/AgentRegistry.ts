@@ -41,7 +41,7 @@ class AgentRegistryClass {
   selectBestAgent(prompt: string): BaseAgent | null {
     console.warn('[AGENT SELECTION] Using deprecated keyword-based selection');
     // Fallback to default agent
-    return this.get('default');
+    return this.get('default') || null;
   }
 
   /**
@@ -107,7 +107,7 @@ class AgentRegistryClass {
         console.warn('[AGENT SELECTION DEBUG] LLM selected non-existent agent:', selectedAgentName);
         const fallbackAgent = this.get('default');
         return {
-          agent: fallbackAgent,
+          agent: fallbackAgent || null,
           reasoning: `LLM selected ${selectedAgentName} but agent not found, using default`
         };
       }
@@ -116,7 +116,7 @@ class AgentRegistryClass {
       console.error('[AGENT SELECTION DEBUG] Error in LLM-based selection:', error);
       const fallbackAgent = this.get('default');
       return {
-        agent: fallbackAgent,
+        agent: fallbackAgent || null,
         reasoning: `Error in LLM selection: ${error instanceof Error ? error.message : 'Unknown error'}, using default`
       };
     }

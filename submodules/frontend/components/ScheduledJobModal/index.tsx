@@ -51,7 +51,7 @@ interface ScheduledJobModalProps {
 }
 
 type ScheduleTypeOption = {
-  id: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
+  id: 'once' | 'daily' | 'weekly' | 'custom';
   label: string;
   description: string;
   icon: React.ElementType;
@@ -77,13 +77,6 @@ const scheduleOptions: ScheduleTypeOption[] = [
     id: 'weekly',
     label: 'Weekly',
     description: 'Run once a week on the same day',
-    icon: RepeatIcon,
-    isRecurring: true,
-  },
-  {
-    id: 'monthly',
-    label: 'Monthly',
-    description: 'Run once a month on the same date',
     icon: RepeatIcon,
     isRecurring: true,
   },
@@ -114,7 +107,7 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
 }) => {
   const [jobName, setJobName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
-  const [scheduleType, setScheduleType] = useState<'once' | 'daily' | 'weekly' | 'monthly' | 'custom'>('once');
+  const [scheduleType, setScheduleType] = useState<'once' | 'daily' | 'weekly' | 'custom'>('once');
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('09:00');
   const [intervalDays, setIntervalDays] = useState(1);
@@ -174,7 +167,7 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
       
       // Calculate next run time
       const nextRunTime = JobsAPI.calculateNextRunTime(
-        scheduleType as 'once' | 'daily' | 'weekly' | 'monthly' | 'custom',
+        scheduleType as 'once' | 'daily' | 'weekly' | 'custom',
         scheduleDateTime,
         scheduleType === 'custom' ? intervalDays : undefined
       );
@@ -182,7 +175,7 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
       // Create the job with scheduling information
       const job = await JobsAPI.createJob(walletAddress, {
         name: jobName,
-        description: jobDescription || null,
+        description: jobDescription || '',
         initial_message: initialMessage,
         is_scheduled: true,
       });
@@ -190,13 +183,13 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
       // Update the job with scheduling details
       await JobsAPI.updateJob(job.id, {
         wallet_address: walletAddress,
-        schedule_type: scheduleType as 'once' | 'daily' | 'weekly' | 'monthly' | 'custom',
+        schedule_type: scheduleType as 'once' | 'daily' | 'weekly' | 'custom',
         schedule_time: scheduleDateTime,
         next_run_time: nextRunTime,
         interval_days: scheduleType === 'custom' ? intervalDays : null,
         max_runs: maxRuns,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        weekly_days: scheduleType === 'weekly' ? selectedDays : null,
+        weekly_days: scheduleType === 'weekly' ? selectedDays.join(',') : null,
       });
 
       toast({
@@ -253,8 +246,6 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
           daysOfWeek.find(d => d.id === day)?.label
         ).join(', ');
         return `run every ${dayNames} at ${time}`;
-      case 'monthly':
-        return `run monthly at ${time}`;
       case 'custom':
         return `run every ${intervalDays} day${intervalDays !== 1 ? 's' : ''} at ${time}`;
       default:
@@ -388,7 +379,7 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
                 {scheduleType === 'weekly' && (
                   <FormControl isRequired>
                     <FormLabel fontWeight="medium">Select Days</FormLabel>
-                    <CheckboxGroup value={selectedDays} onChange={setSelectedDays}>
+                    <CheckboxGroup value={selectedDays} onChange={(value) => setSelectedDays(value as string[])}>
                       <SimpleGrid columns={7} spacing={2}>
                         {daysOfWeek.map((day) => (
                           <Box key={day.id} textAlign="center">
@@ -530,7 +521,7 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
                       </Text>
                     </Flex>
                     <Text fontSize="sm" color="blue.100">
-                      "{jobName}" will {getScheduleDescription()}
+                      &quot;{jobName}&quot; will {getScheduleDescription()}
                       {maxRuns && (
                         <Text as="span" color="blue.200">
                           {' '}(max {maxRuns} run{maxRuns !== 1 ? 's' : ''})

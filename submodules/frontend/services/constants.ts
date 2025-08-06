@@ -50,7 +50,6 @@ export const DCA_AVAILABLE_FREQUENCIES = [
   { value: "daily", label: "Daily" },
   { value: "weekly", label: "Weekly" },
   { value: "biweekly", label: "Bi-weekly" },
-  { value: "monthly", label: "Monthly" },
 ];
 
 // export enum AGENT_TYPES {

@@ -11,8 +11,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     let DB;
     try {
-      const module = await import('@/services/Database/db');
-      DB = module;
+      const dbModule = await import('@/services/Database/db');
+      DB = dbModule;
     } catch (importError) {
       console.error('Database module not available:', importError);
       return res.status(503).json({ 
@@ -47,7 +47,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           initial_message,
           status: 'pending',
           is_scheduled: is_scheduled || false,
-          has_uploaded_file: has_uploaded_file || false
+          has_uploaded_file: has_uploaded_file || false,
+          timezone: 'UTC',
+          is_active: true,
+          run_count: 0
         });
 
         return res.status(201).json({ job: newJob });

@@ -8,7 +8,7 @@ export const codeExecutorTool = createTool({
     code: z.string().describe('The Python code to execute'),
     language: z.string().optional().default('python').describe('Programming language (currently supports python)'),
   }),
-  execute: async ({ code, language = 'python' }) => {
+  execute: async ({ context: { code, language = 'python' } }) => {
     if (language !== 'python') {
       return `Unsupported language: ${language}. Currently only Python is supported.`;
     }
@@ -31,7 +31,7 @@ export const codeAnalyzerTool = createTool({
     language: z.string().describe('Programming language of the code'),
     analysis_type: z.enum(['security', 'performance', 'style', 'all']).optional().default('all').describe('Type of analysis to perform'),
   }),
-  execute: async ({ code, language, analysis_type = 'all' }) => {
+  execute: async ({ context: { code, language, analysis_type = 'all' } }) => {
     try {
       const lines = code.split('\n');
       const analysis = {

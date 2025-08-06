@@ -36,7 +36,7 @@ export const codeAnalyzerTool = createTool({
       language: detectedLanguage,
       analysis: {
         syntaxValid: true, // Mock - would use actual parser
-        complexity: lines > 50 ? 'high' : lines > 20 ? 'medium' : 'low',
+        complexity: (lines > 50 ? 'high' : lines > 20 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
         issues: [],
         suggestions: [
           'Consider adding comments for better readability',

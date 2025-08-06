@@ -15,6 +15,7 @@ import {
   writeMessageStream,
   StreamingEvent,
 } from "@/services/ChatManagement/api";
+import { getMessagesHistory } from "@/services/ChatManagement/storage";
 import JobsAPI from "@/services/API/jobs";
 import { useWalletAddress } from "@/services/Wallet/utils";
 import { Job, Message } from "@/services/Database/db";
@@ -273,10 +274,8 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
         nextOrderIndex++;
 
         // Handle file upload if present
-        let fileUrl = null;
         if (file) {
-          const uploadResult = await uploadFile(file);
-          fileUrl = uploadResult.fileUrl;
+          await uploadFile(file, getHttpClient(), conversationId);
           
           // Update job to indicate file was uploaded
           await JobsAPI.updateJob(currentConvId, {
@@ -286,7 +285,7 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
         }
 
         // Prepare message for API
-        const messageToSend = fileUrl ? `${message}\n\nFile: ${fileUrl}` : message;
+        const messageToSend = file ? `${message}\n\nFile: ${file.name}` : message;
 
         // Stream the response
         const httpClient = getHttpClient();
@@ -372,7 +371,8 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
                   pendingTitleGeneration.current.add(currentConvId);
                   
                   try {
-                    const generatedTitle = await generateConversationTitle(httpClient, currentConvId);
+                    const messages = getMessagesHistory(currentConvId);
+                    const generatedTitle = await generateConversationTitle(messages, httpClient, currentConvId);
                     
                     // Update job name in database
                     await JobsAPI.updateJob(currentConvId, {
@@ -450,12 +450,19 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
     });
   }, []);
 
+  const refreshJobs = useCallback(async () => {
+    // Placeholder for job refresh functionality
+    // This can be implemented when jobs management is needed
+    console.log("refreshJobs called");
+  }, []);
+
   const contextValue = {
     state,
     setCurrentConversation,
     sendMessage,
     refreshMessages,
     refreshAllTitles,
+    refreshJobs,
     deleteChat,
     setCurrentView,
   };

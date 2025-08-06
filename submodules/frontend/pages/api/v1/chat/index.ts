@@ -14,7 +14,6 @@ export default async function handler(
 
   try {
     const chatRequest: ChatRequest = req.body;
-    console.log(`Received chat request for conversation ${chatRequest.conversationId}`);
 
     // Ensure agents are initialized
     await initializeAgents();
@@ -39,11 +38,9 @@ export default async function handler(
       currentAgent = agentName;
     } else if (chatRequest.useResearch) {
       // Use orchestrator for multi-agent flow
-      console.log('Using research flow');
       [currentAgent, agentResponse] = await orchestrator.runOrchestration(chatRequest);
     } else {
       // Use intelligent agent selection for regular chat
-      console.log('Using intelligent agent selection');
       const selectedAgent = AgentRegistry.selectBestAgent(chatRequest.prompt.content);
       if (!selectedAgent) {
         return res.status(500).json({ error: 'No suitable agent found' });

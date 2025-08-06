@@ -16,8 +16,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     let DB;
     try {
-      const module = await import('@/services/Database/db');
-      DB = module;
+      const dbModule = await import('@/services/Database/db');
+      DB = dbModule;
     } catch (importError) {
       console.error('Database module not available:', importError);
       return res.status(503).json({ 

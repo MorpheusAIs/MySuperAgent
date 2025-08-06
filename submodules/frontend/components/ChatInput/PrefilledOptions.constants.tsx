@@ -104,7 +104,7 @@ export const prefilledOptionsMap = {
   //   examples: [
   //     { text: "DCA into ETH weekly", agent: "dca_agent" },
   //     {
-  //       text: "Help me create a monthly BTC buying strategy",
+  //       text: "Help me create a weekly BTC buying strategy",
   //       agent: "dca_agent",
   //     },
   //   ],

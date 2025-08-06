@@ -10,7 +10,7 @@ export interface ScheduledJob {
   job_name: string;
   job_description: string | null;
   message_content: string;
-  schedule_type: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
+  schedule_type: 'once' | 'daily' | 'weekly' | 'custom';
   schedule_time: Date;
   next_run_time: Date;
   interval_days: number | null;
@@ -149,7 +149,7 @@ export class ScheduledJobsDB {
   }
 
   static calculateNextRunTime(
-    scheduleType: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom',
+    scheduleType: 'once' | 'daily' | 'weekly' | 'custom',
     currentTime: Date,
     intervalDays?: number
   ): Date | null {
@@ -167,9 +167,6 @@ export class ScheduledJobsDB {
         nextRun.setDate(nextRun.getDate() + 7);
         break;
       
-      case 'monthly':
-        nextRun.setMonth(nextRun.getMonth() + 1);
-        break;
       
       case 'custom':
         if (intervalDays) {

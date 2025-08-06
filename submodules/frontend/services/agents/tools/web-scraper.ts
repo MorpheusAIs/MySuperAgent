@@ -7,7 +7,7 @@ export const websiteContentTool = createTool({
   inputSchema: z.object({
     url: z.string().url().describe('The URL to extract content from'),
   }),
-  execute: async ({ url }) => {
+  execute: async ({ context: { url } }) => {
     try {
       // Use a free web scraping API or implement basic fetch
       const response = await fetch(url, {
@@ -45,7 +45,7 @@ export const newsSearchTool = createTool({
     query: z.string().describe('The search query for news articles'),
     limit: z.number().optional().default(5).describe('Number of articles to return (max 10)'),
   }),
-  execute: async ({ query, limit = 5 }) => {
+  execute: async ({ context: { query, limit = 5 } }) => {
     try {
       // Use a free news API - NewsAPI has a free tier
       const apiKey = process.env.NEWS_API_KEY;

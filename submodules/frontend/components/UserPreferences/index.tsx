@@ -62,7 +62,7 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({ onClose }) 
         // Set wallet address even on error
         setPreferences(prev => ({
           ...prev,
-          wallet_address: getAddress(),
+          wallet_address: getAddress() || '',
         }));
         if (!error.message?.includes('Database service unavailable')) {
           toast({
@@ -195,7 +195,6 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({ onClose }) 
                 >
                   <option value="daily" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>Daily</option>
                   <option value="weekly" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>Weekly</option>
-                  <option value="monthly" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>Monthly</option>
                 </Select>
               </FormControl>
 
