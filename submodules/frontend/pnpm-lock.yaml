@@ -38,6 +38,9 @@ importers:
       '@lit-protocol/auth-helpers':
         specifier: ^7.0.6
         version: 7.2.0(bufferutil@4.0.9)(typescript@5.4.2)(utf-8-validate@5.0.10)
+      '@lit-protocol/constants':
+        specifier: ^7.2.3
+        version: 7.2.3(ethers@6.14.4(bufferutil@4.0.9)(utf-8-validate@5.0.10))
       '@lit-protocol/core':
         specifier: ^7.0.6
         version: 7.2.0(bufferutil@4.0.9)(typescript@5.4.2)(utf-8-validate@5.0.10)
@@ -774,6 +777,9 @@ packages:
   '@lit-protocol/constants@7.2.0':
     resolution: {integrity: sha512-oY/+pxWP5t/9ItE13wyM+79G2ORxpsIsCuke+k3vVuGLaApyYVQQBKc/qS2RWXLalQuCG/835T1KBUbf7ghISw==}
 
+  '@lit-protocol/constants@7.2.3':
+    resolution: {integrity: sha512-GmCE/OFyS4nQ+DlybHFao0A8kTQ4EWGB8Au3AXZeWM0Ow1Ms1FYnSX44k1B4D7HW6mj9mBe9DHKRYkGM8zQlYw==}
+
   '@lit-protocol/contracts-sdk@7.2.0':
     resolution: {integrity: sha512-2O0KCT/13JeI+WSbPAQTMoQmbfFbH//gi7VaBTpol8V2ZxnAIh24+KA5uHrvNVtipIWVr8YfxAT9ja0B+2oafQ==}
 
@@ -811,6 +817,9 @@ packages:
 
   '@lit-protocol/types@7.2.0':
     resolution: {integrity: sha512-OScABdsFUnVwMUzkGM7YEaZNAd/3lVKcjwuAiYSLlT0czFsbFJl0Q7UVzB9QQyawgeezKQrkIfV+/XlqBra7jw==}
+
+  '@lit-protocol/types@7.2.3':
+    resolution: {integrity: sha512-WIgwytyUPmX5cpmKYYZQtzKqHeW4Px4Jh1UMK+yPdUPuyKxshFsZBsTEs285CBf1gYPDJUTdRiTKNTbd80qT3g==}
 
   '@lit-protocol/uint8arrays@7.2.0':
     resolution: {integrity: sha512-Gc+REd0RRPivUPrwMklAhrwdRmTVbs2XatZpeJpjoUlXhqIIf9gWau33GKbZI3k6vEEeVoLqJU0JqEQoeEzKMA==}
@@ -7739,6 +7748,17 @@ snapshots:
       - typescript
       - utf-8-validate
 
+  '@lit-protocol/constants@7.2.3(ethers@6.14.4(bufferutil@4.0.9)(utf-8-validate@5.0.10))':
+    dependencies:
+      '@ethersproject/abstract-provider': 5.7.0
+      '@lit-protocol/types': 7.2.3(ethers@6.14.4(bufferutil@4.0.9)(utf-8-validate@5.0.10))
+      '@openagenda/verror': 3.1.4
+      depd: 2.0.0
+      siwe: 2.3.2(ethers@6.14.4(bufferutil@4.0.9)(utf-8-validate@5.0.10))
+      tslib: 1.14.1
+    transitivePeerDependencies:
+      - ethers
+
   '@lit-protocol/contracts-sdk@7.2.0(bufferutil@4.0.9)(typescript@5.4.2)(utf-8-validate@5.0.10)':
     dependencies:
       '@ethersproject/abi': 5.7.0
@@ -8051,6 +8071,15 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
+
+  '@lit-protocol/types@7.2.3(ethers@6.14.4(bufferutil@4.0.9)(utf-8-validate@5.0.10))':
+    dependencies:
+      '@ethersproject/abstract-provider': 5.7.0
+      depd: 2.0.0
+      siwe: 2.3.2(ethers@6.14.4(bufferutil@4.0.9)(utf-8-validate@5.0.10))
+      tslib: 1.14.1
+    transitivePeerDependencies:
+      - ethers
 
   '@lit-protocol/uint8arrays@7.2.0(bufferutil@4.0.9)(typescript@5.4.2)(utf-8-validate@5.0.10)':
     dependencies:
@@ -14734,6 +14763,14 @@ snapshots:
       '@spruceid/siwe-parser': 2.1.2
       '@stablelib/random': 1.0.2
       ethers: 5.8.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      uri-js: 4.4.1
+      valid-url: 1.0.9
+
+  siwe@2.3.2(ethers@6.14.4(bufferutil@4.0.9)(utf-8-validate@5.0.10)):
+    dependencies:
+      '@spruceid/siwe-parser': 2.1.2
+      '@stablelib/random': 1.0.2
+      ethers: 6.14.4(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       uri-js: 4.4.1
       valid-url: 1.0.9
 
