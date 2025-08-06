@@ -1,0 +1,5 @@
+{
+	"dependencies": {
+		"@lit-protocol/constants": "^7.2.3"
+	}
+}
