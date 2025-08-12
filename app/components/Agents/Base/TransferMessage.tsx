@@ -195,4 +195,4 @@ const BaseTransferMessage = ({
   );
 };
 
-export default BaseTransferMessage;
+export { BaseTransferMessage };

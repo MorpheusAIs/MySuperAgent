@@ -1,5 +1,5 @@
 // ElfaTrendingTokensMessage.tsx
-import React, { useState } from "react";
+import React from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -14,18 +14,10 @@ import {
   TokenData,
 } from "./TrendingTokensMessage.types";
 import { Text } from "@chakra-ui/react";
+import { formatNumber } from "@/utils/tokenUtils";
+import { useTokenDisplay } from "@/hooks/useTokenDisplay";
 
 const INITIAL_DISPLAY_COUNT = 10;
-
-const formatNumber = (num: number): string => {
-  if (num >= 1000000) {
-    return `${(num / 1000000).toFixed(1)}M`;
-  }
-  if (num >= 1000) {
-    return `${(num / 1000).toFixed(1)}K`;
-  }
-  return num.toString();
-};
 
 const getChangeIndicator = (changePercent: number) => {
   if (changePercent > 0) {
@@ -52,16 +44,14 @@ const getChangeIndicator = (changePercent: number) => {
 export const ElfaTrendingTokensMessage: React.FC<
   ElfaTrendingTokensMessageProps
 > = ({ metadata }) => {
-  const [showAll, setShowAll] = useState(false);
+  const { showAll, toggleShowAll, getDisplayItems, hasMoreItems, getHiddenCount } = useTokenDisplay(INITIAL_DISPLAY_COUNT);
 
   if (!metadata.success || !metadata.data) {
     return <Text>Failed to load trending tokens data.</Text>;
   }
 
   const { data: tokens, total } = metadata.data;
-  const displayTokens = showAll
-    ? tokens
-    : tokens.slice(0, INITIAL_DISPLAY_COUNT);
+  const displayTokens = getDisplayItems(tokens);
 
   return (
     <div className={styles.container}>
@@ -100,9 +90,9 @@ export const ElfaTrendingTokensMessage: React.FC<
         </tbody>
       </table>
 
-      {tokens.length > INITIAL_DISPLAY_COUNT && (
+      {hasMoreItems(tokens) && (
         <button
-          onClick={() => setShowAll(!showAll)}
+          onClick={toggleShowAll}
           className={styles.showMoreButton}
         >
           {showAll ? (
@@ -111,7 +101,7 @@ export const ElfaTrendingTokensMessage: React.FC<
             </>
           ) : (
             <>
-              Show More <ChevronDown size={16} />
+              Show More ({getHiddenCount(tokens)} more) <ChevronDown size={16} />
             </>
           )}
         </button>

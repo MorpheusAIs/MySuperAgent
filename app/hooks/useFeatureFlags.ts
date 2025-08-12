@@ -36,7 +36,7 @@ export function useFeatureFlags() {
   
   return {
     flags: combinedFlags,
-    isFeatureEnabled: (flag: string) => Boolean(combinedFlags[flag]),
-    getFlag: <T = any>(flag: string): T => combinedFlags[flag] as T,
+    isFeatureEnabled: (flag: string) => Boolean((combinedFlags as any)[flag]),
+    getFlag: <T = any>(flag: string): T => (combinedFlags as any)[flag] as T,
   };
 }
