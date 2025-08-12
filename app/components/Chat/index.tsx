@@ -12,12 +12,13 @@ import { Box, Text, useBreakpointValue, VStack } from "@chakra-ui/react";
 import { FC, useEffect, useState } from "react";
 import styles from "./index.module.css";
 
-export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
-  isSidebarOpen = false,
-}) => {
-  const { state, sendMessage, setCurrentView, setCurrentConversation } =
-    useChatContext();
-  const { messages, currentConversationId, isLoading, currentView } = state;
+export const Chat: FC<{
+  isSidebarOpen?: boolean;
+  currentView: "chat" | "jobs";
+  setCurrentView: (view: "chat" | "jobs") => void;
+}> = ({ isSidebarOpen = false, currentView, setCurrentView }) => {
+  const { state, sendMessage, setCurrentConversation } = useChatContext();
+  const { messages, currentConversationId, isLoading } = state;
   const [localLoading, setLocalLoading] = useState(false);
   const [showPrefilledOptions, setShowPrefilledOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -285,12 +286,12 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
 
         {/* Main Content Area */}
         <Box
-          flex={1}
           display="flex"
           flexDirection="column"
           justifyContent="flex-start"
           px={4}
-          pt={8}
+          pt={4}
+          width="100%"
         >
           {/* Centered Job Input */}
           <VStack spacing={4} width="100%" align="center">
@@ -311,19 +312,9 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
               />
             </Box>
 
-            {/* Prefilled Options - shows between input and jobs list when toggled */}
+            {/* Prefilled Options */}
             {showPrefilledOptions && (
-              <Box
-                width="100%"
-                maxWidth="600px"
-                mt={2}
-                mb={-2}
-                borderRadius="12px"
-                overflow="hidden"
-                bg="rgba(0, 0, 0, 0.5)"
-                border="1px solid"
-                borderColor="gray.800"
-              >
+              <Box maxWidth="600px" width="100%">
                 <PrefilledOptions
                   onSelect={handlePrefilledSelect}
                   isSidebarOpen={isSidebarOpen}
@@ -332,13 +323,7 @@ export const Chat: FC<{ isSidebarOpen?: boolean }> = ({
             )}
 
             {/* Jobs List - directly under input/options */}
-            <Box
-              width="100%"
-              maxWidth="600px"
-              height="calc(100vh - 400px)"
-              minHeight="400px"
-              overflow="hidden"
-            >
+            <Box width="100%" maxWidth="600px">
               <JobsList
                 onJobClick={handleJobClick}
                 onRunScheduledJob={handleRunScheduledJob}

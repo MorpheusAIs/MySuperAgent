@@ -34,7 +34,7 @@ export const SettingsButton: React.FC = () => {
       >
         <Settings className={styles.icon} size={20} />
         <Text fontSize="14px" color="white">
-          Superagent Configurations
+          SuperAgent Configurations
         </Text>
       </Flex>
 
