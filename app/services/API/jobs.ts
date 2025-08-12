@@ -1,20 +1,20 @@
 import axios from 'axios';
 import BASE_URL from '@/services/constants';
 import { Job, Message } from '@/services/Database/db';
+import { BaseAPIClient } from './BaseAPIClient';
 
-export class JobsAPI {
-  private static getHeaders(walletAddress: string) {
-    return {
-      'x-wallet-address': walletAddress,
-      'Content-Type': 'application/json'
-    };
-  }
+export class JobsAPI extends BaseAPIClient {
+  private static instance = new JobsAPI();
 
   static async getJobs(walletAddress: string): Promise<Job[]> {
-    const response = await axios.get(`${BASE_URL}/api/v1/jobs`, {
-      headers: this.getHeaders(walletAddress)
-    });
-    return response.data.jobs;
+    try {
+      const response = await axios.get(`${BASE_URL}/api/v1/jobs`, {
+        headers: this.instance.getHeaders(walletAddress)
+      });
+      return response.data.jobs;
+    } catch (error) {
+      return this.instance.handleApiError(error, 'fetch jobs');
+    }
   }
 
   static async createJob(walletAddress: string, job: {
@@ -24,33 +24,49 @@ export class JobsAPI {
     is_scheduled?: boolean;
     has_uploaded_file?: boolean;
   }): Promise<Job> {
-    const response = await axios.post(`${BASE_URL}/api/v1/jobs`, job, {
-      headers: this.getHeaders(walletAddress)
-    });
-    return response.data.job;
+    try {
+      const response = await axios.post(`${BASE_URL}/api/v1/jobs`, job, {
+        headers: this.instance.getHeaders(walletAddress)
+      });
+      return response.data.job;
+    } catch (error) {
+      return this.instance.handleApiError(error, 'create job');
+    }
   }
 
   static async updateJob(jobId: string, updates: Partial<Job>): Promise<Job> {
-    // Extract wallet address from updates or use a default approach
-    const walletAddress = updates.wallet_address || 'temp';
-    const response = await axios.put(`${BASE_URL}/api/v1/jobs`, { id: jobId, ...updates }, {
-      headers: this.getHeaders(walletAddress)
-    });
-    return response.data.job;
+    try {
+      // Extract wallet address from updates or use a default approach
+      const walletAddress = updates.wallet_address || 'temp';
+      const response = await axios.put(`${BASE_URL}/api/v1/jobs`, { id: jobId, ...updates }, {
+        headers: this.instance.getHeaders(walletAddress)
+      });
+      return response.data.job;
+    } catch (error) {
+      return this.instance.handleApiError(error, 'update job');
+    }
   }
 
   static async deleteJob(walletAddress: string, jobId: string): Promise<void> {
-    await axios.delete(`${BASE_URL}/api/v1/jobs`, {
-      data: { id: jobId },
-      headers: this.getHeaders(walletAddress)
-    });
+    try {
+      await axios.delete(`${BASE_URL}/api/v1/jobs`, {
+        data: { id: jobId },
+        headers: this.instance.getHeaders(walletAddress)
+      });
+    } catch (error) {
+      return this.instance.handleApiError(error, 'delete job');
+    }
   }
 
   static async getMessages(walletAddress: string, jobId: string): Promise<Message[]> {
-    const response = await axios.get(`${BASE_URL}/api/v1/jobs/${jobId}/messages`, {
-      headers: this.getHeaders(walletAddress)
-    });
-    return response.data.messages;
+    try {
+      const response = await axios.get(`${BASE_URL}/api/v1/jobs/${jobId}/messages`, {
+        headers: this.instance.getHeaders(walletAddress)
+      });
+      return response.data.messages;
+    } catch (error) {
+      return this.instance.handleApiError(error, 'fetch messages');
+    }
   }
 
   static async createMessage(walletAddress: string, jobId: string, message: {
@@ -65,10 +81,14 @@ export class JobsAPI {
     is_streaming?: boolean;
     order_index?: number;
   }): Promise<Message> {
-    const response = await axios.post(`${BASE_URL}/api/v1/jobs/${jobId}/messages`, message, {
-      headers: this.getHeaders(walletAddress)
-    });
-    return response.data.message;
+    try {
+      const response = await axios.post(`${BASE_URL}/api/v1/jobs/${jobId}/messages`, message, {
+        headers: this.instance.getHeaders(walletAddress)
+      });
+      return response.data.message;
+    } catch (error) {
+      return this.instance.handleApiError(error, 'create message');
+    }
   }
 
   // Helper method to generate a readable job name from initial message
@@ -136,26 +156,24 @@ export class JobsAPI {
   static async getScheduledJobs(walletAddress: string): Promise<Job[]> {
     try {
       const response = await axios.get(`${BASE_URL}/api/v1/jobs/scheduled`, {
-        headers: this.getHeaders(walletAddress)
+        headers: this.instance.getHeaders(walletAddress)
       });
       
       return response.data.jobs || [];
-    } catch (error: any) {
-      console.error('Error fetching scheduled jobs:', error);
-      throw new Error(error.response?.data?.error || 'Failed to fetch scheduled jobs');
+    } catch (error) {
+      return this.instance.handleApiError(error, 'fetch scheduled jobs');
     }
   }
 
   static async runJob(walletAddress: string, jobId: string): Promise<{ newJob: Job; scheduledJob: Job }> {
     try {
       const response = await axios.post(`${BASE_URL}/api/v1/jobs/run`, { jobId }, {
-        headers: this.getHeaders(walletAddress)
+        headers: this.instance.getHeaders(walletAddress)
       });
       
       return { newJob: response.data.newJob, scheduledJob: response.data.scheduledJob };
-    } catch (error: any) {
-      console.error('Error running scheduled job:', error);
-      throw new Error(error.response?.data?.error || 'Failed to run scheduled job');
+    } catch (error) {
+      return this.instance.handleApiError(error, 'run scheduled job');
     }
   }
 }

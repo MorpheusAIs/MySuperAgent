@@ -3,8 +3,7 @@ import { DEFAULT_CONVERSATION_ID } from "@/services/LocalStorage/config";
 import { getMessagesHistory } from "@/services/ChatManagement/storage";
 import { addMessageToHistory } from "@/services/ChatManagement/messages";
 import { getOrCreateConversation } from "@/services/ChatManagement/storage";
-import { getStorageData } from "../LocalStorage/core";
-import { saveStorageData } from "../LocalStorage/core";
+import { getStorageData, saveStorageData } from "@/services/LocalStorage/core";
 import { trackEvent, trackError, trackTiming } from "@/services/analytics";
 
 // LocalStorage key for selected agents

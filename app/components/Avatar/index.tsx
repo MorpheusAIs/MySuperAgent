@@ -1,5 +1,5 @@
 import React, { FC, ComponentPropsWithoutRef } from "react"
-import me from "../../public/assets/me.svg";
+import me from "@/public/assets/me.svg";
 import { Avatar as CAvatar } from "@chakra-ui/react";
 
 

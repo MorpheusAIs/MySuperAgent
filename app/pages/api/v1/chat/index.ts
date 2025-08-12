@@ -28,7 +28,7 @@ export default async function handler(
     if (agentName) {
       // Direct agent command
       chatRequest.prompt.content = message;
-      const agent = AgentRegistry.get(agentName);
+      const agent = await AgentRegistry.get(agentName);
       
       if (!agent) {
         return res.status(404).json({ error: `Agent ${agentName} not found` });
@@ -41,7 +41,8 @@ export default async function handler(
       [currentAgent, agentResponse] = await orchestrator.runOrchestration(chatRequest);
     } else {
       // Use intelligent agent selection for regular chat
-      const selectedAgent = AgentRegistry.selectBestAgent(chatRequest.prompt.content);
+      const selection = await AgentRegistry.selectBestAgentWithLLM(chatRequest.prompt.content);
+      const selectedAgent = selection.agent;
       if (!selectedAgent) {
         return res.status(500).json({ error: 'No suitable agent found' });
       }

@@ -17,7 +17,7 @@ export class Orchestrator {
       if (request.selectedAgents && request.selectedAgents.length > 0) {
         // Try to find the first available agent from the selected list
         for (const agentName of request.selectedAgents) {
-          selectedAgent = AgentRegistry.get(agentName);
+          selectedAgent = await AgentRegistry.get(agentName);
           if (selectedAgent) {
             break;
           }
@@ -75,7 +75,7 @@ export class Orchestrator {
       if (request.selectedAgents && request.selectedAgents.length > 0) {
         // Try to find the first available agent from the selected list
         for (const agentName of request.selectedAgents) {
-          selectedAgent = AgentRegistry.get(agentName);
+          selectedAgent = await AgentRegistry.get(agentName);
           if (selectedAgent) {
             selectionMethod = 'user_selected';
             break;

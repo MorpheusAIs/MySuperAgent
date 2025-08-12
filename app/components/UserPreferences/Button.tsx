@@ -8,7 +8,7 @@ import {
   ModalCloseButton,
 } from "@chakra-ui/react";
 import { UserPreferencesComponent } from "./index";
-import styles from "../Settings/index.module.css";
+import styles from "@/components/Settings/index.module.css";
 
 export const SchedulingPreferencesButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);

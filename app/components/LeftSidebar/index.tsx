@@ -24,7 +24,7 @@ import { CDPWalletsButton } from "@/components/CDPWallets/Button";
 import { SettingsButton } from "@/components/Settings";
 import { SyncButton } from "@/components/Sync/Button";
 import { SchedulingPreferencesButton } from "@/components/UserPreferences/Button";
-import { StyledTooltip } from "../Common/StyledTooltip";
+import { StyledTooltip } from "@/components/Common/StyledTooltip";
 import styles from "./index.module.css";
 
 export type LeftSidebarProps = {
