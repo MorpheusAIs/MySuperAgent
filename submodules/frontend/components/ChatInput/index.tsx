@@ -1,15 +1,15 @@
-import React, { FC, useState, useEffect, useRef } from "react";
-import { Textarea, IconButton, useMediaQuery, Button } from "@chakra-ui/react";
-import { AddIcon, QuestionOutlineIcon } from "@chakra-ui/icons";
-import { SendIcon } from "../CustomIcon/SendIcon";
-import { Command } from "./Commands";
-import { CommandsPortal } from "./CommandsPortal";
-import { ToolsButton } from "@/components/Tools/ToolsButton";
-import { ScheduleButton } from "@/components/ScheduleButton";
-import { InlineSchedule } from "./InlineSchedule";
-import { isFeatureEnabled } from "@/services/featureFlags";
-import styles from "./index.module.css";
-import BASE_URL from "@/services/constants";
+import { ScheduleButton } from '@/components/ScheduleButton';
+import { ToolsButton } from '@/components/Tools/ToolsButton';
+import BASE_URL from '@/services/constants';
+import { isFeatureEnabled } from '@/services/featureFlags';
+import { AttachmentIcon, QuestionOutlineIcon } from '@chakra-ui/icons';
+import { Button, IconButton, Textarea, useMediaQuery } from '@chakra-ui/react';
+import React, { FC, useEffect, useRef, useState } from 'react';
+import { SendIcon } from '../CustomIcon/SendIcon';
+import { Command } from './Commands';
+import { CommandsPortal } from './CommandsPortal';
+import styles from './index.module.css';
+import { InlineSchedule } from './InlineSchedule';
 
 type ChatInputProps = {
   onSubmit: (
@@ -30,14 +30,14 @@ export const ChatInput: FC<ChatInputProps> = ({
   isSidebarOpen,
   onToggleHelp,
   showPrefilledOptions,
-  placeholder = "Ask anything",
+  placeholder = 'Ask anything',
 }) => {
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [commands, setCommands] = useState<Command[]>([]);
   const [showCommands, setShowCommands] = useState(false);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
-  const [isMobile] = useMediaQuery("(max-width: 768px)");
+  const [isMobile] = useMediaQuery('(max-width: 768px)');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
 
@@ -47,10 +47,10 @@ export const ChatInput: FC<ChatInputProps> = ({
   // Add this useEffect to prevent focus zoom on mobile
   useEffect(() => {
     // Add meta viewport tag to prevent zoom
-    const viewportMeta = document.createElement("meta");
-    viewportMeta.name = "viewport";
+    const viewportMeta = document.createElement('meta');
+    viewportMeta.name = 'viewport';
     viewportMeta.content =
-      "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no";
+      'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
 
     // Check if there's already a viewport meta tag
     const existingMeta = document.querySelector('meta[name="viewport"]');
@@ -58,8 +58,8 @@ export const ChatInput: FC<ChatInputProps> = ({
     if (existingMeta) {
       // Update existing meta tag
       existingMeta.setAttribute(
-        "content",
-        "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+        'content',
+        'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no'
       );
     } else {
       // Add new meta tag
@@ -80,13 +80,13 @@ export const ChatInput: FC<ChatInputProps> = ({
       .then((res) => res.json())
       .then((data) => setCommands(data.commands || []))
       .catch((error) => {
-        console.error("Error fetching commands:", error);
+        console.error('Error fetching commands:', error);
         setCommands([]); // Set empty array on error
       });
   }, []);
 
   // Filter commands based on input
-  const filteredCommands = message.startsWith("/")
+  const filteredCommands = message.startsWith('/')
     ? commands.filter((cmd) =>
         cmd.command.toLowerCase().includes(message.slice(1).toLowerCase())
       )
@@ -94,7 +94,7 @@ export const ChatInput: FC<ChatInputProps> = ({
 
   // Show/hide commands dropdown based on input
   useEffect(() => {
-    setShowCommands(message.startsWith("/") && filteredCommands.length > 0);
+    setShowCommands(message.startsWith('/') && filteredCommands.length > 0);
     setSelectedCommandIndex(0);
   }, [message, filteredCommands.length]);
 
@@ -107,26 +107,26 @@ export const ChatInput: FC<ChatInputProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (showCommands) {
       switch (e.key) {
-        case "ArrowDown":
+        case 'ArrowDown':
           e.preventDefault();
           setSelectedCommandIndex((prev) =>
             Math.min(prev + 1, filteredCommands.length - 1)
           );
           break;
-        case "ArrowUp":
+        case 'ArrowUp':
           e.preventDefault();
           setSelectedCommandIndex((prev) => Math.max(prev - 1, 0));
           break;
-        case "Tab":
-        case "Enter":
+        case 'Tab':
+        case 'Enter':
           e.preventDefault();
           handleCommandSelect(filteredCommands[selectedCommandIndex]);
           break;
-        case "Escape":
+        case 'Escape':
           setShowCommands(false);
           break;
       }
-    } else if (e.key === "Enter" && !e.shiftKey) {
+    } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
@@ -135,6 +135,18 @@ export const ChatInput: FC<ChatInputProps> = ({
   const handleFileUpload = () => {
     fileInputRef.current?.click();
   };
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Generate preview URL for images; clean up when file changes
+  useEffect(() => {
+    if (file && file.type?.startsWith('image/')) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+    setPreviewUrl(null);
+  }, [file]);
 
   const handleSubmit = async () => {
     if ((!message && !file) || isSubmitting || disabled) return;
@@ -145,14 +157,14 @@ export const ChatInput: FC<ChatInputProps> = ({
       const fileToSend = file;
 
       // Clear input immediately to improve UX
-      setMessage("");
+      setMessage('');
       setFile(null);
       setShowSchedule(false);
 
       // Submit the message with research always enabled
       await onSubmit(messageToSend, fileToSend, true);
     } catch (error) {
-      console.error("Error submitting message:", error);
+      console.error('Error submitting message:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -164,9 +176,8 @@ export const ChatInput: FC<ChatInputProps> = ({
 
   const handleScheduleJobCreated = (jobId: string) => {
     setShowSchedule(false);
-    setMessage("");
+    setMessage('');
   };
-
 
   return (
     <>
@@ -191,7 +202,7 @@ export const ChatInput: FC<ChatInputProps> = ({
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder={
-                file ? "Click the arrow to process your file" : placeholder
+                file ? 'Click the arrow to process your file' : placeholder
               }
               minH="36px"
               maxH="240px"
@@ -207,19 +218,61 @@ export const ChatInput: FC<ChatInputProps> = ({
               onClick={handleSubmit}
               icon={
                 <SendIcon
-                  width={isMobile ? "20px" : "24px"}
-                  height={isMobile ? "20px" : "24px"}
+                  width={isMobile ? '20px' : '24px'}
+                  height={isMobile ? '20px' : '24px'}
                 />
               }
             />
           </div>
 
+          {/* File preview */}
+          {file && (
+            <div className={styles.filePreview}>
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt={file.name}
+                  style={{
+                    width: 120,
+                    height: 80,
+                    objectFit: 'cover',
+                    borderRadius: 6,
+                    display: 'block',
+                  }}
+                />
+              ) : (
+                <div style={{ color: '#ddd', fontSize: 14 }}>
+                  Document attached
+                </div>
+              )}
+              <div className={styles.fileInfo}>
+                <div>
+                  <div className={styles.fileName}>{file.name}</div>
+                  <div className={styles.fileType}>
+                    {(file.type || 'Unknown').toString()}
+                    {file.size ? ` • ${(file.size / 1024).toFixed(1)} KB` : ''}
+                  </div>
+                </div>
+                <Button
+                  size="xs"
+                  style={{
+                    color: 'white',
+                  }}
+                  className={styles.removeFile}
+                  onClick={() => setFile(null)}
+                >
+                  Remove
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Action buttons container */}
           <div className={styles.actionsContainer}>
             <div className={styles.leftActions}>
               <IconButton
-                aria-label="Add"
-                icon={<AddIcon />}
+                aria-label="Attach"
+                icon={<AttachmentIcon />}
                 className={styles.actionIcon}
                 size="sm"
                 onClick={handleFileUpload}
@@ -229,7 +282,7 @@ export const ChatInput: FC<ChatInputProps> = ({
                   leftIcon={<QuestionOutlineIcon />}
                   size="sm"
                   className={`${styles.actionButton} ${
-                    showPrefilledOptions ? styles.activeButton : ""
+                    showPrefilledOptions ? styles.activeButton : ''
                   }`}
                   onClick={onToggleHelp}
                 >

@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
   VStack,
   FormControl,
   FormLabel,
   Textarea,
   Button,
-} from "@chakra-ui/react";
-import styles from "./GeneralSettings.module.css";
+} from '@chakra-ui/react';
+import styles from './GeneralSettings.module.css';
 
 interface GeneralSettingsProps {
   onSave: () => void;
@@ -14,12 +14,12 @@ interface GeneralSettingsProps {
 
 export const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSave }) => {
   const [settings, setSettings] = useState({
-    aiPersonality: "",
-    bio: "",
+    aiPersonality: '',
+    bio: '',
   });
 
   const handleSave = () => {
-    console.log("Saving general settings:", settings);
+    console.log('Saving general settings:', settings);
     onSave();
   };
 
@@ -27,7 +27,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSave }) => {
     <VStack spacing={6} align="stretch">
       <FormControl>
         <FormLabel className={styles.label}>
-          Give your AI a personality
+          Give SuperAgent a personality
         </FormLabel>
         <Textarea
           value={settings.aiPersonality}

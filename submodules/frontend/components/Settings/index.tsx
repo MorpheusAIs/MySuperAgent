@@ -1,6 +1,6 @@
-import React from "react";
-import { Flex, Text } from "@chakra-ui/react";
-import { Settings } from "lucide-react";
+import React from 'react';
+import { Flex, Text } from '@chakra-ui/react';
+import { Settings } from 'lucide-react';
 import {
   Modal,
   ModalOverlay,
@@ -13,10 +13,10 @@ import {
   TabPanels,
   Tab,
   TabPanel,
-} from "@chakra-ui/react";
-import { GeneralSettings } from "./GeneralSettings";
-import { AgentSelection } from "./AgentSelection";
-import styles from "./index.module.css";
+} from '@chakra-ui/react';
+import { GeneralSettings } from './GeneralSettings';
+import { AgentSelection } from './AgentSelection';
+import styles from './index.module.css';
 
 export const SettingsButton: React.FC = () => {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -33,7 +33,7 @@ export const SettingsButton: React.FC = () => {
       >
         <Settings className={styles.icon} size={20} />
         <Text fontSize="14px" color="white">
-          Agent Configurations
+          SuperAgent Configurations
         </Text>
       </Flex>
 
@@ -66,7 +66,7 @@ export const SettingsButton: React.FC = () => {
           </ModalHeader>
           <ModalCloseButton
             color="white"
-            _hover={{ bg: "rgba(255, 255, 255, 0.1)" }}
+            _hover={{ bg: 'rgba(255, 255, 255, 0.1)' }}
           />
 
           <ModalBody padding="16px">
@@ -76,11 +76,11 @@ export const SettingsButton: React.FC = () => {
                   color="white"
                   bg="transparent"
                   _selected={{
-                    bg: "rgba(255, 255, 255, 0.1)",
-                    color: "white",
+                    bg: 'rgba(255, 255, 255, 0.1)',
+                    color: 'white',
                   }}
                   _hover={{
-                    bg: "rgba(255, 255, 255, 0.05)",
+                    bg: 'rgba(255, 255, 255, 0.05)',
                   }}
                   borderRadius="6px"
                   fontSize="14px"
