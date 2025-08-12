@@ -54,6 +54,8 @@ yarn-error.log*
 resources/*
 
 
+package-lock.json
+
 ## app related items
 app.log
 submodules/agents/data/vector_store
