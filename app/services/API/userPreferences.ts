@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { UserPreferences } from '@/services/Database/db';
 import BASE_URL from '@/services/constants';
+import { BaseAPIClient } from './BaseAPIClient';
 
 export interface UpdateUserPreferencesRequest {
   auto_schedule_jobs?: boolean;
@@ -9,13 +10,7 @@ export interface UpdateUserPreferencesRequest {
   timezone?: string;
 }
 
-class UserPreferencesAPI {
-  private getHeaders(walletAddress: string) {
-    return {
-      'Content-Type': 'application/json',
-      'x-wallet-address': walletAddress,
-    };
-  }
+class UserPreferencesAPI extends BaseAPIClient {
 
   async getUserPreferences(walletAddress: string): Promise<UserPreferences | null> {
     try {
@@ -28,8 +23,7 @@ class UserPreferencesAPI {
       if (error.response?.status === 404) {
         return null; // User preferences don't exist yet
       }
-      console.error('Error fetching user preferences:', error);
-      throw new Error(error.response?.data?.error || 'Failed to fetch user preferences');
+      this.handleApiError(error, 'fetch user preferences');
     }
   }
 
@@ -40,9 +34,8 @@ class UserPreferencesAPI {
       });
       
       return response.data;
-    } catch (error: any) {
-      console.error('Error updating user preferences:', error);
-      throw new Error(error.response?.data?.error || 'Failed to update user preferences');
+    } catch (error) {
+      this.handleApiError(error, 'update user preferences');
     }
   }
 
@@ -53,9 +46,8 @@ class UserPreferencesAPI {
       });
       
       return response.data;
-    } catch (error: any) {
-      console.error('Error creating user preferences:', error);
-      throw new Error(error.response?.data?.error || 'Failed to create user preferences');
+    } catch (error) {
+      this.handleApiError(error, 'create user preferences');
     }
   }
 
@@ -64,9 +56,8 @@ class UserPreferencesAPI {
       await axios.delete(`${BASE_URL}/api/v1/user-preferences`, {
         headers: this.getHeaders(walletAddress)
       });
-    } catch (error: any) {
-      console.error('Error deleting user preferences:', error);
-      throw new Error(error.response?.data?.error || 'Failed to delete user preferences');
+    } catch (error) {
+      this.handleApiError(error, 'delete user preferences');
     }
   }
 }

@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import axios from "axios";
-import { trackEvent } from "../../services/analytics";
+import { trackEvent } from "@/services/analytics";
 
 // Types
 interface AuthContextType {

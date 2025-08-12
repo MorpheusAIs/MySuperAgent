@@ -19,11 +19,11 @@ import CryptoChartMessage from "@/components/Agents/CryptoData/CryptoChartMessag
 import DCAMessage from "@/components/Agents/DCA/DCAMessage";
 
 // Base Agent Components
-import BaseTransferMessage from "@/components/Agents/Base/TransferMessage";
-import BaseSwapMessage from "@/components/Agents/Base/SwapMessage";
+import { BaseTransferMessage } from "@/components/Agents/Base/TransferMessage";
+import { BaseSwapMessage } from "@/components/Agents/Base/SwapMessage";
 
 // Swap Components
-import OneInchSwapMessage from "@/components/Agents/Swaps/Swap/SwapMessage";
+import { OneInchSwapMessage } from "@/components/Agents/Swaps/Swap/SwapMessage";
 
 // Token Components
 import { CodexTopTokensMessage } from "@/components/Agents/Codex/TopTokens/CodexTopTokensMessage";
@@ -46,9 +46,9 @@ import { ElfaAccountSmartStatsMessage } from "@/components/Agents/Elfa/AccountSm
 import { TopMentionsMetadata } from "@/components/Agents/Elfa/TopMentions/TopMentionsMessage.types";
 import { TrendingTokensMetadata } from "@/components/Agents/Elfa/TrendingTokens/TrendingTokensMessage.types";
 import { AccountSmartStatsMetadata } from "@/components/Agents/Elfa/AccountSmartStats/AccountSmartStatsMessage.types";
-import { TopHoldersMetadata } from "../Agents/Codex/TopHolders/CodexTopHoldersMessage.types";
-import { ElfaMentionsMessage } from "../Agents/Elfa/Mentions/MentionsMessage";
-import { MentionsMetadata } from "../Agents/Elfa/Mentions/MentionsMessage.types";
+import { TopHoldersMetadata } from "@/components/Agents/Codex/TopHolders/CodexTopHoldersMessage.types";
+import { ElfaMentionsMessage } from "@/components/Agents/Elfa/Mentions/MentionsMessage";
+import { MentionsMetadata } from "@/components/Agents/Elfa/Mentions/MentionsMessage.types";
 
 // Crew Components
 import { CrewResponseMessage } from "@/components/Agents/Crew";

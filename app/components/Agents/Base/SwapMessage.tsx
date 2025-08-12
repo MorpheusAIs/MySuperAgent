@@ -220,4 +220,4 @@ const BaseSwapMessage = ({
   );
 };
 
-export default BaseSwapMessage;
+export { BaseSwapMessage };

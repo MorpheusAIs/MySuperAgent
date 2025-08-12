@@ -1,7 +1,7 @@
 import React, { FC, useState, useEffect, useRef } from "react";
 import { Textarea, IconButton, useMediaQuery, Button } from "@chakra-ui/react";
 import { AddIcon, QuestionOutlineIcon } from "@chakra-ui/icons";
-import { SendIcon } from "../CustomIcon/SendIcon";
+import { SendIcon } from "@/components/CustomIcon/SendIcon";
 import { Command } from "./Commands";
 import { CommandsPortal } from "./CommandsPortal";
 import { ToolsButton } from "@/components/Tools/ToolsButton";

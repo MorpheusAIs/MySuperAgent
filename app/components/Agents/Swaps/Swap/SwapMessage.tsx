@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { ArrowLeftRight, Info } from "lucide-react";
 import { useAccount } from "wagmi";
-import { useSwapTransaction, SwapTx } from "../hooks";
+import { useSwapTransaction, SwapTx } from "@/components/Agents/Swaps/hooks";
 import styles from "./SwapMessage.module.css";
 import { OneInchSwapMessageProps } from "./SwapMessage.types";
 import { StyledTooltip } from "@/components/Common/StyledTooltip";
@@ -140,4 +140,4 @@ const OneInchSwapMessage: React.FC<OneInchSwapMessageProps> = ({
   );
 };
 
-export default OneInchSwapMessage;
+export { OneInchSwapMessage };
