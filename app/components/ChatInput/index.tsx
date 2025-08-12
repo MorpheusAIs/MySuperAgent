@@ -1,20 +1,24 @@
-import React, { FC, useState, useEffect, useRef } from "react";
-import { Textarea, IconButton, useMediaQuery, Button } from "@chakra-ui/react";
-import { AddIcon, QuestionOutlineIcon } from "@chakra-ui/icons";
 import { SendIcon } from "@/components/CustomIcon/SendIcon";
+import { ScheduleButton } from "@/components/ScheduleButton";
+import { ToolsButton } from "@/components/Tools/ToolsButton";
+import BASE_URL from "@/services/constants";
+import { isFeatureEnabled } from "@/services/featureFlags";
+import {
+  AttachmentIcon,
+  CloseIcon,
+  QuestionOutlineIcon,
+} from "@chakra-ui/icons";
+import { Button, IconButton, Textarea, useMediaQuery } from "@chakra-ui/react";
+import React, { FC, useEffect, useRef, useState } from "react";
 import { Command } from "./Commands";
 import { CommandsPortal } from "./CommandsPortal";
-import { ToolsButton } from "@/components/Tools/ToolsButton";
-import { ScheduleButton } from "@/components/ScheduleButton";
-import { InlineSchedule } from "./InlineSchedule";
-import { isFeatureEnabled } from "@/services/featureFlags";
 import styles from "./index.module.css";
-import BASE_URL from "@/services/constants";
+import { InlineSchedule } from "./InlineSchedule";
 
 type ChatInputProps = {
   onSubmit: (
     message: string,
-    file: File | null,
+    files: File[],
     useResearch: boolean
   ) => Promise<void>;
   disabled: boolean;
@@ -33,7 +37,7 @@ export const ChatInput: FC<ChatInputProps> = ({
   placeholder = "Ask anything",
 }) => {
   const [message, setMessage] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [commands, setCommands] = useState<Command[]>([]);
   const [showCommands, setShowCommands] = useState(false);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
@@ -136,21 +140,33 @@ export const ChatInput: FC<ChatInputProps> = ({
     fileInputRef.current?.click();
   };
 
+  const handleFilesSelected = (files: FileList | null) => {
+    if (files) {
+      const newFiles = Array.from(files);
+      setAttachedFiles((prev) => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async () => {
-    if ((!message && !file) || isSubmitting || disabled) return;
+    if ((!message && attachedFiles.length === 0) || isSubmitting || disabled)
+      return;
 
     try {
       setIsSubmitting(true);
       const messageToSend = message;
-      const fileToSend = file;
+      const filesToSend = [...attachedFiles];
 
       // Clear input immediately to improve UX
       setMessage("");
-      setFile(null);
+      setAttachedFiles([]);
       setShowSchedule(false);
 
       // Submit the message with research always enabled
-      await onSubmit(messageToSend, fileToSend, true);
+      await onSubmit(messageToSend, filesToSend, true);
     } catch (error) {
       console.error("Error submitting message:", error);
     } finally {
@@ -166,7 +182,6 @@ export const ChatInput: FC<ChatInputProps> = ({
     setShowSchedule(false);
     setMessage("");
   };
-
 
   return (
     <>
@@ -187,11 +202,13 @@ export const ChatInput: FC<ChatInputProps> = ({
               ref={inputRef}
               className={styles.messageInput}
               onKeyDown={handleKeyDown}
-              disabled={isSubmitting || disabled || file !== null}
+              disabled={isSubmitting || disabled}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder={
-                file ? "Click the arrow to process your file" : placeholder
+                attachedFiles.length > 0
+                  ? `${attachedFiles.length} file${attachedFiles.length > 1 ? "s" : ""} attached - ${placeholder}`
+                  : placeholder
               }
               minH="36px"
               maxH="240px"
@@ -202,7 +219,11 @@ export const ChatInput: FC<ChatInputProps> = ({
 
             <IconButton
               className={styles.sendButton}
-              disabled={isSubmitting || disabled || (!message && !file)}
+              disabled={
+                isSubmitting ||
+                disabled ||
+                (!message && attachedFiles.length === 0)
+              }
               aria-label="Send"
               onClick={handleSubmit}
               icon={
@@ -214,17 +235,52 @@ export const ChatInput: FC<ChatInputProps> = ({
             />
           </div>
 
+          {/* Attachment previews */}
+          {attachedFiles.length > 0 && (
+            <div className={styles.attachmentPreviews}>
+              {attachedFiles.map((file, index) => (
+                <div
+                  key={`${file.name}-${index}`}
+                  className={styles.attachmentPreview}
+                >
+                  <div className={styles.attachmentImageContainer}>
+                    {file.type?.startsWith("image/") ? (
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className={styles.attachmentImage}
+                        onLoad={(e) => URL.revokeObjectURL(e.currentTarget.src)}
+                      />
+                    ) : (
+                      <div className={styles.attachmentPlaceholder}>📄</div>
+                    )}
+                    <div className={styles.attachmentOverlay}>
+                      <span className={styles.attachmentName}>{file.name}</span>
+                    </div>
+                  </div>
+                  <IconButton
+                    aria-label="Remove attachment"
+                    icon={<CloseIcon />}
+                    className={styles.removeAttachment}
+                    size="xs"
+                    onClick={() => removeFile(index)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Action buttons container */}
           <div className={styles.actionsContainer}>
             <div className={styles.leftActions}>
               <IconButton
-                aria-label="Add"
-                icon={<AddIcon />}
+                aria-label="Attach"
+                icon={<AttachmentIcon />}
                 className={styles.actionIcon}
                 size="sm"
                 onClick={handleFileUpload}
               />
-              {isFeatureEnabled('feature.prefilled_options') && (
+              {isFeatureEnabled("feature.prefilled_options") && (
                 <Button
                   leftIcon={<QuestionOutlineIcon />}
                   size="sm"
@@ -245,7 +301,7 @@ export const ChatInput: FC<ChatInputProps> = ({
             </div>
 
             {/* Right aligned tools button */}
-            {isFeatureEnabled('feature.tools_configuration') && (
+            {isFeatureEnabled("feature.tools_configuration") && (
               <div className={styles.rightActions}>
                 <ToolsButton apiBaseUrl={BASE_URL} />
               </div>
@@ -266,8 +322,9 @@ export const ChatInput: FC<ChatInputProps> = ({
         <input
           ref={fileInputRef}
           type="file"
+          multiple
           className={styles.hiddenInput}
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          onChange={(e) => handleFilesSelected(e.target.files)}
           disabled={isSubmitting || disabled}
         />
       </div>
