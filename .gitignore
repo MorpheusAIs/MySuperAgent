@@ -62,3 +62,8 @@ uploads/*
 
 ## lint
 .pytest_cache/
+
+## editors
+.vscode/
+.claude/
+.cursor/

@@ -1,21 +1,22 @@
-import React from "react";
-import { Flex, Text } from "@chakra-ui/react";
-import { Settings } from "lucide-react";
 import {
+  Flex,
   Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
   ModalBody,
   ModalCloseButton,
-  Tabs,
-  TabList,
-  TabPanels,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
   Tab,
+  TabList,
   TabPanel,
+  TabPanels,
+  Tabs,
+  Text,
 } from "@chakra-ui/react";
-import { GeneralSettings } from "./GeneralSettings";
+import { Settings } from "lucide-react";
+import React from "react";
 import { AgentSelection } from "./AgentSelection";
+import { GeneralSettings } from "./GeneralSettings";
 import styles from "./index.module.css";
 
 export const SettingsButton: React.FC = () => {
@@ -33,7 +34,7 @@ export const SettingsButton: React.FC = () => {
       >
         <Settings className={styles.icon} size={20} />
         <Text fontSize="14px" color="white">
-          Agent Configurations
+          SuperAgent Configurations
         </Text>
       </Flex>
 

@@ -1,11 +1,11 @@
-import { useState } from "react";
 import {
-  VStack,
+  Button,
   FormControl,
   FormLabel,
   Textarea,
-  Button,
+  VStack,
 } from "@chakra-ui/react";
+import { useState } from "react";
 import styles from "./GeneralSettings.module.css";
 
 interface GeneralSettingsProps {
@@ -27,7 +27,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSave }) => {
     <VStack spacing={6} align="stretch">
       <FormControl>
         <FormLabel className={styles.label}>
-          Give your AI a personality
+          Give your Superagent a personality
         </FormLabel>
         <Textarea
           value={settings.aiPersonality}

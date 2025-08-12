@@ -3,8 +3,6 @@
   max-width: 600px;
   margin: 0 auto;
   padding: 0;
-  height: 100%;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -74,50 +72,27 @@
 }
 
 .tabPanelsContainer {
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
 .tabPanelsContainer > div {
-  height: 100%;
   display: flex;
   flex-direction: column;
 }
 
 .tabPanelsContainer > div > div {
-  flex: 1;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabPanelsContainer > div > div > div {
   display: flex;
   flex-direction: column;
 }
 
 .scrollableContent {
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
   padding-right: 4px;
-}
-
-/* Custom scrollbar styling */
-.scrollableContent::-webkit-scrollbar {
-  width: 6px;
-}
-
-.scrollableContent::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 3px;
-}
-
-.scrollableContent::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-
-.scrollableContent::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
 }
 
 .searchFilterContainer {
@@ -261,4 +236,10 @@
   background: rgba(255, 255, 255, 0.1) !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
   transform: scale(1.05);
+}
+
+.scrollableContent > div:first-child {
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
 }

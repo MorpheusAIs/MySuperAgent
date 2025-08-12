@@ -9,6 +9,26 @@
 .logo {
   display: flex;
   align-items: center;
+  transition: opacity 0.2s ease;
+}
+
+.logo:hover {
+  opacity: 0.8;
+}
+
+.logo > div {
+  display: flex;
+  align-items: center;
+  transition: opacity 0.2s ease;
+}
+
+.logo > div:hover {
+  opacity: 0.8;
+}
+
+.logo a {
+  display: flex;
+  align-items: center;
 }
 
 .connectButtonWrapper {
