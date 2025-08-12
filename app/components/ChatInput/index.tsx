@@ -34,16 +34,17 @@ export const ChatInput: FC<ChatInputProps> = ({
   isSidebarOpen,
   onToggleHelp,
   showPrefilledOptions,
-  placeholder = "Ask anything",
+  placeholder = 'Ask anything',
 }) => {
   const [message, setMessage] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [commands, setCommands] = useState<Command[]>([]);
   const [showCommands, setShowCommands] = useState(false);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
-  const [isMobile] = useMediaQuery("(max-width: 768px)");
+  const [isMobile] = useMediaQuery('(max-width: 768px)');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -51,10 +52,10 @@ export const ChatInput: FC<ChatInputProps> = ({
   // Add this useEffect to prevent focus zoom on mobile
   useEffect(() => {
     // Add meta viewport tag to prevent zoom
-    const viewportMeta = document.createElement("meta");
-    viewportMeta.name = "viewport";
+    const viewportMeta = document.createElement('meta');
+    viewportMeta.name = 'viewport';
     viewportMeta.content =
-      "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no";
+      'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
 
     // Check if there's already a viewport meta tag
     const existingMeta = document.querySelector('meta[name="viewport"]');
@@ -62,8 +63,8 @@ export const ChatInput: FC<ChatInputProps> = ({
     if (existingMeta) {
       // Update existing meta tag
       existingMeta.setAttribute(
-        "content",
-        "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+        'content',
+        'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no'
       );
     } else {
       // Add new meta tag
@@ -84,13 +85,13 @@ export const ChatInput: FC<ChatInputProps> = ({
       .then((res) => res.json())
       .then((data) => setCommands(data.commands || []))
       .catch((error) => {
-        console.error("Error fetching commands:", error);
+        console.error('Error fetching commands:', error);
         setCommands([]); // Set empty array on error
       });
   }, []);
 
   // Filter commands based on input
-  const filteredCommands = message.startsWith("/")
+  const filteredCommands = message.startsWith('/')
     ? commands.filter((cmd) =>
         cmd.command.toLowerCase().includes(message.slice(1).toLowerCase())
       )
@@ -98,7 +99,7 @@ export const ChatInput: FC<ChatInputProps> = ({
 
   // Show/hide commands dropdown based on input
   useEffect(() => {
-    setShowCommands(message.startsWith("/") && filteredCommands.length > 0);
+    setShowCommands(message.startsWith('/') && filteredCommands.length > 0);
     setSelectedCommandIndex(0);
   }, [message, filteredCommands.length]);
 
@@ -111,26 +112,26 @@ export const ChatInput: FC<ChatInputProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (showCommands) {
       switch (e.key) {
-        case "ArrowDown":
+        case 'ArrowDown':
           e.preventDefault();
           setSelectedCommandIndex((prev) =>
             Math.min(prev + 1, filteredCommands.length - 1)
           );
           break;
-        case "ArrowUp":
+        case 'ArrowUp':
           e.preventDefault();
           setSelectedCommandIndex((prev) => Math.max(prev - 1, 0));
           break;
-        case "Tab":
-        case "Enter":
+        case 'Tab':
+        case 'Enter':
           e.preventDefault();
           handleCommandSelect(filteredCommands[selectedCommandIndex]);
           break;
-        case "Escape":
+        case 'Escape':
           setShowCommands(false);
           break;
       }
-    } else if (e.key === "Enter" && !e.shiftKey) {
+    } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
@@ -151,6 +152,39 @@ export const ChatInput: FC<ChatInputProps> = ({
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set drag over to false if we're leaving the entire drop zone
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const newFiles = Array.from(files);
+      setAttachedFiles((prev) => [...prev, ...newFiles]);
+    }
+  };
+
   const handleSubmit = async () => {
     if ((!message && attachedFiles.length === 0) || isSubmitting || disabled)
       return;
@@ -168,7 +202,7 @@ export const ChatInput: FC<ChatInputProps> = ({
       // Submit the message with research always enabled
       await onSubmit(messageToSend, filesToSend, true);
     } catch (error) {
-      console.error("Error submitting message:", error);
+      console.error('Error submitting message:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -180,7 +214,7 @@ export const ChatInput: FC<ChatInputProps> = ({
 
   const handleScheduleJobCreated = (jobId: string) => {
     setShowSchedule(false);
-    setMessage("");
+    setMessage('');
   };
 
   return (
@@ -195,7 +229,23 @@ export const ChatInput: FC<ChatInputProps> = ({
       )}
 
       <div className={styles.flexContainer}>
-        <div className={styles.inputWrapper}>
+        <div 
+          className={`${styles.inputWrapper} ${isDragOver ? styles.dragOver : ''}`}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          {/* Drag overlay */}
+          {isDragOver && (
+            <div className={styles.dragOverlay}>
+              <div className={styles.dragOverlayContent}>
+                <AttachmentIcon className={styles.dragOverlayIcon} />
+                <span>Drop files here</span>
+              </div>
+            </div>
+          )}
+
           {/* Text input area */}
           <div className={styles.textareaContainer}>
             <Textarea
@@ -228,8 +278,8 @@ export const ChatInput: FC<ChatInputProps> = ({
               onClick={handleSubmit}
               icon={
                 <SendIcon
-                  width={isMobile ? "20px" : "24px"}
-                  height={isMobile ? "20px" : "24px"}
+                  width={isMobile ? '20px' : '24px'}
+                  height={isMobile ? '20px' : '24px'}
                 />
               }
             />
@@ -285,7 +335,7 @@ export const ChatInput: FC<ChatInputProps> = ({
                   leftIcon={<QuestionOutlineIcon />}
                   size="sm"
                   className={`${styles.actionButton} ${
-                    showPrefilledOptions ? styles.activeButton : ""
+                    showPrefilledOptions ? styles.activeButton : ''
                   }`}
                   onClick={onToggleHelp}
                 >

@@ -313,6 +313,50 @@
   height: 8px !important;
 }
 
+/* Drag and drop styles */
+.dragOver {
+  position: relative;
+  border: 2px dashed rgba(255, 255, 255, 0.6) !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  transition: all 0.2s ease;
+}
+
+.dragOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+}
+
+.dragOverlayContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: white;
+  text-align: center;
+}
+
+.dragOverlayIcon {
+  width: 48px !important;
+  height: 48px !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.dragOverlayContent span {
+  font-size: 18px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
 @media (max-width: 768px) {
   .actionButton {
     padding: 4px 8px !important;
