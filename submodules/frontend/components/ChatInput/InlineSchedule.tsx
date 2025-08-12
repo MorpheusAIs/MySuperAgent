@@ -1,15 +1,15 @@
-import React, { FC, useState } from 'react';
+import JobsAPI from '@/services/API/jobs';
+import { useWalletAddress } from '@/services/Wallet/utils';
+import { CalendarIcon } from '@chakra-ui/icons';
 import {
+  Button,
   HStack,
   Input,
   Select,
-  Button,
-  useToast,
   Text,
+  useToast,
 } from '@chakra-ui/react';
-import { CalendarIcon } from '@chakra-ui/icons';
-import JobsAPI from '@/services/API/jobs';
-import { useWalletAddress } from '@/services/Wallet/utils';
+import { FC, useState } from 'react';
 import styles from './InlineSchedule.module.css';
 
 interface InlineScheduleProps {
@@ -26,7 +26,9 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
   onClose,
 }) => {
   const [jobName, setJobName] = useState('');
-  const [scheduleType, setScheduleType] = useState<'once' | 'hourly' | 'daily' | 'weekly' | 'custom'>('hourly');
+  const [scheduleType, setScheduleType] = useState<
+    'once' | 'hourly' | 'daily' | 'weekly' | 'custom'
+  >('hourly');
   const [scheduleTime, setScheduleTime] = useState('09:00');
   const [scheduleDate, setScheduleDate] = useState('');
   const [intervalDays, setIntervalDays] = useState(1);
@@ -52,18 +54,22 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
 
     try {
       const walletAddress = getAddress();
-      
+
       if (!walletAddress) {
         // Without wallet, we'll create a localStorage-based conversation instead
-        console.log("No wallet connected - creating local conversation instead of scheduled job");
-        
+        console.log(
+          'No wallet connected - creating local conversation instead of scheduled job'
+        );
+
         try {
           // Import localStorage utilities
-          const { createNewConversation } = await import("@/services/ChatManagement/conversations");
-          
+          const { createNewConversation } = await import(
+            '@/services/ChatManagement/conversations'
+          );
+
           // Create a new localStorage conversation
           const newConversationId = createNewConversation();
-          
+
           toast({
             title: 'Conversation created! 💬',
             description: `"${jobName}" saved locally (requires wallet for scheduling)`,
@@ -89,11 +95,11 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
           return;
         }
       }
-      
+
       // Create base schedule time
       const now = new Date();
       let scheduleDateTime;
-      
+
       if (scheduleType === 'once') {
         // For 'once', combine the selected date and time
         if (!scheduleDate || !scheduleTime) {
@@ -114,20 +120,20 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
         scheduleDateTime = new Date();
         const [hours, minutes] = scheduleTime.split(':');
         scheduleDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        
-        // For weekly, if a date is selected, use it as the start date
-        if (scheduleType === 'weekly' && scheduleDate) {
-          const startDate = new Date(scheduleDate + 'T' + scheduleTime);
-          scheduleDateTime = startDate;
+
+        // For weekly, do NOT use a picked calendar date; use the next occurrence based on time
+        // If the time has already passed today, schedule for tomorrow (server will compute next run)
+        if (scheduleDateTime <= now) {
+          scheduleDateTime.setDate(scheduleDateTime.getDate() + 1);
         }
       }
-      
+
       const nextRunTime = JobsAPI.calculateNextRunTime(
         scheduleType,
         scheduleDateTime,
         scheduleType === 'custom' ? intervalDays : undefined
       );
-      
+
       const job = await JobsAPI.createJob(walletAddress, {
         name: jobName,
         description: '',
@@ -141,7 +147,8 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
         schedule_time: scheduleDateTime,
         next_run_time: nextRunTime,
         interval_days: scheduleType === 'custom' ? intervalDays : null,
-        max_runs: maxOccurrences === 'infinite' ? null : parseInt(maxOccurrences),
+        max_runs:
+          maxOccurrences === 'infinite' ? null : parseInt(maxOccurrences),
         weekly_days: scheduleType === 'weekly' ? selectedDays.join(',') : null,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
@@ -171,9 +178,9 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
   };
 
   const toggleDay = (dayIndex: number) => {
-    setSelectedDays(prev => 
-      prev.includes(dayIndex) 
-        ? prev.filter(d => d !== dayIndex)
+    setSelectedDays((prev) =>
+      prev.includes(dayIndex)
+        ? prev.filter((d) => d !== dayIndex)
         : [...prev, dayIndex]
     );
   };
@@ -197,7 +204,7 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
           className={styles.input}
           flex={1}
         />
-        
+
         <Select
           value={scheduleType}
           onChange={(e) => setScheduleType(e.target.value as any)}
@@ -215,7 +222,9 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
         {/* Show time for daily and weekly only on first row */}
         {(scheduleType === 'daily' || scheduleType === 'weekly') && (
           <>
-            <Text color="gray.400" fontSize="sm">@</Text>
+            <Text color="gray.400" fontSize="sm">
+              @
+            </Text>
             <Input
               type="time"
               value={scheduleTime}
@@ -270,7 +279,9 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
             className={styles.input}
             w="140px"
           />
-          <Text color="gray.400" fontSize="sm">@</Text>
+          <Text color="gray.400" fontSize="sm">
+            @
+          </Text>
           <Input
             type="time"
             value={scheduleTime}
@@ -296,23 +307,16 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
               </button>
             ))}
           </HStack>
-          <Input
-            type="date"
-            value={scheduleDate}
-            onChange={(e) => setScheduleDate(e.target.value)}
-            min={getMinDateTime()}
-            size="sm"
-            className={styles.input}
-            w="130px"
-            placeholder="Start date (optional)"
-          />
+          {/* No calendar date picker for weekly */}
         </HStack>
       )}
 
       {/* Second row for custom options */}
       {scheduleType === 'custom' && (
         <HStack spacing={2} align="center" mt={2}>
-          <Text color="gray.400" fontSize="sm">every</Text>
+          <Text color="gray.400" fontSize="sm">
+            every
+          </Text>
           <Input
             type="number"
             value={intervalDays}
@@ -323,7 +327,9 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
             className={styles.input}
             w="70px"
           />
-          <Text color="gray.400" fontSize="sm">days @</Text>
+          <Text color="gray.400" fontSize="sm">
+            days @
+          </Text>
           <Input
             type="time"
             value={scheduleTime}

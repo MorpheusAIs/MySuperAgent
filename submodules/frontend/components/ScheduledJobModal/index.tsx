@@ -1,47 +1,43 @@
-import React, { FC, useState } from 'react';
-import {
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
-  Button,
-  FormControl,
-  FormLabel,
-  Input,
-  Select,
-  Textarea,
-  NumberInput,
-  NumberInputField,
-  useToast,
-  VStack,
-  HStack,
-  Text,
-  Switch,
-  Box,
-  Flex,
-  Badge,
-  Icon,
-  SimpleGrid,
-  Divider,
-  InputGroup,
-  InputLeftAddon,
-  Checkbox,
-  CheckboxGroup,
-  Stack,
-  useColorModeValue,
-} from '@chakra-ui/react';
-import { 
-  CalendarIcon, 
-  TimeIcon, 
-  RepeatIcon, 
-  InfoIcon,
-  CheckIcon 
-} from '@chakra-ui/icons';
 import JobsAPI from '@/services/API/jobs';
 import { useWalletAddress } from '@/services/Wallet/utils';
+import {
+  CalendarIcon,
+  CheckIcon,
+  InfoIcon,
+  RepeatIcon,
+  TimeIcon,
+} from '@chakra-ui/icons';
+import {
+  Badge,
+  Box,
+  Button,
+  Checkbox,
+  CheckboxGroup,
+  Divider,
+  Flex,
+  FormControl,
+  FormLabel,
+  Icon,
+  Input,
+  InputGroup,
+  InputLeftAddon,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  NumberInput,
+  NumberInputField,
+  SimpleGrid,
+  Text,
+  Textarea,
+  useColorModeValue,
+  useToast,
+  VStack,
+} from '@chakra-ui/react';
+import React, { FC, useState } from 'react';
 
 interface ScheduledJobModalProps {
   isOpen: boolean;
@@ -107,7 +103,9 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
 }) => {
   const [jobName, setJobName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
-  const [scheduleType, setScheduleType] = useState<'once' | 'daily' | 'weekly' | 'custom'>('once');
+  const [scheduleType, setScheduleType] = useState<
+    'once' | 'daily' | 'weekly' | 'custom'
+  >('once');
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('09:00');
   const [intervalDays, setIntervalDays] = useState(1);
@@ -122,7 +120,9 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
   const selectedBg = useColorModeValue('blue.50', 'blue.900');
   const selectedBorder = useColorModeValue('blue.500', 'blue.300');
 
-  const isRecurring = scheduleOptions.find(opt => opt.id === scheduleType)?.isRecurring || false;
+  const isRecurring =
+    scheduleOptions.find((opt) => opt.id === scheduleType)?.isRecurring ||
+    false;
 
   const handleSubmit = async () => {
     if (!jobName || !scheduleDate || !scheduleTime) {
@@ -164,14 +164,14 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
         setIsLoading(false);
         return;
       }
-      
+
       // Calculate next run time
       const nextRunTime = JobsAPI.calculateNextRunTime(
         scheduleType as 'once' | 'daily' | 'weekly' | 'custom',
         scheduleDateTime,
         scheduleType === 'custom' ? intervalDays : undefined
       );
-      
+
       // Create the job with scheduling information
       const job = await JobsAPI.createJob(walletAddress, {
         name: jobName,
@@ -242,12 +242,14 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
         return `run daily at ${time}`;
       case 'weekly':
         if (selectedDays.length === 0) return `run weekly at ${time}`;
-        const dayNames = selectedDays.map(day => 
-          daysOfWeek.find(d => d.id === day)?.label
-        ).join(', ');
+        const dayNames = selectedDays
+          .map((day) => daysOfWeek.find((d) => d.id === day)?.label)
+          .join(', ');
         return `run every ${dayNames} at ${time}`;
       case 'custom':
-        return `run every ${intervalDays} day${intervalDays !== 1 ? 's' : ''} at ${time}`;
+        return `run every ${intervalDays} day${
+          intervalDays !== 1 ? 's' : ''
+        } at ${time}`;
       default:
         return '';
     }
@@ -275,7 +277,7 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
           </Flex>
         </ModalHeader>
         <ModalCloseButton />
-        
+
         <ModalBody pb={6}>
           <VStack spacing={6} align="stretch">
             {/* Job Details Section */}
@@ -293,7 +295,10 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
                     bg="gray.700"
                     border="1px solid"
                     borderColor={borderColor}
-                    _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px blue.400' }}
+                    _focus={{
+                      borderColor: 'blue.400',
+                      boxShadow: '0 0 0 1px blue.400',
+                    }}
                   />
                 </FormControl>
 
@@ -307,7 +312,10 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
                     bg="gray.700"
                     border="1px solid"
                     borderColor={borderColor}
-                    _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px blue.400' }}
+                    _focus={{
+                      borderColor: 'blue.400',
+                      boxShadow: '0 0 0 1px blue.400',
+                    }}
                   />
                 </FormControl>
 
@@ -337,23 +345,34 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
               <Text fontWeight="semibold" mb={4} color="gray.300">
                 Schedule Configuration
               </Text>
-              
+
               {/* Schedule Type Selection */}
               <VStack spacing={4} align="stretch">
                 <FormControl isRequired>
-                  <FormLabel fontWeight="medium">When should this job run?</FormLabel>
+                  <FormLabel fontWeight="medium">
+                    When should this job run?
+                  </FormLabel>
                   <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                     {scheduleOptions.map((option) => (
                       <Box
                         key={option.id}
                         p={4}
                         border="2px solid"
-                        borderColor={scheduleType === option.id ? selectedBorder : borderColor}
-                        bg={scheduleType === option.id ? selectedBg : 'gray.700'}
+                        borderColor={
+                          scheduleType === option.id
+                            ? selectedBorder
+                            : borderColor
+                        }
+                        bg={
+                          scheduleType === option.id ? selectedBg : 'gray.700'
+                        }
                         borderRadius="lg"
                         cursor="pointer"
                         transition="all 0.2s"
-                        _hover={{ borderColor: 'blue.300', transform: 'translateY(-1px)' }}
+                        _hover={{
+                          borderColor: 'blue.300',
+                          transform: 'translateY(-1px)',
+                        }}
                         onClick={() => setScheduleType(option.id)}
                       >
                         <Flex align="center" gap={3}>
@@ -379,7 +398,10 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
                 {scheduleType === 'weekly' && (
                   <FormControl isRequired>
                     <FormLabel fontWeight="medium">Select Days</FormLabel>
-                    <CheckboxGroup value={selectedDays} onChange={(value) => setSelectedDays(value as string[])}>
+                    <CheckboxGroup
+                      value={selectedDays}
+                      onChange={(value) => setSelectedDays(value as string[])}
+                    >
                       <SimpleGrid columns={7} spacing={2}>
                         {daysOfWeek.map((day) => (
                           <Box key={day.id} textAlign="center">
@@ -396,8 +418,16 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
                               display="block"
                               p={2}
                               border="2px solid"
-                              borderColor={selectedDays.includes(day.id) ? 'blue.400' : borderColor}
-                              bg={selectedDays.includes(day.id) ? 'blue.900' : 'gray.700'}
+                              borderColor={
+                                selectedDays.includes(day.id)
+                                  ? 'blue.400'
+                                  : borderColor
+                              }
+                              bg={
+                                selectedDays.includes(day.id)
+                                  ? 'blue.900'
+                                  : 'gray.700'
+                              }
                               borderRadius="md"
                               cursor="pointer"
                               textAlign="center"
@@ -435,7 +465,10 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
                           border="1px solid"
                           borderColor={borderColor}
                           borderLeftRadius={0}
-                          _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px blue.400' }}
+                          _focus={{
+                            borderColor: 'blue.400',
+                            boxShadow: '0 0 0 1px blue.400',
+                          }}
                         />
                       </NumberInput>
                       <InputLeftAddon bg="gray.600" borderColor={borderColor}>
@@ -446,26 +479,8 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
                 )}
 
                 {/* Date and Time */}
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                  <FormControl isRequired>
-                    <FormLabel fontWeight="medium">
-                      <Flex align="center" gap={2}>
-                        <Icon as={CalendarIcon} color="blue.400" />
-                        {scheduleType === 'once' ? 'Date' : 'Start Date'}
-                      </Flex>
-                    </FormLabel>
-                    <Input
-                      type="date"
-                      value={scheduleDate}
-                      onChange={(e) => setScheduleDate(e.target.value)}
-                      min={getMinDateTime()}
-                      bg="gray.700"
-                      border="1px solid"
-                      borderColor={borderColor}
-                      _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px blue.400' }}
-                    />
-                  </FormControl>
-
+                {scheduleType === 'weekly' ? (
+                  // For weekly schedules, only show time
                   <FormControl isRequired>
                     <FormLabel fontWeight="medium">
                       <Flex align="center" gap={2}>
@@ -480,56 +495,113 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
                       bg="gray.700"
                       border="1px solid"
                       borderColor={borderColor}
-                      _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px blue.400' }}
+                      _focus={{
+                        borderColor: 'blue.400',
+                        boxShadow: '0 0 0 1px blue.400',
+                      }}
                     />
                   </FormControl>
-                </SimpleGrid>
+                ) : (
+                  // For other schedule types, show both date and time
+                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                    <FormControl isRequired>
+                      <FormLabel fontWeight="medium">
+                        <Flex align="center" gap={2}>
+                          <Icon as={CalendarIcon} color="blue.400" />
+                          {scheduleType === 'once' ? 'Date' : 'Start Date'}
+                        </Flex>
+                      </FormLabel>
+                      <Input
+                        type="date"
+                        value={scheduleDate}
+                        onChange={(e) => setScheduleDate(e.target.value)}
+                        min={getMinDateTime()}
+                        bg="gray.700"
+                        border="1px solid"
+                        borderColor={borderColor}
+                        _focus={{
+                          borderColor: 'blue.400',
+                          boxShadow: '0 0 0 1px blue.400',
+                        }}
+                      />
+                    </FormControl>
+
+                    <FormControl isRequired>
+                      <FormLabel fontWeight="medium">
+                        <Flex align="center" gap={2}>
+                          <Icon as={TimeIcon} color="blue.400" />
+                          Time
+                        </Flex>
+                      </FormLabel>
+                      <Input
+                        type="time"
+                        value={scheduleTime}
+                        onChange={(e) => setScheduleTime(e.target.value)}
+                        bg="gray.700"
+                        border="1px solid"
+                        borderColor={borderColor}
+                        _focus={{
+                          borderColor: 'blue.400',
+                          boxShadow: '0 0 0 1px blue.400',
+                        }}
+                      />
+                    </FormControl>
+                  </SimpleGrid>
+                )}
 
                 {/* Advanced Options for Recurring Jobs */}
                 {isRecurring && (
                   <FormControl>
-                    <FormLabel fontWeight="medium">Maximum Runs (optional)</FormLabel>
+                    <FormLabel fontWeight="medium">
+                      Maximum Runs (optional)
+                    </FormLabel>
                     <NumberInput
                       value={maxRuns || ''}
                       onChange={(_, value) => setMaxRuns(value || null)}
                       min={1}
                     >
-                      <NumberInputField 
+                      <NumberInputField
                         placeholder="Leave empty for unlimited"
                         bg="gray.700"
                         border="1px solid"
                         borderColor={borderColor}
-                        _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px blue.400' }}
+                        _focus={{
+                          borderColor: 'blue.400',
+                          boxShadow: '0 0 0 1px blue.400',
+                        }}
                       />
                     </NumberInput>
                   </FormControl>
                 )}
 
                 {/* Schedule Preview */}
-                {jobName && scheduleDate && scheduleTime && (
-                  <Box
-                    p={4}
-                    bg="blue.900"
-                    border="1px solid"
-                    borderColor="blue.400"
-                    borderRadius="lg"
-                  >
-                    <Flex align="center" gap={2} mb={2}>
-                      <Icon as={InfoIcon} color="blue.400" />
-                      <Text fontWeight="medium" fontSize="sm">
-                        Schedule Preview
-                      </Text>
-                    </Flex>
-                    <Text fontSize="sm" color="blue.100">
-                      &quot;{jobName}&quot; will {getScheduleDescription()}
-                      {maxRuns && (
-                        <Text as="span" color="blue.200">
-                          {' '}(max {maxRuns} run{maxRuns !== 1 ? 's' : ''})
+                {jobName &&
+                  scheduleTime &&
+                  (scheduleType === 'weekly' || scheduleDate) && (
+                    <Box
+                      p={4}
+                      bg="blue.900"
+                      border="1px solid"
+                      borderColor="blue.400"
+                      borderRadius="lg"
+                    >
+                      <Flex align="center" gap={2} mb={2}>
+                        <Icon as={InfoIcon} color="blue.400" />
+                        <Text fontWeight="medium" fontSize="sm">
+                          Schedule Preview
                         </Text>
-                      )}
-                    </Text>
-                  </Box>
-                )}
+                      </Flex>
+                      <Text fontSize="sm" color="blue.100">
+                        &quot;{jobName}&quot; will {getScheduleDescription()}
+                        {maxRuns && (
+                          <Text as="span" color="blue.200">
+                            {' '}
+                            (max {maxRuns} run{maxRuns !== 1 ? 's' : ''})
+                          </Text>
+                        )}
+                      </Text>
+                    </Box>
+                  )}
               </VStack>
             </Box>
           </VStack>
