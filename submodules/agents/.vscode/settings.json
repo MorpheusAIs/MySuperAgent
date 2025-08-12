@@ -1,4 +1,0 @@
-{
-  "python.analysis.extraPaths": ["./src"],
-  "python.autoComplete.extraPaths": ["./src"]
-}
