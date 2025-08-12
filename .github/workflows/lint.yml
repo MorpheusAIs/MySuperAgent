@@ -11,8 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: "recursive"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -39,27 +37,26 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd submodules/frontend
+          cd app
           pnpm install --frozen-lockfile
 
       - name: Setup environment variables for build
         run: |
-          cd submodules/frontend
+          cd app
           echo "NEXT_PUBLIC_API_URL=http://localhost:3000" > .env.local
           echo "NODE_ENV=production" >> .env.local
-          echo "DATABASE_URL=postgresql://test:test@localhost:5432/testdb" >> .env.local
 
       - name: Run TypeScript/JavaScript linter
         run: |
-          cd submodules/frontend
+          cd app
           pnpm run lint
 
       - name: Run TypeScript type check
         run: |
-          cd submodules/frontend
+          cd app
           pnpm exec tsc --noEmit
 
       - name: Run build check
         run: |
-          cd submodules/frontend
+          cd app
           pnpm run build

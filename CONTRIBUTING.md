@@ -1,6 +1,6 @@
 # Contributing and Future Interoperability of Agents
 
-**For contributors looking to build a local agent** please see [Agents README](submodules/agents/README.md) section: "Steps to Add a New Agent".
+**For contributors looking to build a local agent** please see the documentation in the `/docs` directory.
 This will let you experiment with your agent locally.
 
 Later in 2024/5 you will be able to publish your agent to the Morpheus registry.

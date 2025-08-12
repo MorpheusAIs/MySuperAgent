@@ -4,9 +4,9 @@
 
 ## A Platform for Building, Deploying, and Leveraging AI Agents
 
-A developer-focused platform that enables building, testing, and deploying AI agents. Powered by Python and React, with seamless integration of LLMs and Web3 capabilities.
+A developer-focused platform that enables building, testing, and deploying AI agents. Powered by React and Next.js, with seamless integration of LLMs and Web3 capabilities.
 
-**Note:** MySuperAgent serves as both a development sandbox and production platform for AI agent builders. The platform enables rapid prototyping and deployment of agents that can be automatically invoked based on user intent. For detailed documentation on specific agents, see the agent READMEs in the `/agents` directory.
+**Note:** MySuperAgent serves as both a development sandbox and production platform for AI agent builders. The platform enables rapid prototyping and deployment of agents that can be automatically invoked based on user intent.
 
 ![UI](static/demo.gif)
 
@@ -94,14 +94,10 @@ To run MySuperAgent locally, follow these comprehensive setup instructions:
 
 #### Prerequisites
 
-1. Install Ollama:
-   ```bash
-   # Install Ollama following instructions at https://ollama.ai
-   ollama pull 3.2:3b
-   ollama serve
-   ```
+- Node.js 18+ and pnpm
+- Modern web browser
 
-#### Running with Docker
+#### Local Development
 
 1. Clone the repository:
 
@@ -110,64 +106,16 @@ To run MySuperAgent locally, follow these comprehensive setup instructions:
    cd mysuperagent
    ```
 
-2. Start the Docker environment:
+2. Install dependencies and run:
 
    ```bash
-   docker compose -p mysuperagent -f build/docker-compose.yml up
+   cd app
+   pnpm install
+   pnpm run dev
    ```
 
 3. Access the application:
-   - Frontend: http://localhost:3333
-   - Server API: http://localhost:8888
-
-#### Running Services Independently
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/MorpheusAIs/mysuperagent.git
-   cd mysuperagent
-   ```
-
-2. Start PostgreSQL:
-
-   ```bash
-   docker run -d \
-     -p 5678:5678 \
-     -e POSTGRES_USER=neo \
-     -e POSTGRES_PASSWORD=trinity \
-     -e POSTGRES_DB=morpheus_db \
-     postgres:16-bullseye -p 5678
-   ```
-
-3. Start the Frontend:
-
-   ```bash
-   cd submodules/frontend
-   docker build -t frontend .
-   docker run -d -p 3333:80 frontend
-   ```
-
-4. Start the Agents API:
-   ```bash
-   cd submodules/agents
-   docker build -t agents -f build/Dockerfile .
-   docker run -d \
-     -p 8888:5000 \
-     -e DATABASE_URL=postgresql://neo:trinity@localhost:5678/morpheus_db \
-     agents
-   ```
-
-#### Simulating Production Environment
-
-To test features that require external API integrations, you'll need to export the following environment variables:
-
-```
-export TogetherApiKey="mock-key"
-export CerebrasApiKey="mock-key"
-export CodexApiKey="mock-key"
-export ElfaApiKey="mock-key"
-```
+   - Frontend: http://localhost:3000
 
 ### Developer Documentation
 
