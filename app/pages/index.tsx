@@ -1,10 +1,10 @@
-import type { NextPage } from "next";
-import { Box, Flex, useBreakpointValue } from "@chakra-ui/react";
-import { LeftSidebar } from "@/components/LeftSidebar";
 import { Chat } from "@/components/Chat";
-import { useState } from "react";
 import { HeaderBar } from "@/components/HeaderBar";
+import { LeftSidebar } from "@/components/LeftSidebar";
 import { ChatProviderDB } from "@/contexts/chat/ChatProviderDB";
+import { Box, Flex, useBreakpointValue } from "@chakra-ui/react";
+import type { NextPage } from "next";
+import { useState } from "react";
 import styles from "./index.module.css";
 
 // Wrapper with provider
@@ -18,11 +18,18 @@ const HomeWithProvider: NextPage = () => {
 
 const Home = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<"chat" | "jobs">("jobs");
   const isMobile = useBreakpointValue({ base: true, md: false });
+
+  const handleBackToJobs = () => {
+    setCurrentView("jobs");
+  };
 
   return (
     <Box className={styles.container}>
-      <HeaderBar />
+      <HeaderBar
+        onBackToJobs={currentView === "chat" ? handleBackToJobs : undefined}
+      />
       <Flex className={styles.contentWrapper}>
         <Box
           className={styles.sidebarWrapper}
@@ -46,7 +53,11 @@ const Home = () => {
             marginLeft: isMobile ? 0 : isSidebarOpen ? "240px" : 0,
           }}
         >
-          <Chat isSidebarOpen={isSidebarOpen} />
+          <Chat
+            isSidebarOpen={isSidebarOpen}
+            currentView={currentView}
+            setCurrentView={setCurrentView}
+          />
         </Box>
       </Flex>
     </Box>
