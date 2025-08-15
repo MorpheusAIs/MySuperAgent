@@ -81,6 +81,16 @@ export interface Message {
   order_index: number;
 }
 
+export interface AgentTeam {
+  id: string;
+  wallet_address: string;
+  name: string;
+  description: string | null;
+  agents: string[];
+  created_at: Date;
+  updated_at: Date;
+}
+
 
 // Database service classes
 export class UserDB {
@@ -476,9 +486,77 @@ export class MessageDB {
   }
 }
 
+export class AgentTeamDB {
+  static async createTeam(team: Omit<AgentTeam, 'id' | 'created_at' | 'updated_at'>): Promise<AgentTeam> {
+    // Ensure user exists first
+    await UserDB.createOrUpdateUser(team.wallet_address);
+
+    const query = `
+      INSERT INTO agent_teams (wallet_address, name, description, agents)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *;
+    `;
+    
+    const values = [
+      team.wallet_address,
+      team.name,
+      team.description || null,
+      team.agents
+    ];
+    
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  }
+
+  static async getTeamsByWallet(walletAddress: string): Promise<AgentTeam[]> {
+    const query = `
+      SELECT * FROM agent_teams 
+      WHERE wallet_address = $1 
+      ORDER BY created_at DESC;
+    `;
+    
+    const result = await pool.query(query, [walletAddress]);
+    return result.rows;
+  }
+
+  static async getTeam(teamId: string): Promise<AgentTeam | null> {
+    const query = 'SELECT * FROM agent_teams WHERE id = $1;';
+    const result = await pool.query(query, [teamId]);
+    return result.rows[0] || null;
+  }
+
+  static async updateTeam(teamId: string, updates: Partial<Omit<AgentTeam, 'id' | 'wallet_address' | 'created_at' | 'updated_at'>>): Promise<AgentTeam> {
+    const allowedFields = ['name', 'description', 'agents'];
+    const updateFields = Object.keys(updates)
+      .filter(key => allowedFields.includes(key))
+      .map((key, index) => `${key} = $${index + 2}`)
+      .join(', ');
+    
+    const values = Object.keys(updates)
+      .filter(key => allowedFields.includes(key))
+      .map(key => updates[key as keyof typeof updates]);
+    
+    const query = `
+      UPDATE agent_teams 
+      SET ${updateFields}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *;
+    `;
+    
+    const result = await pool.query(query, [teamId, ...values]);
+    return result.rows[0];
+  }
+
+  static async deleteTeam(teamId: string): Promise<void> {
+    const query = 'DELETE FROM agent_teams WHERE id = $1;';
+    await pool.query(query, [teamId]);
+  }
+}
+
 export default {
   UserDB,
   UserPreferencesDB,
   JobDB,
-  MessageDB
+  MessageDB,
+  AgentTeamDB
 };

@@ -18,7 +18,7 @@ import {
   IconWorld,
 } from "@tabler/icons-react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { Workflows } from "@/components/Workflows";
+import { AgentTeamsButton } from "@/components/AgentTeams/Button";
 import { ApiCredentialsButton } from "@/components/Credentials/Button";
 import { CDPWalletsButton } from "@/components/CDPWallets/Button";
 import { SettingsButton } from "@/components/Settings";
@@ -138,14 +138,9 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                         opacity={account ? 1 : 0.5}
                         pl={1}
                       >
-                        <StyledTooltip
-                          label="Scheduled workflows that handle automated trades, swaps, and more are coming soon. Use cases include automated DCA strategies, signal-driven quant trading, and more"
-                          placement="right"
-                        >
-                          <div className={styles.menuItem}>
-                            <Workflows />
-                          </div>
-                        </StyledTooltip>
+                        <div className={styles.menuItem}>
+                          <AgentTeamsButton />
+                        </div>
                         <div className={styles.menuItem}>
                           <ApiCredentialsButton />
                         </div>

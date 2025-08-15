@@ -12,8 +12,11 @@ class AgentRegistryClass {
     this.agents.set(definition.name, agent);
   }
 
-  registerLazy(name: string, loader: () => Promise<BaseAgent>) {
+  registerLazy(name: string, loader: () => Promise<BaseAgent>, description?: string) {
     this.lazyAgents.set(name, loader);
+    if (description) {
+      this.agentDescriptions.set(name, description);
+    }
   }
 
   async get(name: string): Promise<BaseAgent | undefined> {
@@ -45,11 +48,74 @@ class AgentRegistryClass {
     return Array.from(this.agents.values()).map(agent => agent.getDefinition());
   }
 
+  private agentDescriptions = new Map<string, string>();
+
   getAvailableAgents(): Array<{ name: string; description: string }> {
-    return this.getDefinitions().map(def => ({
+    // Return both loaded agents and lazy agents
+    const loadedAgents = this.getDefinitions().map(def => ({
       name: def.name,
       description: def.description,
     }));
+    
+    const lazyAgents = Array.from(this.agentDescriptions.entries()).map(([name, description]) => ({
+      name,
+      description
+    }));
+    
+    // Combine and deduplicate
+    const allAgents = new Map();
+    loadedAgents.forEach(agent => allAgents.set(agent.name, agent));
+    lazyAgents.forEach(agent => allAgents.set(agent.name, agent));
+    
+    return Array.from(allAgents.values());
+  }
+
+  static getAllAgentDescriptions(): Array<{ name: string; description: string }> {
+    // Static list of all agents to avoid dynamic import issues in API endpoints
+    return [
+      { name: 'default', description: 'A general-purpose AI assistant that can help with a wide variety of tasks' },
+      { name: 'research', description: 'A specialized research assistant that can search the web and gather information on various topics' },
+      { name: 'code', description: 'A specialized coding assistant that can help with programming tasks, code analysis, and debugging' },
+      { name: 'data', description: 'A data analysis specialist that can process, analyze, and visualize data from various sources' },
+      { name: 'math', description: 'A mathematical computation expert that can solve complex equations and mathematical problems' },
+      { name: 'crypto_data_backend', description: 'Provides cryptocurrency market data, price analysis, and blockchain information' },
+      { name: 'codex_backend', description: 'Advanced code analysis and development assistance for complex programming tasks' },
+      { name: 'elfa_backend', description: 'Social media sentiment and trend analysis specialist' },
+      { name: 'rugcheck_backend', description: 'Cryptocurrency security analysis and rug pull detection specialist' },
+      { name: 'dexscreener_backend', description: 'Decentralized exchange data and trading pair analysis' },
+      { name: 'news_backend', description: 'Real-time news aggregation and analysis from multiple sources' },
+      { name: 'tweet_sizzler_backend', description: 'Twitter content creation and social media engagement specialist' },
+      { name: 'mor_rewards_backend', description: 'Morpheus network rewards and token distribution analysis' },
+      { name: 'imagen_backend', description: 'AI image generation and visual content creation specialist' },
+      { name: 'rag_backend', description: 'Retrieval-augmented generation for enhanced knowledge retrieval' },
+      { name: 'default_backend', description: 'General-purpose backend agent for various tasks and integrations' },
+      { name: 'mcp_reddit', description: 'Reddit content analysis and community insights specialist' },
+      { name: 'mcp_brave', description: 'Web search and information retrieval using Brave Search' },
+      { name: 'mcp_hackernews', description: 'Hacker News content analysis and tech trend monitoring' },
+      { name: 'mcp_googlemaps', description: 'Location-based services and geographical information specialist' },
+      { name: 'mcp_airbnb', description: 'Travel accommodation search and booking analysis' },
+      { name: 'mcp_yt_transcripts', description: 'YouTube video transcript extraction and analysis' },
+      { name: 'mcp_puppeteer', description: 'Web automation and scraping specialist using Puppeteer' },
+      { name: 'research_backend', description: 'Advanced research and information gathering specialist' },
+      { name: 'document_analyzer', description: 'Document analysis and text extraction specialist' },
+      { name: 'web_extraction', description: 'Web content extraction and data scraping specialist' },
+      { name: 'instagram_backend', description: 'Instagram content analysis and social media insights' },
+      { name: 'tiktok_backend', description: 'TikTok content analysis and viral trend monitoring' },
+      { name: 'twitter_analyst', description: 'Twitter sentiment analysis and social media monitoring' },
+      { name: 'facebook_analyst', description: 'Facebook content analysis and social media insights' },
+      { name: 'reddit_analyst', description: 'Reddit community analysis and discussion monitoring' },
+      { name: 'social_media_intelligence', description: 'Comprehensive social media intelligence and cross-platform analysis' },
+      { name: 'business_analyst', description: 'Business intelligence and market analysis specialist' },
+      { name: 'linkedin_intelligence', description: 'LinkedIn professional network analysis and career insights' },
+      { name: 'job_market_analyst', description: 'Job market trends and employment analysis specialist' },
+      { name: 'ecommerce_analyst', description: 'E-commerce market analysis and online retail insights' },
+      { name: 'travel_intelligence', description: 'Travel industry analysis and destination intelligence' },
+      { name: 'real_estate_analyst', description: 'Real estate market analysis and property insights' },
+      { name: 'youtube_analyst', description: 'YouTube content analysis and video performance insights' },
+      { name: 'visual_content_creator', description: 'Visual content creation and graphic design specialist' },
+      { name: 'content_discovery', description: 'Content discovery and curation specialist across platforms' },
+      { name: 'code_assistant_backend', description: 'Advanced code assistance and software development support' }
+    ];
   }
 
   getAgentsByCapability(capability: string): BaseAgent[] {
@@ -185,57 +251,206 @@ class AgentRegistryClass {
     this.registerLazy('code', async () => {
       const { CodeAgent } = await import('@/services/agents/agents/CodeAgent');
       return new CodeAgent();
-    });
+    }, 'A specialized coding assistant that can help with programming tasks, code analysis, and debugging');
     
     this.registerLazy('data', async () => {
       const { DataAgent } = await import('@/services/agents/agents/DataAgent');
       return new DataAgent();
-    });
+    }, 'A data analysis specialist that can process, analyze, and visualize data from various sources');
     
     this.registerLazy('math', async () => {
       const { MathAgent } = await import('@/services/agents/agents/MathAgent');
       return new MathAgent();
-    });
+    }, 'A mathematical computation expert that can solve complex equations and mathematical problems');
 
-    // Register most commonly used backend agents
+    // AllBackendAgents.ts
     this.registerLazy('crypto_data_backend', async () => {
       const { CryptoDataAgentBackend } = await import('@/services/agents/agents/AllBackendAgents');
       return new CryptoDataAgentBackend();
-    });
+    }, 'Provides cryptocurrency market data, price analysis, and blockchain information');
 
     this.registerLazy('codex_backend', async () => {
       const { CodexAgentBackend } = await import('@/services/agents/agents/AllBackendAgents');
       return new CodexAgentBackend();
-    });
+    }, 'Advanced code analysis and development assistance for complex programming tasks');
 
     this.registerLazy('elfa_backend', async () => {
       const { ElfaAgentBackend } = await import('@/services/agents/agents/AllBackendAgents');
       return new ElfaAgentBackend();
-    });
+    }, 'Social media sentiment and trend analysis specialist');
 
-    this.registerLazy('research_backend', async () => {
-      const { ResearchAgentBackend } = await import('@/services/agents/agents/BackendAgents');
-      return new ResearchAgentBackend();
-    });
-
-    // Register specialized agents for lazy loading only when needed
     this.registerLazy('rugcheck_backend', async () => {
       const { RugcheckAgentBackend } = await import('@/services/agents/agents/AllBackendAgents');
       return new RugcheckAgentBackend();
-    });
+    }, 'Cryptocurrency security analysis and rug pull detection specialist');
 
     this.registerLazy('dexscreener_backend', async () => {
       const { DexscreenerAgentBackend } = await import('@/services/agents/agents/AllBackendAgents');
       return new DexscreenerAgentBackend();
-    });
+    }, 'Decentralized exchange data and trading pair analysis');
 
     this.registerLazy('news_backend', async () => {
       const { NewsAgentBackend } = await import('@/services/agents/agents/AllBackendAgents');
       return new NewsAgentBackend();
-    });
+    }, 'Real-time news aggregation and analysis from multiple sources');
 
-    // Add more lazy agents as needed
-    // This approach reduces initial bundle size and startup time
+    this.registerLazy('tweet_sizzler_backend', async () => {
+      const { TweetSizzlerAgentBackend } = await import('@/services/agents/agents/AllBackendAgents');
+      return new TweetSizzlerAgentBackend();
+    }, 'Twitter content creation and social media engagement specialist');
+
+    this.registerLazy('mor_rewards_backend', async () => {
+      const { MorRewardsAgentBackend } = await import('@/services/agents/agents/AllBackendAgents');
+      return new MorRewardsAgentBackend();
+    }, 'Morpheus network rewards and token distribution analysis');
+
+    this.registerLazy('imagen_backend', async () => {
+      const { ImagenAgentBackend } = await import('@/services/agents/agents/AllBackendAgents');
+      return new ImagenAgentBackend();
+    }, 'AI image generation and visual content creation specialist');
+
+    this.registerLazy('rag_backend', async () => {
+      const { RagAgentBackend } = await import('@/services/agents/agents/AllBackendAgents');
+      return new RagAgentBackend();
+    }, 'Retrieval-augmented generation for enhanced knowledge retrieval');
+
+    this.registerLazy('default_backend', async () => {
+      const { DefaultAgentBackend } = await import('@/services/agents/agents/AllBackendAgents');
+      return new DefaultAgentBackend();
+    }, 'General-purpose backend agent for various tasks and integrations');
+
+    // MCP Agents
+    this.registerLazy('mcp_reddit', async () => {
+      const { McpRedditAgent } = await import('@/services/agents/agents/AllBackendAgents');
+      return new McpRedditAgent();
+    }, 'Reddit content analysis and community insights specialist');
+
+    this.registerLazy('mcp_brave', async () => {
+      const { McpBraveAgent } = await import('@/services/agents/agents/AllBackendAgents');
+      return new McpBraveAgent();
+    }, 'Web search and information retrieval using Brave Search');
+
+    this.registerLazy('mcp_hackernews', async () => {
+      const { McpHackerNewsAgent } = await import('@/services/agents/agents/AllBackendAgents');
+      return new McpHackerNewsAgent();
+    }, 'Hacker News content analysis and tech trend monitoring');
+
+    this.registerLazy('mcp_googlemaps', async () => {
+      const { McpGoogleMapsAgent } = await import('@/services/agents/agents/AllBackendAgents');
+      return new McpGoogleMapsAgent();
+    }, 'Location-based services and geographical information specialist');
+
+    this.registerLazy('mcp_airbnb', async () => {
+      const { McpAirbnbAgent } = await import('@/services/agents/agents/AllBackendAgents');
+      return new McpAirbnbAgent();
+    }, 'Travel accommodation search and booking analysis');
+
+    this.registerLazy('mcp_yt_transcripts', async () => {
+      const { McpYtTranscriptsAgent } = await import('@/services/agents/agents/AllBackendAgents');
+      return new McpYtTranscriptsAgent();
+    }, 'YouTube video transcript extraction and analysis');
+
+    this.registerLazy('mcp_puppeteer', async () => {
+      const { McpPuppeteerAgent } = await import('@/services/agents/agents/AllBackendAgents');
+      return new McpPuppeteerAgent();
+    }, 'Web automation and scraping specialist using Puppeteer');
+
+    // BackendAgents.ts
+    this.registerLazy('research_backend', async () => {
+      const { ResearchAgentBackend } = await import('@/services/agents/agents/BackendAgents');
+      return new ResearchAgentBackend();
+    }, 'Advanced research and information gathering specialist');
+
+    this.registerLazy('document_analyzer', async () => {
+      const { DocumentAnalyzer } = await import('@/services/agents/agents/BackendAgents');
+      return new DocumentAnalyzer();
+    }, 'Document analysis and text extraction specialist');
+
+    this.registerLazy('web_extraction', async () => {
+      const { WebExtractionSpecialist } = await import('@/services/agents/agents/BackendAgents');
+      return new WebExtractionSpecialist();
+    }, 'Web content extraction and data scraping specialist');
+
+    this.registerLazy('instagram_backend', async () => {
+      const { InstagramAgentBackend } = await import('@/services/agents/agents/BackendAgents');
+      return new InstagramAgentBackend();
+    }, 'Instagram content analysis and social media insights');
+
+    this.registerLazy('tiktok_backend', async () => {
+      const { TikTokAgent } = await import('@/services/agents/agents/BackendAgents');
+      return new TikTokAgent();
+    }, 'TikTok content analysis and viral trend monitoring');
+
+    this.registerLazy('twitter_analyst', async () => {
+      const { TwitterAnalystBackend } = await import('@/services/agents/agents/BackendAgents');
+      return new TwitterAnalystBackend();
+    }, 'Twitter sentiment analysis and social media monitoring');
+
+    this.registerLazy('facebook_analyst', async () => {
+      const { FacebookAnalyst } = await import('@/services/agents/agents/BackendAgents');
+      return new FacebookAnalyst();
+    }, 'Facebook content analysis and social media insights');
+
+    this.registerLazy('reddit_analyst', async () => {
+      const { RedditAnalyst } = await import('@/services/agents/agents/BackendAgents');
+      return new RedditAnalyst();
+    }, 'Reddit community analysis and discussion monitoring');
+
+    this.registerLazy('social_media_intelligence', async () => {
+      const { SocialMediaIntelligenceBackend } = await import('@/services/agents/agents/BackendAgents');
+      return new SocialMediaIntelligenceBackend();
+    }, 'Comprehensive social media intelligence and cross-platform analysis');
+
+    this.registerLazy('business_analyst', async () => {
+      const { BusinessAnalystBackend } = await import('@/services/agents/agents/BackendAgents');
+      return new BusinessAnalystBackend();
+    }, 'Business intelligence and market analysis specialist');
+
+    this.registerLazy('linkedin_intelligence', async () => {
+      const { LinkedInIntelligence } = await import('@/services/agents/agents/BackendAgents');
+      return new LinkedInIntelligence();
+    }, 'LinkedIn professional network analysis and career insights');
+
+    this.registerLazy('job_market_analyst', async () => {
+      const { JobMarketAnalyst } = await import('@/services/agents/agents/BackendAgents');
+      return new JobMarketAnalyst();
+    }, 'Job market trends and employment analysis specialist');
+
+    // BackendAgentsPartTwo.ts
+    this.registerLazy('ecommerce_analyst', async () => {
+      const { EcommerceAnalystBackend } = await import('@/services/agents/agents/BackendAgentsPartTwo');
+      return new EcommerceAnalystBackend();
+    }, 'E-commerce market analysis and online retail insights');
+
+    this.registerLazy('travel_intelligence', async () => {
+      const { TravelIntelligenceBackend } = await import('@/services/agents/agents/BackendAgentsPartTwo');
+      return new TravelIntelligenceBackend();
+    }, 'Travel industry analysis and destination intelligence');
+
+    this.registerLazy('real_estate_analyst', async () => {
+      const { RealEstateAnalystBackend } = await import('@/services/agents/agents/BackendAgentsPartTwo');
+      return new RealEstateAnalystBackend();
+    }, 'Real estate market analysis and property insights');
+
+    this.registerLazy('youtube_analyst', async () => {
+      const { YouTubeAnalystBackend } = await import('@/services/agents/agents/BackendAgentsPartTwo');
+      return new YouTubeAnalystBackend();
+    }, 'YouTube content analysis and video performance insights');
+
+    this.registerLazy('visual_content_creator', async () => {
+      const { VisualContentCreatorBackend } = await import('@/services/agents/agents/BackendAgentsPartTwo');
+      return new VisualContentCreatorBackend();
+    }, 'Visual content creation and graphic design specialist');
+
+    this.registerLazy('content_discovery', async () => {
+      const { ContentDiscoverySpecialist } = await import('@/services/agents/agents/BackendAgentsPartTwo');
+      return new ContentDiscoverySpecialist();
+    }, 'Content discovery and curation specialist across platforms');
+
+    this.registerLazy('code_assistant_backend', async () => {
+      const { CodeAssistantBackend } = await import('@/services/agents/agents/BackendAgentsPartTwo');
+      return new CodeAssistantBackend();
+    }, 'Advanced code assistance and software development support');
   }
 
   isInitialized() {
