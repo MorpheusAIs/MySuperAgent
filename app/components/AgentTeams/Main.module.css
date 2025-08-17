@@ -1,0 +1,466 @@
+/* Agent Teams Main Component Styles - Match Chat component */
+.container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #000;
+  color: white;
+  overflow-y: auto;
+  position: relative;
+  padding-top: 70px; /* Account for header */
+}
+
+.header {
+  padding: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: #000;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1rem;
+}
+
+.createButton {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white !important;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.createButton:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
+  transform: translateY(-1px);
+  color: white !important;
+}
+
+.formContainer {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 0 2rem 2rem 2rem;
+}
+
+.formTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.content {
+  flex: 1;
+  padding: 0 2rem 2rem 2rem;
+  overflow-y: auto;
+}
+
+.emptyState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
+}
+
+.emptySubtitle {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1rem;
+  max-width: 400px;
+}
+
+.teamCard {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.teamCard:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.teamName {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: white;
+}
+
+.teamDescription {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.agentsLabel {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.agentBadge {
+  background: rgba(66, 153, 225, 0.15);
+  color: #4299E1;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid rgba(66, 153, 225, 0.3);
+}
+
+.teamDate {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+}
+
+.actionButton {
+  color: rgba(255, 255, 255, 0.7) !important;
+  background: transparent !important;
+}
+
+.actionButton:hover {
+  color: white !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.deleteButton {
+  color: rgba(255, 255, 255, 0.7) !important;
+  background: transparent !important;
+}
+
+.deleteButton:hover {
+  color: #E53E3E !important;
+  background: rgba(229, 62, 62, 0.1) !important;
+}
+
+/* Form Styles */
+.formLabel {
+  color: white !important;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.input {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  border-radius: 6px;
+}
+
+.input:hover {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.input:focus {
+  border-color: #4299E1 !important;
+  box-shadow: 0 0 0 1px #4299E1 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.textarea {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  border-radius: 6px;
+  resize: vertical;
+}
+
+.textarea:hover {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.textarea:focus {
+  border-color: #4299E1 !important;
+  box-shadow: 0 0 0 1px #4299E1 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.agentsList {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.agentOption {
+  padding: 0.75rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.agentOption:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.agentSelected {
+  background: rgba(66, 153, 225, 0.1);
+  border-color: rgba(66, 153, 225, 0.3);
+}
+
+.agentName {
+  color: white !important;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.agentDescription {
+  color: rgba(255, 255, 255, 0.6) !important;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.cancelButton {
+  color: rgba(255, 255, 255, 0.7) !important;
+  background: transparent !important;
+}
+
+.cancelButton:hover {
+  color: white !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.submitButton {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none;
+}
+
+.submitButton:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
+  color: white !important;
+}
+
+.submitButton:disabled {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  cursor: not-allowed;
+}
+
+/* Override Chakra UI default styles - AGGRESSIVE OVERRIDES */
+.input,
+.input input,
+.textarea,
+.textarea textarea {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: white !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Button overrides - force dark theme */
+.createButton,
+.submitButton {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.createButton:hover,
+.createButton:focus,
+.createButton:active,
+.submitButton:hover,
+.submitButton:focus,
+.submitButton:active {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.cancelButton,
+.actionButton,
+.deleteButton {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.cancelButton:hover,
+.cancelButton:focus,
+.cancelButton:active {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+}
+
+.actionButton:hover,
+.actionButton:focus,
+.actionButton:active {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+}
+
+.deleteButton:hover,
+.deleteButton:focus,
+.deleteButton:active {
+  background: rgba(229, 62, 62, 0.1) !important;
+  color: #E53E3E !important;
+}
+
+/* Checkbox overrides */
+.agentOption .chakra-checkbox__control {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.agentOption .chakra-checkbox__control:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.agentOption .chakra-checkbox__control[data-checked] {
+  background: #4299E1 !important;
+  border-color: #4299E1 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .header {
+    padding: 1.5rem 1rem;
+  }
+  
+  .content {
+    padding: 0 1rem 2rem 1rem;
+  }
+  
+  .formContainer {
+    margin: 0 1rem 2rem 1rem;
+    padding: 1.5rem;
+  }
+  
+  .title {
+    font-size: 1.75rem;
+  }
+  
+  .teamCard {
+    padding: 1rem;
+  }
+}
+
+/* Scrollbar styling */
+.agentsList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.agentsList::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.agentsList::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.agentsList::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* GLOBAL OVERRIDES - Force dark theme on ALL Chakra UI components */
+.container .chakra-button {
+  background: transparent !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.container .chakra-button[data-theme="primary"],
+.container .chakra-button:not([data-variant="ghost"]):not([data-variant="outline"]) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.container .chakra-button:hover,
+.container .chakra-button:focus,
+.container .chakra-button:active {
+  transform: none !important;
+}
+
+.container .chakra-input,
+.container .chakra-textarea {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: white !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.container .chakra-input:hover,
+.container .chakra-textarea:hover {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.container .chakra-input:focus,
+.container .chakra-textarea:focus {
+  border-color: #4299E1 !important;
+  box-shadow: 0 0 0 1px #4299E1 !important;
+}
+
+.container .chakra-form__label {
+  color: white !important;
+}
+
+.container .chakra-checkbox__control {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.container .chakra-checkbox__control:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.container .chakra-checkbox__control[data-checked] {
+  background: #4299E1 !important;
+  border-color: #4299E1 !important;
+}
