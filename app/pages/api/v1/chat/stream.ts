@@ -1,20 +1,20 @@
-import { initializeAgents } from "@/services/agents/initialize";
-import { createOrchestrator } from "@/services/agents/orchestrator";
-import { ChatRequest } from "@/services/agents/types";
+import { initializeAgents } from '@/services/agents/initialize';
+import { createOrchestrator } from '@/services/agents/orchestrator';
+import { ChatRequest } from '@/services/agents/types';
 import {
   ValidationError,
   createSafeErrorResponse,
   validateRequired,
-} from "@/services/utils/errors";
-import { NextApiRequest, NextApiResponse } from "next";
-import { v4 as uuidv4 } from "uuid";
+} from '@/services/utils/errors';
+import { NextApiRequest, NextApiResponse } from 'next';
+import { v4 as uuidv4 } from 'uuid';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
@@ -27,9 +27,9 @@ export default async function handler(
 
     // Validate required fields
     try {
-      validateRequired(chatRequest, ["prompt"] as (keyof ChatRequest)[]);
+      validateRequired(chatRequest, ['prompt'] as (keyof ChatRequest)[]);
       if (!chatRequest.prompt?.content) {
-        throw new ValidationError("Missing prompt content");
+        throw new ValidationError('Missing prompt content');
       }
     } catch (error) {
       const { error: errorMessage, statusCode } =
@@ -45,46 +45,46 @@ export default async function handler(
 
     // Set up SSE headers
     res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
     });
 
     // Send initial connection event
     res.write(
-      `event: connected\ndata: ${JSON.stringify({ type: "connected", requestId: chatRequest.requestId })}\n\n`
+      `event: connected\ndata: ${JSON.stringify({ type: 'connected', requestId: chatRequest.requestId })}\n\n`
     );
 
     // Set up event listeners for orchestration events (matching Python implementation)
     const eventHandlers = {
-      "flow-start": (data: any) => {
+      'flow-start': (data: any) => {
         res.write(
-          `event: flow_start\ndata: ${JSON.stringify({ type: "flow_start", data })}\n\n`
+          `event: flow_start\ndata: ${JSON.stringify({ type: 'flow_start', data })}\n\n`
         );
       },
-      "subtask-dispatch": (data: any) => {
+      'subtask-dispatch': (data: any) => {
         res.write(
-          `event: subtask_dispatch\ndata: ${JSON.stringify({ type: "subtask_dispatch", data })}\n\n`
+          `event: subtask_dispatch\ndata: ${JSON.stringify({ type: 'subtask_dispatch', data })}\n\n`
         );
       },
-      "subtask-result": (data: any) => {
+      'subtask-result': (data: any) => {
         res.write(
-          `event: subtask_result\ndata: ${JSON.stringify({ type: "subtask_result", data })}\n\n`
+          `event: subtask_result\ndata: ${JSON.stringify({ type: 'subtask_result', data })}\n\n`
         );
       },
-      "synthesis-start": (data: any) => {
+      'synthesis-start': (data: any) => {
         res.write(
-          `event: synthesis_start\ndata: ${JSON.stringify({ type: "synthesis_start", data })}\n\n`
+          `event: synthesis_start\ndata: ${JSON.stringify({ type: 'synthesis_start', data })}\n\n`
         );
       },
-      "synthesis-complete": (data: any) => {
+      'synthesis-complete': (data: any) => {
         res.write(
-          `event: synthesis_complete\ndata: ${JSON.stringify({ type: "synthesis_complete", data })}\n\n`
+          `event: synthesis_complete\ndata: ${JSON.stringify({ type: 'synthesis_complete', data })}\n\n`
         );
       },
-      "flow-end": (data: any) => {
+      'flow-end': (data: any) => {
         res.write(
-          `event: flow_end\ndata: ${JSON.stringify({ type: "flow_end", data })}\n\n`
+          `event: flow_end\ndata: ${JSON.stringify({ type: 'flow_end', data })}\n\n`
         );
       },
     };
@@ -100,8 +100,8 @@ export default async function handler(
       .catch((error) => {
         res.write(
           `data: ${JSON.stringify({
-            type: "error",
-            message: error instanceof Error ? error.message : "Unknown error",
+            type: 'error',
+            message: error instanceof Error ? error.message : 'Unknown error',
           })}\n\n`
         );
         res.end();
@@ -114,12 +114,12 @@ export default async function handler(
       });
 
     // Handle client disconnect
-    req.on("close", () => {
+    req.on('close', () => {
       // Client disconnected - stream will naturally end
     });
   } catch (error) {
     return res.status(500).json({
-      error: error instanceof Error ? error.message : "Internal server error",
+      error: error instanceof Error ? error.message : 'Internal server error',
     });
   }
 }

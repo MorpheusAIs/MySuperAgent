@@ -1,10 +1,10 @@
-import { AgentRegistry } from "@/services/agents/core/AgentRegistry";
+import { AgentRegistry } from '@/services/agents/core/AgentRegistry';
 import {
   AgentResponse,
   ChatRequest,
   ResponseType,
-} from "@/services/agents/types";
-import { EventEmitter } from "events";
+} from '@/services/agents/types';
+import { EventEmitter } from 'events';
 
 export class Orchestrator {
   private eventEmitter: EventEmitter;
@@ -51,18 +51,18 @@ export class Orchestrator {
       }
 
       if (!selectedAgent) {
-        throw new Error("No suitable agent found");
+        throw new Error('No suitable agent found');
       }
 
       const response = await selectedAgent.chat({
         prompt: request.prompt,
-        conversationId: request.conversationId || "default",
+        conversationId: request.conversationId || 'default',
       });
 
       const agentName = selectedAgent.getDefinition().name;
       const agentResponse: AgentResponse = {
         responseType: ResponseType.SUCCESS,
-        content: response.content || "No response generated",
+        content: response.content || 'No response generated',
         metadata: {
           ...response.metadata,
           selectedAgent: agentName,
@@ -77,10 +77,10 @@ export class Orchestrator {
       const response: AgentResponse = {
         responseType: ResponseType.ERROR,
         errorMessage:
-          error instanceof Error ? error.message : "Unknown error occurred",
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
 
-      return ["orchestrator", response];
+      return ['orchestrator', response];
     }
   }
 
@@ -92,7 +92,7 @@ export class Orchestrator {
 
       // Determine which agent(s) to use for streaming
       let selectedAgent;
-      let selectionMethod = "unknown";
+      let selectionMethod = 'unknown';
 
       if (request.selectedAgents && request.selectedAgents.length > 0) {
         // Try to find the first available agent from the selected list
@@ -102,7 +102,7 @@ export class Orchestrator {
             this.requestId
           );
           if (selectedAgent) {
-            selectionMethod = "user_selected";
+            selectionMethod = 'user_selected';
             break;
           }
         }
@@ -113,7 +113,7 @@ export class Orchestrator {
             request.prompt.content
           );
           selectedAgent = selectionResult.agent;
-          selectionMethod = "llm_intelligent_fallback";
+          selectionMethod = 'llm_intelligent_fallback';
         }
       } else {
         // Use LLM-based intelligent agent selection
@@ -121,11 +121,11 @@ export class Orchestrator {
           request.prompt.content
         );
         selectedAgent = selectionResult.agent;
-        selectionMethod = "llm_intelligent";
+        selectionMethod = 'llm_intelligent';
       }
 
       if (!selectedAgent) {
-        throw new Error("No suitable agent found");
+        throw new Error('No suitable agent found');
       }
 
       const selectedAgentName = selectedAgent.getDefinition().name;
@@ -135,18 +135,18 @@ export class Orchestrator {
       if (request.chatHistory) {
         messages.push(
           ...request.chatHistory.map((msg) => ({
-            role: msg.role as "system" | "user" | "assistant",
+            role: msg.role as 'system' | 'user' | 'assistant',
             content: msg.content,
           }))
         );
       }
       messages.push({
-        role: "user" as const,
+        role: 'user' as const,
         content: request.prompt.content,
       });
 
       // Check if the agent has Mastra streamVNext method
-      if (typeof selectedAgent.streamVNext === "function") {
+      if (typeof selectedAgent.streamVNext === 'function') {
         const stream = await selectedAgent.streamVNext(messages);
 
         let subtaskOutputs: any[] = [];
@@ -164,24 +164,24 @@ export class Orchestrator {
         for await (const chunk of stream) {
           // Handle different chunk types from Mastra
           switch (chunk.type) {
-            case "text":
+            case 'text':
               // Stream text chunks
               res.write(
                 `data: ${JSON.stringify({
-                  type: "chunk",
+                  type: 'chunk',
                   content: chunk.payload.text || chunk.payload.content,
                   timestamp: new Date().toISOString(),
                 })}\n\n`
               );
               break;
 
-            case "tool_call":
+            case 'tool_call':
               // Emit subtask dispatch for tool calls
               res.write(
                 `data: ${JSON.stringify({
-                  type: "subtask_dispatch",
+                  type: 'subtask_dispatch',
                   data: {
-                    subtask: `Executing tool: ${chunk.payload.name || "Unknown tool"}`,
+                    subtask: `Executing tool: ${chunk.payload.name || 'Unknown tool'}`,
                     agent: selectedAgent.getDefinition().name,
                     current_agent_index: 0,
                     total_agents: 1,
@@ -191,11 +191,11 @@ export class Orchestrator {
               );
               break;
 
-            case "tool_result":
+            case 'tool_result':
               // Emit subtask result for tool results
               const toolResult = {
-                subtask: `Tool execution: ${chunk.payload.name || "Unknown tool"}`,
-                output: chunk.payload.result || "Tool completed",
+                subtask: `Tool execution: ${chunk.payload.name || 'Unknown tool'}`,
+                output: chunk.payload.result || 'Tool completed',
                 agents: [selectedAgent.getDefinition().name],
                 telemetry: {
                   processing_time: { duration: 0 },
@@ -212,7 +212,7 @@ export class Orchestrator {
 
               res.write(
                 `data: ${JSON.stringify({
-                  type: "subtask_result",
+                  type: 'subtask_result',
                   data: toolResult,
                 })}\n\n`
               );
@@ -240,7 +240,7 @@ export class Orchestrator {
         // Emit synthesis complete
         res.write(
           `data: ${JSON.stringify({
-            type: "synthesis_complete",
+            type: 'synthesis_complete',
             data: {
               final_answer: finalText,
               timestamp: new Date().toISOString(),
@@ -250,7 +250,7 @@ export class Orchestrator {
 
         // Emit stream complete with final metadata including debugging info
         const metadata = {
-          collaboration: "orchestrated",
+          collaboration: 'orchestrated',
           contributing_agents: contributingAgents,
           subtask_outputs: subtaskOutputs,
           selected_agent: selectedAgentName,
@@ -277,7 +277,7 @@ export class Orchestrator {
 
         res.write(
           `data: ${JSON.stringify({
-            type: "stream_complete",
+            type: 'stream_complete',
             data: {
               final_answer: finalText,
               ...metadata,
@@ -291,7 +291,7 @@ export class Orchestrator {
         // Fallback to regular chat if streaming not available
         const response = await selectedAgent.chat({
           prompt: request.prompt,
-          conversationId: request.conversationId || "default",
+          conversationId: request.conversationId || 'default',
         });
 
         const agentName = selectedAgent.getDefinition().name;
@@ -299,10 +299,10 @@ export class Orchestrator {
         // Send as complete event for non-streaming with debugging info
         res.write(
           `data: ${JSON.stringify({
-            type: "stream_complete",
+            type: 'stream_complete',
             data: {
-              final_answer: response.content || "No response generated",
-              collaboration: "single_agent",
+              final_answer: response.content || 'No response generated',
+              collaboration: 'single_agent',
               contributing_agents: [agentName],
               selected_agent: agentName,
               selection_method: selectionMethod,
@@ -312,8 +312,8 @@ export class Orchestrator {
               ),
               subtask_outputs: [
                 {
-                  subtask: "Direct agent response",
-                  output: response.content || "No response generated",
+                  subtask: 'Direct agent response',
+                  output: response.content || 'No response generated',
                   agents: [agentName],
                   telemetry: {
                     processing_time: { duration: 0 },
@@ -335,9 +335,9 @@ export class Orchestrator {
     } catch (error) {
       res.write(
         `data: ${JSON.stringify({
-          type: "error",
+          type: 'error',
           message:
-            error instanceof Error ? error.message : "Unknown error occurred",
+            error instanceof Error ? error.message : 'Unknown error occurred',
         })}\n\n`
       );
       res.end();
@@ -358,4 +358,4 @@ export const createOrchestrator = (requestId?: string) =>
   new Orchestrator(requestId);
 
 // Backward compatibility - but this should be avoided for new code
-export const orchestrator = new Orchestrator("legacy-singleton");
+export const orchestrator = new Orchestrator('legacy-singleton');
