@@ -27,7 +27,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSave }) => {
     <VStack spacing={6} align="stretch">
       <FormControl>
         <FormLabel className={styles.label}>
-          Give your Superagent a personality
+          Give SuperAgent a personality
         </FormLabel>
         <Textarea
           value={settings.aiPersonality}

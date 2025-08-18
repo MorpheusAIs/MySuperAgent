@@ -19,11 +19,15 @@
 .inputWrapper {
   width: 100%;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.05)
+  );
   border: 1px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
   overflow: hidden;
-  box-shadow: 
+  box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transition: all 0.2s ease;
@@ -31,14 +35,14 @@
 
 .inputWrapper:hover {
   border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 
+  box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .inputWrapper:focus-within {
   border-color: rgba(103, 232, 249, 0.6);
-  box-shadow: 
+  box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.4),
     0 0 0 2px rgba(103, 232, 249, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
@@ -313,61 +317,17 @@
   height: 8px !important;
 }
 
-/* Drag and drop styles */
-.dragOver {
-  position: relative;
-  border: 2px dashed rgba(255, 255, 255, 0.6) !important;
-  background-color: rgba(255, 255, 255, 0.05) !important;
-  transition: all 0.2s ease;
-}
-
-.dragOverlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  border-radius: 12px;
-  backdrop-filter: blur(4px);
-}
-
-.dragOverlayContent {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  color: white;
-  text-align: center;
-}
-
-.dragOverlayIcon {
-  width: 48px !important;
-  height: 48px !important;
-  color: rgba(255, 255, 255, 0.8) !important;
-}
-
-.dragOverlayContent span {
-  font-size: 18px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
-}
-
 @media (max-width: 768px) {
   .actionButton {
     padding: 4px 8px !important;
     font-size: 13px !important;
   }
-  
+
   .attachmentPreview {
     width: 60px;
     height: 45px;
   }
-  
+
   .attachmentName {
     font-size: 9px;
   }
