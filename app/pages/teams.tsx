@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { HeaderBar } from "@/components/HeaderBar";
 import { LeftSidebar } from "@/components/LeftSidebar";
-import { AgentTeamsMain } from "@/components/AgentTeams/Main";
+import { TeamsMain } from "@/components/Teams/Main";
 import { Box, Flex } from "@chakra-ui/react";
 import type { NextPage } from "next";
 import styles from "./index.module.css";
 
-const AgentTeamsPage: NextPage = () => {
+const TeamsPage: NextPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Expanded by default
 
   return (
@@ -26,11 +26,11 @@ const AgentTeamsPage: NextPage = () => {
             marginLeft: isSidebarOpen ? "360px" : 0,
           }}
         >
-          <AgentTeamsMain isSidebarOpen={isSidebarOpen} />
+          <TeamsMain isSidebarOpen={isSidebarOpen} />
         </Box>
       </Flex>
     </Box>
   );
 };
 
-export default AgentTeamsPage;
+export default TeamsPage;

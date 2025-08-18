@@ -181,3 +181,40 @@ All import paths have been updated throughout the codebase to reflect the new st
 3. **Clearer purpose** - File names better describe their contents
 4. **Easier navigation** - Logical structure makes finding files easier
 5. **Maintainability** - Consistent patterns make the codebase easier to maintain
+
+## Navigation and Routing Updates (2025-08-18)
+
+### Agent Teams → Teams Rename
+The agent-teams feature has been renamed to simply "teams" for cleaner URLs and better user experience:
+
+#### URL Changes
+- `/agent-teams` → `/teams`
+- `/api/agent-teams/` → `/api/teams/`
+
+#### File Structure Changes
+- `pages/agent-teams.tsx` → `pages/teams.tsx`
+- `pages/api/agent-teams/` → `pages/api/teams/`
+- `components/AgentTeams/` → `components/Teams/`
+- `migrations/003-add-agent-teams.js` → `migrations/003-add-teams.js`
+
+#### Database Updates
+- Table name: `agent_teams` → `teams`
+- Index name: `idx_agent_teams_wallet` → `idx_teams_wallet`
+- Trigger name: `update_agent_teams_updated_at` → `update_teams_updated_at`
+
+### Dashboard Navigation
+Added a new Dashboard entry in the Advanced section of the left sidebar:
+
+#### New Component
+- `components/Dashboard/Button.tsx` - Dashboard navigation button
+- `components/Dashboard/Button.module.css` - Styling for the button
+
+#### Navigation Behavior
+- Dashboard button routes to the root page (`/`)
+- Shows all jobs and chat UI (main application interface)
+- Positioned at the top of the Advanced section for easy access
+
+#### Integration
+- Added to `LeftSidebar` component in the Advanced section
+- Uses `LayoutDashboard` icon from Lucide React
+- Consistent styling with other navigation buttons

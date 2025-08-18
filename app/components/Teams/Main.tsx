@@ -36,7 +36,7 @@ interface AgentTeam {
   updated_at: string;
 }
 
-export const AgentTeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
+export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   isSidebarOpen = false,
 }) => {
   const [teams, setTeams] = useState<AgentTeam[]>([]);
@@ -57,7 +57,7 @@ export const AgentTeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     if (!address) return;
     
     try {
-      const response = await fetch(`/api/agent-teams?wallet_address=${address}`);
+      const response = await fetch(`/api/teams?wallet_address=${address}`);
       if (response.ok) {
         const data = await response.json();
         setTeams(data);
@@ -105,7 +105,7 @@ export const AgentTeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     }
 
     try {
-      const response = await fetch("/api/agent-teams", {
+      const response = await fetch("/api/teams", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -150,7 +150,7 @@ export const AgentTeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     }
 
     try {
-      const response = await fetch(`/api/agent-teams/${editingTeam.id}`, {
+      const response = await fetch(`/api/teams/${editingTeam.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -184,7 +184,7 @@ export const AgentTeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     if (!confirm("Are you sure you want to delete this team?")) return;
 
     try {
-      const response = await fetch(`/api/agent-teams/${teamId}`, {
+      const response = await fetch(`/api/teams/${teamId}`, {
         method: "DELETE",
       });
 

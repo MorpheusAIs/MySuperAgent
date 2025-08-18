@@ -18,7 +18,8 @@ import {
   IconWorld,
 } from "@tabler/icons-react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { AgentTeamsButton } from "@/components/AgentTeams/Button";
+import { DashboardButton } from "@/components/Dashboard/Button";
+import { TeamsButton } from "@/components/Teams/Button";
 import { ApiCredentialsButton } from "@/components/Credentials/Button";
 import { CdpWalletsButton } from "@/components/CdpWallets/Button";
 import { SettingsButton } from "@/components/Settings";
@@ -139,7 +140,10 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                         pl={1}
                       >
                         <div className={styles.menuItem}>
-                          <AgentTeamsButton />
+                          <DashboardButton />
+                        </div>
+                        <div className={styles.menuItem}>
+                          <TeamsButton />
                         </div>
                         <div className={styles.menuItem}>
                           <ApiCredentialsButton />

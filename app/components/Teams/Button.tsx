@@ -4,11 +4,11 @@ import { Users } from "lucide-react";
 import { useRouter } from "next/router";
 import styles from "./Button.module.css";
 
-export const AgentTeamsButton: React.FC = () => {
+export const TeamsButton: React.FC = () => {
   const router = useRouter();
 
   const handleClick = () => {
-    router.push("/agent-teams");
+    router.push("/teams");
   };
 
   return (

@@ -23,7 +23,7 @@ export default async function handler(
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (error) {
-    console.error('Error in agent-teams/[teamId] API:', error);
+    console.error('Error in teams/[teamId] API:', error);
     return res.status(500).json({ 
       error: error instanceof Error ? error.message : 'Internal server error' 
     });

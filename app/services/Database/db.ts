@@ -492,7 +492,7 @@ export class AgentTeamDB {
     await UserDB.createOrUpdateUser(team.wallet_address);
 
     const query = `
-      INSERT INTO agent_teams (wallet_address, name, description, agents)
+      INSERT INTO teams (wallet_address, name, description, agents)
       VALUES ($1, $2, $3, $4)
       RETURNING *;
     `;
@@ -510,7 +510,7 @@ export class AgentTeamDB {
 
   static async getTeamsByWallet(walletAddress: string): Promise<AgentTeam[]> {
     const query = `
-      SELECT * FROM agent_teams 
+      SELECT * FROM teams 
       WHERE wallet_address = $1 
       ORDER BY created_at DESC;
     `;
@@ -520,7 +520,7 @@ export class AgentTeamDB {
   }
 
   static async getTeam(teamId: string): Promise<AgentTeam | null> {
-    const query = 'SELECT * FROM agent_teams WHERE id = $1;';
+    const query = 'SELECT * FROM teams WHERE id = $1;';
     const result = await pool.query(query, [teamId]);
     return result.rows[0] || null;
   }
@@ -537,7 +537,7 @@ export class AgentTeamDB {
       .map(key => updates[key as keyof typeof updates]);
     
     const query = `
-      UPDATE agent_teams 
+      UPDATE teams 
       SET ${updateFields}, updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING *;
@@ -548,7 +548,7 @@ export class AgentTeamDB {
   }
 
   static async deleteTeam(teamId: string): Promise<void> {
-    const query = 'DELETE FROM agent_teams WHERE id = $1;';
+    const query = 'DELETE FROM teams WHERE id = $1;';
     await pool.query(query, [teamId]);
   }
 }
