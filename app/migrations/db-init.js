@@ -16,6 +16,7 @@ async function initializeDatabase() {
     await client.query('DROP TABLE IF EXISTS scheduled_jobs CASCADE;');
     await client.query('DROP TABLE IF EXISTS messages CASCADE;');
     await client.query('DROP TABLE IF EXISTS jobs CASCADE;');
+    await client.query('DROP TABLE IF EXISTS teams CASCADE;');
     await client.query('DROP TABLE IF EXISTS user_preferences CASCADE;');
     await client.query('DROP TABLE IF EXISTS users CASCADE;');
     
@@ -101,6 +102,23 @@ async function initializeDatabase() {
     await client.query(createMessagesTable);
     console.log('✅ messages table created successfully');
 
+    // Create teams table
+    console.log('👥 Creating teams table...');
+    const createTeamsTable = `
+      CREATE TABLE IF NOT EXISTS teams (
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        wallet_address VARCHAR(42) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        agents TEXT[] NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (wallet_address) REFERENCES users(wallet_address) ON DELETE CASCADE
+      );
+    `;
+    await client.query(createTeamsTable);
+    console.log('✅ teams table created successfully');
+
     // Create indexes for efficient querying
     console.log('🔍 Creating indexes...');
     const createIndexQueries = [
@@ -108,7 +126,8 @@ async function initializeDatabase() {
       'CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs (status);',
       'CREATE INDEX IF NOT EXISTS idx_jobs_scheduled ON jobs (is_scheduled, is_active, next_run_time) WHERE is_scheduled = TRUE;',
       'CREATE INDEX IF NOT EXISTS idx_messages_job_id ON messages (job_id);',
-      'CREATE INDEX IF NOT EXISTS idx_messages_order ON messages (job_id, order_index);'
+      'CREATE INDEX IF NOT EXISTS idx_messages_order ON messages (job_id, order_index);',
+      'CREATE INDEX IF NOT EXISTS idx_teams_wallet ON teams(wallet_address);'
     ];
 
     for (const query of createIndexQueries) {
@@ -142,6 +161,12 @@ async function initializeDatabase() {
       DROP TRIGGER IF EXISTS update_jobs_updated_at ON jobs;
       CREATE TRIGGER update_jobs_updated_at
         BEFORE UPDATE ON jobs
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+
+      DROP TRIGGER IF EXISTS update_teams_updated_at ON teams;
+      CREATE TRIGGER update_teams_updated_at
+        BEFORE UPDATE ON teams
         FOR EACH ROW
         EXECUTE FUNCTION update_updated_at_column();
     `;

@@ -13,18 +13,15 @@ export const DashboardButton: React.FC = () => {
 
   return (
     <Flex
-      className={styles.button}
+      as="button"
       align="center"
-      p={3}
-      borderRadius="md"
-      cursor="pointer"
+      gap={3}
+      width="100%"
       onClick={handleClick}
-      _hover={{
-        bg: "whiteAlpha.200",
-      }}
+      className={styles.menuButton}
     >
-      <LayoutDashboard size={20} style={{ marginRight: "12px" }} />
-      <Text fontSize="sm" fontWeight="medium">
+      <LayoutDashboard size={20} className={styles.icon} />
+      <Text fontSize="14px" color="white">
         Dashboard
       </Text>
     </Flex>

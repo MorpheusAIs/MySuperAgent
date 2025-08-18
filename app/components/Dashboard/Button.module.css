@@ -1,10 +1,17 @@
-.button {
-  width: 100%;
-  transition: all 0.2s ease-in-out;
-  color: white;
+.menuButton {
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background: transparent;
+  border: none;
 }
 
-.button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  transform: translateY(-1px);
+.menuButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.icon {
+  color: white;
+  flex-shrink: 0;
 }
