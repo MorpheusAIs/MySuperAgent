@@ -17,6 +17,9 @@ import { Settings } from "lucide-react";
 import React from "react";
 import { AgentSelection } from "./AgentSelection";
 import { GeneralSettings } from "./GeneralSettings";
+import { UserCredentials } from "./UserCredentials";
+import { MCPConfiguration } from "./MCPConfiguration";
+import { A2AManagement } from "./A2AManagement";
 import styles from "./index.module.css";
 
 export const SettingsButton: React.FC = () => {
@@ -88,6 +91,51 @@ export const SettingsButton: React.FC = () => {
                 >
                   General
                 </Tab>
+                <Tab
+                  color="white"
+                  bg="transparent"
+                  _selected={{
+                    bg: "rgba(255, 255, 255, 0.1)",
+                    color: "white",
+                  }}
+                  _hover={{
+                    bg: "rgba(255, 255, 255, 0.05)",
+                  }}
+                  borderRadius="6px"
+                  fontSize="14px"
+                >
+                  Credentials
+                </Tab>
+                <Tab
+                  color="white"
+                  bg="transparent"
+                  _selected={{
+                    bg: "rgba(255, 255, 255, 0.1)",
+                    color: "white",
+                  }}
+                  _hover={{
+                    bg: "rgba(255, 255, 255, 0.05)",
+                  }}
+                  borderRadius="6px"
+                  fontSize="14px"
+                >
+                  MCP Servers
+                </Tab>
+                <Tab
+                  color="white"
+                  bg="transparent"
+                  _selected={{
+                    bg: "rgba(255, 255, 255, 0.1)",
+                    color: "white",
+                  }}
+                  _hover={{
+                    bg: "rgba(255, 255, 255, 0.05)",
+                  }}
+                  borderRadius="6px"
+                  fontSize="14px"
+                >
+                  A2A Agents
+                </Tab>
                 {/* Temporarily disabling the ability to select agents */}
                 {/* <Tab
                   color="white"
@@ -109,6 +157,15 @@ export const SettingsButton: React.FC = () => {
               <TabPanels>
                 <TabPanel p={0}>
                   <GeneralSettings onSave={() => setIsOpen(false)} />
+                </TabPanel>
+                <TabPanel p={0}>
+                  <UserCredentials onSave={() => setIsOpen(false)} />
+                </TabPanel>
+                <TabPanel p={0}>
+                  <MCPConfiguration onSave={() => setIsOpen(false)} />
+                </TabPanel>
+                <TabPanel p={0}>
+                  <A2AManagement onSave={() => setIsOpen(false)} />
                 </TabPanel>
                 <TabPanel p={0}>
                   <AgentSelection onSave={() => setIsOpen(false)} />

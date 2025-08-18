@@ -16,6 +16,7 @@ export default async function handler(
 
   try {
     const chatRequest: ChatRequest = req.body;
+    const walletAddress = req.body.walletAddress; // Extract wallet address from request
     
     // Generate request ID if not provided
     if (!chatRequest.requestId) {
@@ -73,8 +74,8 @@ export default async function handler(
       orchestrator.onEvent(event, handler);
     });
 
-    // Start streaming processing
-    orchestrator.streamOrchestration(chatRequest, res)
+    // Start streaming processing with user context
+    orchestrator.streamOrchestration(chatRequest, res, walletAddress)
       .catch((error) => {
         res.write(`data: ${JSON.stringify({ 
           type: 'error',

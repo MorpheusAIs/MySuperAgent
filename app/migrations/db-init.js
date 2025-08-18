@@ -119,6 +119,97 @@ async function initializeDatabase() {
     await client.query(createTeamsTable);
     console.log('✅ teams table created successfully');
 
+    // Create credential management tables
+    console.log('🔐 Creating credential management tables...');
+    
+    // User credentials table
+    const createUserCredentialsTable = `
+      CREATE TABLE IF NOT EXISTS user_credentials (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        wallet_address VARCHAR(42) NOT NULL REFERENCES users(wallet_address) ON DELETE CASCADE,
+        service_type VARCHAR(50) NOT NULL,
+        service_name VARCHAR(100) NOT NULL,
+        credential_name VARCHAR(100) NOT NULL,
+        encrypted_value TEXT NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_used_at TIMESTAMP DEFAULT NULL,
+        UNIQUE(wallet_address, service_name, credential_name)
+      );
+    `;
+    await client.query(createUserCredentialsTable);
+    console.log('✅ user_credentials table created successfully');
+
+    // User MCP servers table
+    const createUserMCPServersTable = `
+      CREATE TABLE IF NOT EXISTS user_mcp_servers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        wallet_address VARCHAR(42) NOT NULL REFERENCES users(wallet_address) ON DELETE CASCADE,
+        server_name VARCHAR(100) NOT NULL,
+        server_url TEXT NOT NULL,
+        connection_config JSONB DEFAULT '{}',
+        is_enabled BOOLEAN DEFAULT TRUE,
+        health_status VARCHAR(20) DEFAULT 'unknown',
+        last_health_check TIMESTAMP DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(wallet_address, server_name)
+      );
+    `;
+    await client.query(createUserMCPServersTable);
+    console.log('✅ user_mcp_servers table created successfully');
+
+    // User A2A agents table
+    const createUserA2AAgentsTable = `
+      CREATE TABLE IF NOT EXISTS user_a2a_agents (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        wallet_address VARCHAR(42) NOT NULL REFERENCES users(wallet_address) ON DELETE CASCADE,
+        agent_id VARCHAR(100) NOT NULL,
+        agent_name VARCHAR(200) NOT NULL,
+        agent_description TEXT,
+        endpoint_url TEXT NOT NULL,
+        capabilities JSONB DEFAULT '[]',
+        is_enabled BOOLEAN DEFAULT TRUE,
+        connection_status VARCHAR(20) DEFAULT 'unknown',
+        last_ping TIMESTAMP DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(wallet_address, agent_id)
+      );
+    `;
+    await client.query(createUserA2AAgentsTable);
+    console.log('✅ user_a2a_agents table created successfully');
+
+    // User available tools table
+    const createUserAvailableToolsTable = `
+      CREATE TABLE IF NOT EXISTS user_available_tools (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        wallet_address VARCHAR(42) NOT NULL REFERENCES users(wallet_address) ON DELETE CASCADE,
+        mcp_server_id UUID REFERENCES user_mcp_servers(id) ON DELETE CASCADE,
+        tool_name VARCHAR(100) NOT NULL,
+        tool_description TEXT,
+        tool_schema JSONB DEFAULT '{}',
+        is_available BOOLEAN DEFAULT TRUE,
+        last_checked TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(wallet_address, mcp_server_id, tool_name)
+      );
+    `;
+    await client.query(createUserAvailableToolsTable);
+    console.log('✅ user_available_tools table created successfully');
+
+    // User encryption keys table
+    const createUserEncryptionKeysTable = `
+      CREATE TABLE IF NOT EXISTS user_encryption_keys (
+        wallet_address VARCHAR(42) PRIMARY KEY REFERENCES users(wallet_address) ON DELETE CASCADE,
+        key_hash VARCHAR(128) NOT NULL,
+        salt VARCHAR(64) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    await client.query(createUserEncryptionKeysTable);
+    console.log('✅ user_encryption_keys table created successfully');
+
     // Create indexes for efficient querying
     console.log('🔍 Creating indexes...');
     const createIndexQueries = [
@@ -127,7 +218,16 @@ async function initializeDatabase() {
       'CREATE INDEX IF NOT EXISTS idx_jobs_scheduled ON jobs (is_scheduled, is_active, next_run_time) WHERE is_scheduled = TRUE;',
       'CREATE INDEX IF NOT EXISTS idx_messages_job_id ON messages (job_id);',
       'CREATE INDEX IF NOT EXISTS idx_messages_order ON messages (job_id, order_index);',
-      'CREATE INDEX IF NOT EXISTS idx_teams_wallet ON teams(wallet_address);'
+      'CREATE INDEX IF NOT EXISTS idx_teams_wallet ON teams(wallet_address);',
+      // Credential management indexes
+      'CREATE INDEX IF NOT EXISTS idx_user_credentials_wallet ON user_credentials(wallet_address);',
+      'CREATE INDEX IF NOT EXISTS idx_user_credentials_service ON user_credentials(wallet_address, service_name);',
+      'CREATE INDEX IF NOT EXISTS idx_user_mcp_servers_wallet ON user_mcp_servers(wallet_address);',
+      'CREATE INDEX IF NOT EXISTS idx_user_mcp_servers_enabled ON user_mcp_servers(wallet_address, is_enabled);',
+      'CREATE INDEX IF NOT EXISTS idx_user_a2a_agents_wallet ON user_a2a_agents(wallet_address);',
+      'CREATE INDEX IF NOT EXISTS idx_user_a2a_agents_enabled ON user_a2a_agents(wallet_address, is_enabled);',
+      'CREATE INDEX IF NOT EXISTS idx_user_available_tools_wallet ON user_available_tools(wallet_address);',
+      'CREATE INDEX IF NOT EXISTS idx_user_available_tools_server ON user_available_tools(mcp_server_id);'
     ];
 
     for (const query of createIndexQueries) {
@@ -167,6 +267,25 @@ async function initializeDatabase() {
       DROP TRIGGER IF EXISTS update_teams_updated_at ON teams;
       CREATE TRIGGER update_teams_updated_at
         BEFORE UPDATE ON teams
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+
+      -- Triggers for credential management tables
+      DROP TRIGGER IF EXISTS update_user_credentials_updated_at ON user_credentials;
+      CREATE TRIGGER update_user_credentials_updated_at
+        BEFORE UPDATE ON user_credentials
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+
+      DROP TRIGGER IF EXISTS update_user_mcp_servers_updated_at ON user_mcp_servers;
+      CREATE TRIGGER update_user_mcp_servers_updated_at
+        BEFORE UPDATE ON user_mcp_servers
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+
+      DROP TRIGGER IF EXISTS update_user_a2a_agents_updated_at ON user_a2a_agents;
+      CREATE TRIGGER update_user_a2a_agents_updated_at
+        BEFORE UPDATE ON user_a2a_agents
         FOR EACH ROW
         EXECUTE FUNCTION update_updated_at_column();
     `;

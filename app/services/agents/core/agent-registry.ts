@@ -1,11 +1,17 @@
 import { BaseAgent } from '@/services/agents/core/base-agent';
 import { AgentDefinition } from '@/services/agents/types';
+import { UserMCPManager, MCPServerStatus } from '@/services/mcp/user-mcp-manager';
+import { UserA2AManager, A2AAgentStatus } from '@/services/a2a/user-a2a-manager';
+import { ToolDescriptor } from '@/services/mcp/server-registry';
 
 class AgentRegistryClass {
   private agents: Map<string, BaseAgent> = new Map();
   private lazyAgents: Map<string, () => Promise<BaseAgent>> = new Map();
   private initialized = false;
   private coreAgentsLoaded = false;
+  private userSpecificAgents: Map<string, Map<string, BaseAgent>> = new Map(); // walletAddress -> agentName -> agent
+  private userMCPTools: Map<string, ToolDescriptor[]> = new Map(); // walletAddress -> tools
+  private userA2AAgents: Map<string, A2AAgentStatus[]> = new Map(); // walletAddress -> agents
 
   register(agent: BaseAgent) {
     const definition = agent.getDefinition();
@@ -68,6 +74,153 @@ class AgentRegistryClass {
     lazyAgents.forEach(agent => allAgents.set(agent.name, agent));
     
     return Array.from(allAgents.values());
+  }
+
+  /**
+   * Get available agents for a specific user, including their custom MCP tools and A2A agents
+   */
+  async getUserAvailableAgents(walletAddress: string): Promise<Array<{ 
+    name: string; 
+    description: string; 
+    type: 'core' | 'mcp' | 'a2a';
+    capabilities?: string[];
+    status?: string;
+  }>> {
+    const coreAgents = this.getAvailableAgents().map(agent => ({
+      ...agent,
+      type: 'core' as const
+    }));
+
+    // Get user's MCP tools
+    const mcpTools = await this.getUserMCPTools(walletAddress);
+    const mcpAgents = mcpTools.map(tool => ({
+      name: `mcp_${tool.name}`,
+      description: tool.description || `MCP tool: ${tool.name}`,
+      type: 'mcp' as const,
+      capabilities: [tool.name]
+    }));
+
+    // Get user's A2A agents
+    const a2aAgents = await this.getUserA2AAgents(walletAddress);
+    const a2aAgentsList = a2aAgents.map(agent => ({
+      name: `a2a_${agent.agentId}`,
+      description: `A2A Agent: ${agent.agentName}`,
+      type: 'a2a' as const,
+      capabilities: agent.capabilities,
+      status: agent.connectionStatus
+    }));
+
+    return [...coreAgents, ...mcpAgents, ...a2aAgentsList];
+  }
+
+  /**
+   * Get user's MCP tools with caching
+   */
+  async getUserMCPTools(walletAddress: string): Promise<ToolDescriptor[]> {
+    // Check cache first
+    const cached = this.userMCPTools.get(walletAddress);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const tools = await UserMCPManager.getUserAvailableTools(walletAddress);
+      this.userMCPTools.set(walletAddress, tools);
+      return tools;
+    } catch (error) {
+      console.error(`Failed to get MCP tools for user ${walletAddress}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get user's A2A agents with caching
+   */
+  async getUserA2AAgents(walletAddress: string): Promise<A2AAgentStatus[]> {
+    // Check cache first
+    const cached = this.userA2AAgents.get(walletAddress);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const agents = await UserA2AManager.getUserA2AAgents(walletAddress);
+      this.userA2AAgents.set(walletAddress, agents);
+      return agents;
+    } catch (error) {
+      console.error(`Failed to get A2A agents for user ${walletAddress}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Refresh user-specific caches
+   */
+  async refreshUserData(walletAddress: string): Promise<void> {
+    // Clear caches
+    this.userMCPTools.delete(walletAddress);
+    this.userA2AAgents.delete(walletAddress);
+
+    // Reload data
+    await Promise.all([
+      this.getUserMCPTools(walletAddress),
+      this.getUserA2AAgents(walletAddress)
+    ]);
+  }
+
+  /**
+   * Clear user data (on logout)
+   */
+  clearUserData(walletAddress: string): void {
+    this.userMCPTools.delete(walletAddress);
+    this.userA2AAgents.delete(walletAddress);
+    this.userSpecificAgents.delete(walletAddress);
+  }
+
+  /**
+   * Get comprehensive capability summary for a user
+   */
+  async getUserCapabilitySummary(walletAddress: string): Promise<{
+    totalAgents: number;
+    coreAgents: number;
+    mcpTools: number;
+    a2aAgents: number;
+    connectedA2AAgents: number;
+    allCapabilities: string[];
+    mcpCapabilities: string[];
+    a2aCapabilities: string[];
+  }> {
+    const userAgents = await this.getUserAvailableAgents(walletAddress);
+    
+    const coreAgents = userAgents.filter(a => a.type === 'core');
+    const mcpAgents = userAgents.filter(a => a.type === 'mcp');
+    const a2aAgents = userAgents.filter(a => a.type === 'a2a');
+    const connectedA2AAgents = a2aAgents.filter(a => a.status === 'connected');
+    
+    const allCapabilities = new Set<string>();
+    const mcpCapabilities = new Set<string>();
+    const a2aCapabilities = new Set<string>();
+    
+    userAgents.forEach(agent => {
+      if (agent.capabilities) {
+        agent.capabilities.forEach(cap => {
+          allCapabilities.add(cap);
+          if (agent.type === 'mcp') mcpCapabilities.add(cap);
+          if (agent.type === 'a2a') a2aCapabilities.add(cap);
+        });
+      }
+    });
+    
+    return {
+      totalAgents: userAgents.length,
+      coreAgents: coreAgents.length,
+      mcpTools: mcpAgents.length,
+      a2aAgents: a2aAgents.length,
+      connectedA2AAgents: connectedA2AAgents.length,
+      allCapabilities: Array.from(allCapabilities),
+      mcpCapabilities: Array.from(mcpCapabilities),
+      a2aCapabilities: Array.from(a2aCapabilities)
+    };
   }
 
   static getAllAgentDescriptions(): Array<{ name: string; description: string }> {
@@ -139,13 +292,33 @@ class AgentRegistryClass {
   }
 
   /**
-   * Use LLM to intelligently select the best agent for a task (proper implementation)
+   * Use LLM to intelligently select the best agent for a task (enhanced with user-specific agents)
    */
-  async selectBestAgentWithLLM(prompt: string): Promise<{agent: BaseAgent | null, reasoning: string}> {
+  async selectBestAgentWithLLM(prompt: string, walletAddress?: string): Promise<{
+    agent: BaseAgent | null, 
+    reasoning: string,
+    agentType?: 'core' | 'mcp' | 'a2a'
+  }> {
     console.log('[AGENT SELECTION DEBUG] Starting LLM-based agent selection for prompt:', prompt.substring(0, 100) + '...');
     
-    const agentDescriptions = this.getLLMChoicePayload();
-    console.log('[AGENT SELECTION DEBUG] Available agents:', agentDescriptions.map(a => a.name));
+    let agentDescriptions: Array<{name: string, description: string, capabilities: string[]}>;
+    
+    if (walletAddress) {
+      // Include user-specific agents in selection
+      const userAgents = await this.getUserAvailableAgents(walletAddress);
+      agentDescriptions = userAgents
+        .filter(agent => !agent.status || agent.status === 'connected') // Only include connected A2A agents
+        .map(agent => ({
+          name: agent.name,
+          description: agent.description,
+          capabilities: agent.capabilities || []
+        }));
+      console.log('[AGENT SELECTION DEBUG] Available agents (including user-specific):', agentDescriptions.map(a => a.name));
+    } else {
+      // Fallback to core agents only
+      agentDescriptions = this.getLLMChoicePayload();
+      console.log('[AGENT SELECTION DEBUG] Available core agents:', agentDescriptions.map(a => a.name));
+    }
     
     try {
       // Import openai from ai-sdk
@@ -164,7 +337,7 @@ class AgentRegistryClass {
         `- ${agent.name}: ${agent.description} (Capabilities: ${agent.capabilities.join(', ')})`
       ).join('\n');
       
-      const selectionPrompt = `Select the best agent for this task. Match agent expertise to task requirements. Prefer specialized agents over generalists.\n\nAvailable agents:\n${agentList}\n\nTask: ${prompt}`;
+      const selectionPrompt = `Select the best agent for this task. Match agent expertise to task requirements. Prefer specialized agents over generalists. User-specific MCP tools (mcp_*) and A2A agents (a2a_*) may provide more relevant capabilities.\n\nAvailable agents:\n${agentList}\n\nTask: ${prompt}`;
       
       console.log('[AGENT SELECTION DEBUG] Making LLM call with prompt:', selectionPrompt.substring(0, 200) + '...');
       
@@ -178,20 +351,38 @@ class AgentRegistryClass {
       console.log('[AGENT SELECTION DEBUG] LLM selection result:', result.object);
       
       const selectedAgentName = result.object.selected_agent;
-      const selectedAgent = await this.get(selectedAgentName);
+      let selectedAgent = await this.get(selectedAgentName);
+      let agentType: 'core' | 'mcp' | 'a2a' | undefined = 'core';
+      
+      // Handle user-specific agents
+      if (!selectedAgent && walletAddress) {
+        if (selectedAgentName.startsWith('mcp_')) {
+          agentType = 'mcp';
+          // For MCP tools, we could create a dynamic agent or use a proxy
+          console.log('[AGENT SELECTION DEBUG] Selected MCP tool:', selectedAgentName);
+          // TODO: Create dynamic MCP agent or proxy
+        } else if (selectedAgentName.startsWith('a2a_')) {
+          agentType = 'a2a';
+          // For A2A agents, we could create a proxy agent
+          console.log('[AGENT SELECTION DEBUG] Selected A2A agent:', selectedAgentName);
+          // TODO: Create dynamic A2A agent proxy
+        }
+      }
       
       if (selectedAgent) {
         console.log('[AGENT SELECTION DEBUG] Successfully selected agent:', selectedAgentName);
         return {
           agent: selectedAgent,
-          reasoning: result.object.reasoning
+          reasoning: result.object.reasoning,
+          agentType
         };
       } else {
         console.warn('[AGENT SELECTION DEBUG] LLM selected non-existent agent:', selectedAgentName);
         const fallbackAgent = await this.get('default');
         return {
           agent: fallbackAgent || null,
-          reasoning: `LLM selected ${selectedAgentName} but agent not found, using default`
+          reasoning: `LLM selected ${selectedAgentName} but agent not found, using default`,
+          agentType: 'core'
         };
       }
       
@@ -200,7 +391,8 @@ class AgentRegistryClass {
       const fallbackAgent = await this.get('default');
       return {
         agent: fallbackAgent || null,
-        reasoning: `Error in LLM selection: ${error instanceof Error ? error.message : 'Unknown error'}, using default`
+        reasoning: `Error in LLM selection: ${error instanceof Error ? error.message : 'Unknown error'}, using default`,
+        agentType: 'core'
       };
     }
   }

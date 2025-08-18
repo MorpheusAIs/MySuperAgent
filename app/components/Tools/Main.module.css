@@ -1,0 +1,253 @@
+/* Tools Main Component Styles */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #1A202C;
+  overflow: hidden;
+}
+
+.header {
+  padding: 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1A202C;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  color: white;
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+}
+
+.actionButton {
+  background: #4299E1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.actionButton:hover:not(:disabled) {
+  background: #3182CE;
+  transform: translateY(-1px);
+}
+
+.actionButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.statsContainer {
+  padding: 24px 32px;
+  background: #1A202C;
+}
+
+.statCard {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.statLabel {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.statNumber {
+  font-size: 28px;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.statHelper {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.filtersContainer {
+  padding: 24px 32px;
+  background: #1A202C;
+}
+
+.searchInput {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 8px;
+}
+
+.searchInput:focus {
+  border-color: #4299E1;
+  box-shadow: 0 0 0 1px #4299E1;
+}
+
+.searchInput::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.categorySelect {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 8px;
+}
+
+.categorySelect:focus {
+  border-color: #4299E1;
+  box-shadow: 0 0 0 1px #4299E1;
+}
+
+.credentialsAlert {
+  margin: 0 32px 24px 32px;
+  background: rgba(255, 165, 0, 0.1);
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  border-radius: 8px;
+}
+
+.content {
+  flex: 1;
+  padding: 24px 32px 32px 32px;
+  overflow-y: auto;
+  background: #1A202C;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: 24px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.emptySubtitle {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+.toolCard {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+  transition: all 0.2s ease;
+}
+
+.toolCard:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.toolIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toolName {
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  line-height: 1.2;
+}
+
+.toolDescription {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+}
+
+.statusText {
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.statusText[data-status="connected"] {
+  color: #48BB78;
+}
+
+.statusText[data-status="error"] {
+  color: #F56565;
+}
+
+.statusText[data-status="disconnected"] {
+  color: #ED8936;
+}
+
+.statusText[data-status="unknown"] {
+  color: #A0AEC0;
+}
+
+.capabilitiesLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.credentialsLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.docButton {
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.docButton:hover {
+  color: white;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header,
+  .statsContainer,
+  .filtersContainer,
+  .content {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  
+  .title {
+    font-size: 28px;
+  }
+  
+  .toolCard {
+    padding: 16px;
+  }
+}
