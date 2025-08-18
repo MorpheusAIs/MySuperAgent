@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
 import { useAccount, useChainId, useSendTransaction } from "wagmi";
 // import { sendClaimStatus, sendSwapStatus } from "@/services/apiHooks";
-// import { getHttpClient } from "@/services/constants";
+// import { getHttpClient } from "@/services/config/constants";
 // import { SwapTxPayloadType, ClaimTransactionPayload } from "@/services/types";
-// import { SWAP_STATUS, CLAIM_STATUS } from "@/services/constants";
+// import { SWAP_STATUS, CLAIM_STATUS } from "@/services/config/constants";
 
 export const useChat = (onBackendError: () => void) => {
   const [txHash, setTxHash] = useState<string>("");

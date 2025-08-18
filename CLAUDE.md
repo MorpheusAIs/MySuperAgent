@@ -118,3 +118,66 @@ describe('YourAgent', () => {
   });
 });
 ```
+
+## Codebase Organization Changes (2025-08-18)
+
+### Services Directory Structure
+The services directory has been reorganized for consistency and clarity:
+
+#### Directory Naming Convention
+- All service directories now use **kebab-case** naming:
+  - `Database` → `database`
+  - `LitProtocol` → `lit-protocol`
+  - `LocalStorage` → `local-storage`
+  - `SessionSync` → `session-sync`
+  - `Wallet` → `wallet`
+  - `API` → `api`
+  - `ChatManagement` → `chat-management`
+
+#### File Organization
+- **Utilities consolidated** into `services/utils/`:
+  - `agent-utils.ts` - Agent-related utility functions
+  - `file-utils.ts` - File handling utilities
+  - `errors.ts` - Error handling and custom error classes
+  
+- **Configuration consolidated** into `services/config/`:
+  - `constants.ts` - Application constants and configurations
+  - `env.ts` - Environment variable validation and management
+
+#### Agent Files Reorganization
+Agent files in `services/agents/agents/` have been renamed for clarity:
+- `AllBackendAgents.ts` → `mcp-agents.ts` (MCP protocol agents)
+- `BackendAgents.ts` → `specialized-agents.ts` (Specialized backend agents)
+- `BackendAgentsPartTwo.ts` → `crypto-agents.ts` (Crypto and e-commerce agents)
+- `CodeAgent.ts` → `code-agent.ts`
+- `DataAgent.ts` → `data-agent.ts`
+- `DefaultAgent.ts` → `default-agent.ts`
+- `MathAgent.ts` → `math-agent.ts`
+- `ResearchAgent.ts` → `research-agent.ts`
+
+Agent core files also renamed:
+- `AgentRegistry.ts` → `agent-registry.ts`
+- `BaseAgent.ts` → `base-agent.ts`
+
+### Components Directory
+- `CDPWallets` → `CdpWallets` (Consistent PascalCase for React components)
+
+### Import Path Updates
+All import paths have been updated throughout the codebase to reflect the new structure:
+- `@/services/API/` → `@/services/api/`
+- `@/services/Database/` → `@/services/database/`
+- `@/services/LitProtocol/` → `@/services/lit-protocol/`
+- `@/services/LocalStorage/` → `@/services/local-storage/`
+- `@/services/SessionSync/` → `@/services/session-sync/`
+- `@/services/Wallet/` → `@/services/wallet/`
+- `@/services/ChatManagement/` → `@/services/chat-management/`
+- `@/services/utils` → `@/services/utils/agent-utils`
+- `@/services/fileUtils` → `@/services/utils/file-utils`
+- `@/services/constants` → `@/services/config/constants`
+
+### Benefits of These Changes
+1. **Consistent naming** - All service directories now follow the same kebab-case convention
+2. **Better organization** - Related files are grouped together (utils, config)
+3. **Clearer purpose** - File names better describe their contents
+4. **Easier navigation** - Logical structure makes finding files easier
+5. **Maintainability** - Consistent patterns make the codebase easier to maintain

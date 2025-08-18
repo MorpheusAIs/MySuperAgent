@@ -1,4 +1,4 @@
-import { BaseAgent } from '@/services/agents/core/BaseAgent';
+import { BaseAgent } from '@/services/agents/core/base-agent';
 import { getToolsByCategory } from '@/services/agents/tools';
 
 export class ResearchAgent extends BaseAgent {

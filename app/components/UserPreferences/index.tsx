@@ -13,9 +13,9 @@ import {
   Divider,
 } from '@chakra-ui/react';
 import { SettingsIcon } from '@chakra-ui/icons';
-import { UserPreferences } from '@/services/Database/db';
-import UserPreferencesAPI from '@/services/API/userPreferences';
-import { useWalletAddress } from '@/services/Wallet/utils';
+import { UserPreferences } from '@/services/database/db';
+import UserPreferencesAPI from '@/services/api/userPreferences';
+import { useWalletAddress } from '@/services/wallet/utils';
 
 interface UserPreferencesProps {
   onClose?: () => void;

@@ -20,7 +20,7 @@ import {
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Workflows } from "@/components/Workflows";
 import { ApiCredentialsButton } from "@/components/Credentials/Button";
-import { CDPWalletsButton } from "@/components/CDPWallets/Button";
+import { CdpWalletsButton } from "@/components/CdpWallets/Button";
 import { SettingsButton } from "@/components/Settings";
 import { SyncButton } from "@/components/Sync/Button";
 import styles from "./ProfileMenu.module.css";
@@ -169,7 +169,7 @@ export const ProfileMenu = () => {
                       placement="right"
                     >
                       <div className={styles.menuItem}>
-                        <CDPWalletsButton />
+                        <CdpWalletsButton />
                       </div>
                     </StyledTooltip>
                   </Box>

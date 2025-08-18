@@ -1,6 +1,6 @@
-import JobsAPI from "@/services/API/jobs";
-import { Job } from "@/services/Database/db";
-import { useWalletAddress } from "@/services/Wallet/utils";
+import JobsAPI from "@/services/api/jobs";
+import { Job } from "@/services/database/db";
+import { useWalletAddress } from "@/services/wallet/utils";
 import {
   CalendarIcon,
   ChatIcon,
@@ -483,7 +483,7 @@ export const JobsList: FC<JobsListProps> = ({
     setScheduledJobsLoading(false);
 
     try {
-      const { getStorageData } = await import("@/services/LocalStorage/core");
+      const { getStorageData } = await import("@/services/local-storage/core");
       const data = getStorageData();
 
       // Convert localStorage conversations to Job-like objects

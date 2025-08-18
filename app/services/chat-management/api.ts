@@ -1,9 +1,9 @@
 import { ChatMessage, UserMessage } from "@/services/types";
-import { DEFAULT_CONVERSATION_ID } from "@/services/LocalStorage/config";
-import { getMessagesHistory } from "@/services/ChatManagement/storage";
-import { addMessageToHistory } from "@/services/ChatManagement/messages";
-import { getOrCreateConversation } from "@/services/ChatManagement/storage";
-import { getStorageData, saveStorageData } from "@/services/LocalStorage/core";
+import { DEFAULT_CONVERSATION_ID } from "@/services/local-storage/config";
+import { getMessagesHistory } from "@/services/chat-management/storage";
+import { addMessageToHistory } from "@/services/chat-management/messages";
+import { getOrCreateConversation } from "@/services/chat-management/storage";
+import { getStorageData, saveStorageData } from "@/services/local-storage/core";
 import { trackEvent, trackError, trackTiming } from "@/services/analytics";
 
 // LocalStorage key for selected agents

@@ -21,7 +21,7 @@ import styles from "@/components/Sync/index.module.css";
 import {
   encryptAndUploadChats,
   downloadAndDecryptChats,
-} from "@/services/SessionSync/sync";
+} from "@/services/session-sync/sync";
 
 interface SyncModalProps {
   isOpen: boolean;

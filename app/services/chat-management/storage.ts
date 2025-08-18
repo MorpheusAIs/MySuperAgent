@@ -1,7 +1,7 @@
 import { ChatMessage } from "@/services/types";
-import { getStorageData, saveStorageData } from "@/services/LocalStorage/core";
-import { DEFAULT_CONVERSATION_ID } from "@/services/LocalStorage/config";
-import { createNewConversation } from "@/services/ChatManagement/conversations";
+import { getStorageData, saveStorageData } from "@/services/local-storage/core";
+import { DEFAULT_CONVERSATION_ID } from "@/services/local-storage/config";
+import { createNewConversation } from "@/services/chat-management/conversations";
 
 /**
  * Get messages history for a specific conversation

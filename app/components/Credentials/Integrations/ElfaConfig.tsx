@@ -15,11 +15,11 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { CopyIcon } from "@chakra-ui/icons";
-import { encryptSecret, uploadToIrys } from "@/services/LitProtocol/encryption";
+import { encryptSecret, uploadToIrys } from "@/services/lit-protocol/encryption";
 import {
   decryptData,
   downloadFromIrys,
-} from "@/services/LitProtocol/decryption";
+} from "@/services/lit-protocol/decryption";
 import styles from "./ApiCredentials.module.css";
 
 interface ElfaConfigProps {

@@ -1,5 +1,5 @@
-import JobsAPI from '@/services/API/jobs';
-import { useWalletAddress } from '@/services/Wallet/utils';
+import JobsAPI from '@/services/api/jobs';
+import { useWalletAddress } from '@/services/wallet/utils';
 import { CalendarIcon } from '@chakra-ui/icons';
 import {
   Button,
@@ -64,7 +64,7 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
         try {
           // Import localStorage utilities
           const { createNewConversation } = await import(
-            '@/services/ChatManagement/conversations'
+            '@/services/chat-management/conversations'
           );
 
           // Create a new localStorage conversation

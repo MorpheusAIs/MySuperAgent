@@ -1,4 +1,4 @@
-import { BaseAgent } from '@/services/agents/core/BaseAgent';
+import { BaseAgent } from '@/services/agents/core/base-agent';
 import { createTool } from '@mastra/core';
 import { z } from 'zod';
 

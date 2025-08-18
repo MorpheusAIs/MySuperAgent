@@ -7,19 +7,19 @@ import React, {
 } from "react";
 import { useChainId, useAccount } from "wagmi";
 import { ChatMessage } from "@/services/types";
-import { getHttpClient } from "@/services/constants";
+import { getHttpClient } from "@/services/config/constants";
 import {
   writeMessage,
   uploadFile,
   generateConversationTitle,
   writeMessageStream,
   StreamingEvent,
-} from "@/services/ChatManagement/api";
-import { getMessagesHistory } from "@/services/ChatManagement/storage";
-import { addMessageToHistory } from "@/services/ChatManagement/messages";
-import JobsAPI from "@/services/API/jobs";
-import { useWalletAddress } from "@/services/Wallet/utils";
-import { Job, Message } from "@/services/Database/db";
+} from "@/services/chat-management/api";
+import { getMessagesHistory } from "@/services/chat-management/storage";
+import { addMessageToHistory } from "@/services/chat-management/messages";
+import JobsAPI from "@/services/api/jobs";
+import { useWalletAddress } from "@/services/wallet/utils";
+import { Job, Message } from "@/services/database/db";
 import { chatReducer, initialState } from "@/contexts/chat/ChatReducer";
 import ChatContext from "@/contexts/chat/ChatContext";
 
@@ -127,8 +127,8 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
       } catch (error) {
         console.error("Error loading initial data:", error);
         // Fallback to localStorage if database fails
-        const { getMessagesHistory } = await import("@/services/ChatManagement/storage");
-        const { getStorageData } = await import("@/services/LocalStorage/core");
+        const { getMessagesHistory } = await import("@/services/chat-management/storage");
+        const { getStorageData } = await import("@/services/local-storage/core");
         
         const messages = getMessagesHistory("default");
         dispatch({
@@ -447,7 +447,7 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
   // Load initial data from localStorage when no wallet is connected
   const loadLocalStorageData = useCallback(async () => {
     try {
-      const { getStorageData } = await import("@/services/LocalStorage/core");
+      const { getStorageData } = await import("@/services/local-storage/core");
       
       const data = getStorageData();
       

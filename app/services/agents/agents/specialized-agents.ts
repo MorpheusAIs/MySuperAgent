@@ -1,4 +1,4 @@
-import { BaseAgent } from '@/services/agents/core/BaseAgent';
+import { BaseAgent } from '@/services/agents/core/base-agent';
 import { braveSearchTool, websiteSearchTool } from '@/services/agents/tools/crewai-equivalents';
 
 // ======== RESEARCH & SEARCH AGENTS ========

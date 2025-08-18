@@ -1,12 +1,12 @@
 import { ChatMessage } from "@/services/types";
-import { getStorageData, saveStorageData } from "@/services/LocalStorage/core";
+import { getStorageData, saveStorageData } from "@/services/local-storage/core";
 import {
   DEFAULT_MESSAGE,
   DEFAULT_CONVERSATION_ID,
-} from "@/services/LocalStorage/config";
-import { getOrCreateConversation } from "@/services/ChatManagement/storage";
-import { getHttpClient } from "@/services/constants";
-import { generateConversationTitle } from "@/services/ChatManagement/api";
+} from "@/services/local-storage/config";
+import { getOrCreateConversation } from "@/services/chat-management/storage";
+import { getHttpClient } from "@/services/config/constants";
+import { generateConversationTitle } from "@/services/chat-management/api";
 
 /**
  * Add a message to a conversation history

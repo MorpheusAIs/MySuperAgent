@@ -51,21 +51,3 @@ export const DCA_AVAILABLE_FREQUENCIES = [
   { value: "weekly", label: "Weekly" },
   { value: "biweekly", label: "Bi-weekly" },
 ];
-
-// export enum AGENT_TYPES {
-//   DEFAULT = "default",
-//   IMAGEN = "imagen",
-//   RAG = "rag",
-//   CRYPTO_DATA = "crypto data",
-//   TOKEN_SWAP = "token swap",
-//   TWEET_SIZZLER = "tweet sizzler",
-//   DCA = "dca",
-//   BASE = "base",
-//   MOR_CLAIMS = "mor claims",
-//   MOR_REWARDS = "mor rewards",
-//   REALTIME_SEARCH = "realtime search",
-//   CRYPTO_NEWS = "crypto news",
-//   DEXSCREENER = "dexscreener",
-//   ELFA = "elfa",
-//   RUGCHECK = "rugcheck",
-// }

@@ -1,9 +1,9 @@
-import { getStorageData, saveStorageData } from "@/services/LocalStorage/core";
+import { getStorageData, saveStorageData } from "@/services/local-storage/core";
 import {
   DEFAULT_MESSAGE,
   DEFAULT_CONVERSATION_ID,
-} from "@/services/LocalStorage/config";
-import { clearMessagesHistory } from "@/services/ChatManagement/messages";
+} from "@/services/local-storage/config";
+import { clearMessagesHistory } from "@/services/chat-management/messages";
 
 /**
  * Create a new conversation

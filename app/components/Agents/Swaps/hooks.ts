@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useAccount, useChainId, useSendTransaction } from "wagmi";
 import { sendSwapStatus } from "@/services/apiHooks";
-import { getHttpClient, SWAP_STATUS } from "@/services/constants";
+import { getHttpClient, SWAP_STATUS } from "@/services/config/constants";
 import { trackEvent, trackError } from "@/services/analytics";
 
 export type SwapTx = {

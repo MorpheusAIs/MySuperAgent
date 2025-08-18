@@ -1,4 +1,4 @@
-import { BaseAgent } from '@/services/agents/core/BaseAgent';
+import { BaseAgent } from '@/services/agents/core/base-agent';
 import { dalleTool, visionTool, youtubeVideoSearchTool, youtubeChannelSearchTool } from '@/services/agents/tools/crewai-equivalents';
 
 // ======== E-COMMERCE & RETAIL AGENTS ========

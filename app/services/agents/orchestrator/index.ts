@@ -1,6 +1,6 @@
 import { ChatRequest, AgentResponse, ResponseType } from '@/services/agents/types';
 import { EventEmitter } from 'events';
-import { AgentRegistry } from '@/services/agents/core/AgentRegistry';
+import { AgentRegistry } from '@/services/agents/core/agent-registry';
 
 export class Orchestrator {
   private eventEmitter: EventEmitter;

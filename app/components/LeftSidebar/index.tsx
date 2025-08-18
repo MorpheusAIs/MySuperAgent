@@ -20,7 +20,7 @@ import {
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { AgentTeamsButton } from "@/components/AgentTeams/Button";
 import { ApiCredentialsButton } from "@/components/Credentials/Button";
-import { CDPWalletsButton } from "@/components/CDPWallets/Button";
+import { CdpWalletsButton } from "@/components/CdpWallets/Button";
 import { SettingsButton } from "@/components/Settings";
 import { SyncButton } from "@/components/Sync/Button";
 import { SchedulingPreferencesButton } from "@/components/UserPreferences/Button";
@@ -152,7 +152,7 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                           placement="right"
                         >
                           <div className={styles.menuItem}>
-                            <CDPWalletsButton />
+                            <CdpWalletsButton />
                           </div>
                         </StyledTooltip>
                       </Box>

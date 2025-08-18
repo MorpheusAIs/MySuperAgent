@@ -1,7 +1,7 @@
 import React, { FC } from "react";
 import { Box, Text } from "@chakra-ui/react";
 import { ChatMessage } from "@/services/types";
-import { getHumanReadableAgentName } from "@/services/utils";
+import { getHumanReadableAgentName } from "@/services/utils/agent-utils";
 import { renderMessage } from "./CustomMessageRenderers";
 import styles from "./index.module.css";
 

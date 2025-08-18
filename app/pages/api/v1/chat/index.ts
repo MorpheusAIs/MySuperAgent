@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ChatRequest, AgentResponse } from '@/services/agents/types';
-import { AgentRegistry } from '@/services/agents/core/AgentRegistry';
+import { AgentRegistry } from '@/services/agents/core/agent-registry';
 import { orchestrator } from '@/services/agents/orchestrator';
 import { initializeAgents } from '@/services/agents/initialize';
 

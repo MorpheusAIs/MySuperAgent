@@ -1,4 +1,4 @@
-import { BaseAgent } from '@/services/agents/core/BaseAgent';
+import { BaseAgent } from '@/services/agents/core/base-agent';
 import { cryptoPriceTool, cryptoMarketCapTool, defiTvlTool } from '@/services/agents/tools/crypto-data';
 import { braveSearchTool, websiteSearchTool, dalleTool, visionTool } from '@/services/agents/tools/crewai-equivalents';
 import { websiteContentTool, newsSearchTool } from '@/services/agents/tools/web-scraper';
