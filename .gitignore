@@ -2,6 +2,9 @@
 .idea/
 *.iml
 
+# Nextjs
+app/node_modules/
+
 # Python
 __pycache__/
 *.py[cod]

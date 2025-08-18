@@ -1,21 +1,22 @@
-import { ChatInput } from "@/components/ChatInput";
-import PrefilledOptions from "@/components/ChatInput/PrefilledOptions";
-import { JobsList } from "@/components/JobsList";
-import { MessageList } from "@/components/MessageList";
-import { useChatContext } from "@/contexts/chat/useChatContext";
-import { trackEvent } from "@/services/analytics";
-import JobsAPI from "@/services/API/jobs";
-import UserPreferencesAPI from "@/services/API/userPreferences";
-import { UserPreferences } from "@/services/Database/db";
-import { useWalletAddress } from "@/services/Wallet/utils";
-import { Box, Text, useBreakpointValue, VStack } from "@chakra-ui/react";
-import { FC, useEffect, useState } from "react";
-import styles from "./index.module.css";
+import { ChatInput } from '@/components/ChatInput';
+import PrefilledOptions from '@/components/ChatInput/PrefilledOptions';
+import { JobsList } from '@/components/JobsList';
+import { MessageCounter } from '@/components/MessageCounter';
+import { MessageList } from '@/components/MessageList';
+import { useChatContext } from '@/contexts/chat/useChatContext';
+import { trackEvent } from '@/services/analytics';
+import JobsAPI from '@/services/API/jobs';
+import UserPreferencesAPI from '@/services/API/userPreferences';
+import { UserPreferences } from '@/services/Database/db';
+import { useWalletAddress } from '@/services/Wallet/utils';
+import { Box, Text, useBreakpointValue, VStack } from '@chakra-ui/react';
+import { FC, useEffect, useState } from 'react';
+import styles from './index.module.css';
 
 export const Chat: FC<{
   isSidebarOpen?: boolean;
-  currentView: "chat" | "jobs";
-  setCurrentView: (view: "chat" | "jobs") => void;
+  currentView: 'chat' | 'jobs';
+  setCurrentView: (view: 'chat' | 'jobs') => void;
 }> = ({ isSidebarOpen = false, currentView, setCurrentView }) => {
   const { state, sendMessage, setCurrentConversation } = useChatContext();
   const { messages, currentConversationId, isLoading } = state;
@@ -41,7 +42,7 @@ export const Chat: FC<{
           await UserPreferencesAPI.getUserPreferences(walletAddress);
         setUserPreferences(preferences);
       } catch (error) {
-        console.error("Error loading user preferences:", error);
+        console.error('Error loading user preferences:', error);
         // Don't set preferences if loading fails - use defaults
       }
     };
@@ -63,13 +64,13 @@ export const Chat: FC<{
     files: File[],
     useResearch: boolean = true
   ) => {
-    if (currentView === "jobs") {
+    if (currentView === 'jobs') {
       // Create a new job but stay in jobs view
       try {
         const walletAddress = getAddress();
         if (!walletAddress) {
           // No wallet connected, create a localStorage-based conversation
-          console.log("No wallet connected - creating local conversation");
+          console.log('No wallet connected - creating local conversation');
           return await handleLocalStorageJob(message, files, useResearch);
         }
         const shouldAutoSchedule = userPreferences?.auto_schedule_jobs || false;
@@ -87,7 +88,7 @@ export const Chat: FC<{
             // Create schedule time based on user preferences
             const now = new Date();
             const [hours, minutes] =
-              userPreferences.default_schedule_time.split(":");
+              userPreferences.default_schedule_time.split(':');
             const scheduleDateTime = new Date();
             scheduleDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
@@ -99,12 +100,12 @@ export const Chat: FC<{
             // Calculate next run time
             const nextRunTime = JobsAPI.calculateNextRunTime(
               userPreferences.default_schedule_type as
-                | "once"
-                | "daily"
-                | "weekly"
-                | "custom",
+                | 'once'
+                | 'daily'
+                | 'weekly'
+                | 'custom',
               scheduleDateTime,
-              userPreferences.default_schedule_type === "custom" ? 1 : undefined
+              userPreferences.default_schedule_type === 'custom' ? 1 : undefined
             );
 
             // Update the job with scheduling information
@@ -112,14 +113,14 @@ export const Chat: FC<{
               wallet_address: walletAddress,
               is_scheduled: true,
               schedule_type: userPreferences.default_schedule_type as
-                | "once"
-                | "daily"
-                | "weekly"
-                | "custom",
+                | 'once'
+                | 'daily'
+                | 'weekly'
+                | 'custom',
               schedule_time: scheduleDateTime,
               next_run_time: nextRunTime,
               interval_days:
-                userPreferences.default_schedule_type === "custom" ? 1 : null,
+                userPreferences.default_schedule_type === 'custom' ? 1 : null,
               timezone: userPreferences.timezone,
             });
 
@@ -127,7 +128,7 @@ export const Chat: FC<{
               `Job auto-scheduled for ${scheduleDateTime.toLocaleString()}`
             );
           } catch (scheduleError) {
-            console.error("Error auto-scheduling job:", scheduleError);
+            console.error('Error auto-scheduling job:', scheduleError);
             // Continue with regular job creation even if scheduling fails
           }
         }
@@ -141,12 +142,12 @@ export const Chat: FC<{
         // Send the message in the background (non-blocking)
         sendMessage(message, files[0] || null, useResearch, newJob.id)
           .then(() => {
-            console.log("Message sent successfully for job:", newJob.id);
+            console.log('Message sent successfully for job:', newJob.id);
             // Refresh jobs list after message is sent to update status
             refreshJobsList();
           })
           .catch((error) => {
-            console.error("Error sending message:", error);
+            console.error('Error sending message:', error);
             // Refresh even on error to show the failed status
             refreshJobsList();
           });
@@ -154,7 +155,7 @@ export const Chat: FC<{
         // Return immediately for non-blocking behavior
         return Promise.resolve();
       } catch (error) {
-        console.error("Error creating new job:", error);
+        console.error('Error creating new job:', error);
         throw error;
       }
     } else {
@@ -164,7 +165,7 @@ export const Chat: FC<{
         await sendMessage(message, files[0] || null, useResearch);
         setTimeout(() => setLocalLoading(false), 200);
       } catch (error) {
-        console.error("Error sending message:", error);
+        console.error('Error sending message:', error);
         setLocalLoading(false);
       }
     }
@@ -178,7 +179,7 @@ export const Chat: FC<{
     try {
       // Import localStorage utilities
       const { createNewConversation } = await import(
-        "@/services/ChatManagement/conversations"
+        '@/services/ChatManagement/conversations'
       );
 
       // Create a new localStorage conversation
@@ -194,14 +195,14 @@ export const Chat: FC<{
       sendMessage(message, files[0] || null, useResearch, newConversationId)
         .then(() => {
           console.log(
-            "Message sent successfully for conversation:",
+            'Message sent successfully for conversation:',
             newConversationId
           );
           // Refresh jobs list after message is sent to update status
           refreshJobsList();
         })
         .catch((error) => {
-          console.error("Error sending message:", error);
+          console.error('Error sending message:', error);
           // Refresh even on error to show the failed status
           refreshJobsList();
         });
@@ -209,7 +210,7 @@ export const Chat: FC<{
       // Return immediately for non-blocking behavior
       return Promise.resolve();
     } catch (error) {
-      console.error("Error creating local conversation:", error);
+      console.error('Error creating local conversation:', error);
       throw error;
     }
   };
@@ -218,11 +219,11 @@ export const Chat: FC<{
     try {
       setLocalLoading(true);
       await setCurrentConversation(jobId);
-      setCurrentView("chat");
+      setCurrentView('chat');
       // Small delay to ensure state updates have propagated
       setTimeout(() => setLocalLoading(false), 100);
     } catch (error) {
-      console.error("Error selecting job:", error);
+      console.error('Error selecting job:', error);
       setLocalLoading(false);
     }
   };
@@ -240,16 +241,16 @@ export const Chat: FC<{
       await sendMessage(initialMessage, null, true, newJobId);
 
       // Switch to chat view to show the conversation
-      setCurrentView("chat");
+      setCurrentView('chat');
 
       console.log(`Scheduled job executed: ${originalJobId} -> ${newJobId}`);
     } catch (error) {
-      console.error("Error running scheduled job:", error);
+      console.error('Error running scheduled job:', error);
     }
   };
 
   const handleBackToJobs = () => {
-    setCurrentView("jobs");
+    setCurrentView('jobs');
   };
 
   const handlePrefilledSelect = async (selectedMessage: string) => {
@@ -258,13 +259,13 @@ export const Chat: FC<{
       setIsSubmitting(true);
       await handleSubmit(selectedMessage, [], true);
     } catch (error) {
-      console.error("Error submitting prefilled message:", error);
+      console.error('Error submitting prefilled message:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (currentView === "jobs") {
+  if (currentView === 'jobs') {
     return (
       <Box
         className={styles.chatContainer}
@@ -274,6 +275,7 @@ export const Chat: FC<{
       >
         {/* Header */}
         <VStack spacing={6} pt={20} pb={4}>
+          <MessageCounter />
           <Text
             fontSize="2xl"
             fontWeight="bold"
@@ -303,7 +305,7 @@ export const Chat: FC<{
                 onToggleHelp={() => {
                   const newValue = !showPrefilledOptions;
                   setShowPrefilledOptions(newValue);
-                  trackEvent("ui.prefilled_options_toggled", {
+                  trackEvent('ui.prefilled_options_toggled', {
                     isOpen: newValue,
                   });
                 }}
@@ -340,8 +342,8 @@ export const Chat: FC<{
   return (
     <Box
       className={styles.chatContainer}
-      paddingLeft={isMobile ? "2%" : isSidebarOpen ? "30%" : "20%"}
-      paddingRight={isMobile ? "2%" : "20%"}
+      paddingLeft={isMobile ? '2%' : isSidebarOpen ? '30%' : '20%'}
+      paddingRight={isMobile ? '2%' : '20%'}
       display="flex"
       flexDirection="column"
       zIndex="1"
@@ -364,7 +366,7 @@ export const Chat: FC<{
           onToggleHelp={() => {
             const newValue = !showPrefilledOptions;
             setShowPrefilledOptions(newValue);
-            trackEvent("ui.prefilled_options_toggled", {
+            trackEvent('ui.prefilled_options_toggled', {
               isOpen: newValue,
             });
           }}
