@@ -119,7 +119,7 @@ export class UserA2AManager {
     try {
       const agents = await UserA2AAgentDB.getUserA2AAgents(walletAddress);
       
-      return agents.map(agent => ({
+      return agents.map((agent: any) => ({
         agentId: agent.agent_id,
         agentName: agent.agent_name,
         isEnabled: agent.is_enabled,
@@ -226,11 +226,11 @@ export class UserA2AManager {
   static async runHealthCheckForAllAgents(walletAddress: string): Promise<Record<string, 'connected' | 'disconnected' | 'error'>> {
     try {
       const agents = await UserA2AAgentDB.getUserA2AAgents(walletAddress);
-      const enabledAgents = agents.filter(agent => agent.is_enabled);
+      const enabledAgents = agents.filter((agent: any) => agent.is_enabled);
       
       const healthResults: Record<string, 'connected' | 'disconnected' | 'error'> = {};
       
-      await Promise.all(enabledAgents.map(async (agent) => {
+      await Promise.all(enabledAgents.map(async (agent: any) => {
         try {
           const status = await this.pingAgent(walletAddress, agent.agent_id);
           healthResults[agent.agent_id] = status;

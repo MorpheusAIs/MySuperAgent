@@ -17,7 +17,7 @@ import {
 } from "@/services/chat-management/api";
 import { getMessagesHistory } from "@/services/chat-management/storage";
 import { addMessageToHistory } from "@/services/chat-management/messages";
-import JobsAPI from "@/services/api/jobs";
+import JobsAPI from "@/services/api-clients/jobs";
 import { useWalletAddress } from "@/services/wallet/utils";
 import { Job, Message } from "@/services/database/db";
 import { chatReducer, initialState } from "@/contexts/chat/ChatReducer";
@@ -189,7 +189,7 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
       }
       const jobs = await JobsAPI.getJobs(walletAddress);
       
-      jobs.forEach(job => {
+      jobs.forEach((job: Job) => {
         dispatch({
           type: "SET_CONVERSATION_TITLE",
           payload: { conversationId: job.id, title: job.name },

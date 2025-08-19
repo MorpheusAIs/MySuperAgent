@@ -1,4 +1,4 @@
-import JobsAPI from "@/services/api/jobs";
+import JobsAPI from "@/services/api-clients/jobs";
 import { Job } from "@/services/database/db";
 import { useWalletAddress } from "@/services/wallet/utils";
 import {
