@@ -84,24 +84,23 @@ export const ToolsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   const { signMessageAsync } = useSignMessage();
   const toast = useToast();
 
-  const loadMCPData = useCallback(async () => {
+  const loadUserData = useCallback(async () => {
+    if (!address) return;
+    
     try {
       await Promise.all([
-        loadAvailableServers(),
         loadEnabledServers(),
         loadUserCredentials()
       ]);
     } catch (error) {
-      console.error('Failed to load MCP data:', error);
+      console.error('Failed to load user data:', error);
       toast({
-        title: 'Failed to Load Data',
-        description: 'Could not load MCP server information',
+        title: 'Failed to Load User Data',
+        description: 'Could not load your MCP server status',
         status: 'error',
         duration: 3000,
         isClosable: true,
       });
-    } finally {
-      setGlobalLoading(false);
     }
   }, [address, toast]);
 
@@ -150,13 +149,23 @@ export const ToolsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     }
   };
 
+  // Load available servers immediately (no auth needed)
+  useEffect(() => {
+    loadAvailableServers().finally(() => {
+      setGlobalLoading(false);
+    });
+  }, []);
+  
+  // Load user-specific data when wallet connects
   useEffect(() => {
     if (address) {
-      loadMCPData();
+      loadUserData();
     } else {
-      setGlobalLoading(false);
+      // Clear user data when wallet disconnects
+      setEnabledServers([]);
+      setUserCredentials({});
     }
-  }, [address, loadMCPData]);
+  }, [address, loadUserData]);
 
   const handleToggleServer = async (serverName: string, enable: boolean) => {
     if (!address) {
@@ -338,7 +347,8 @@ export const ToolsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   const connectedServers = enabledServers.filter(s => s.connectionStatus === 'connected').length;
   const totalAvailableTools = enabledServers.reduce((sum, s) => sum + (s.availableTools || 0), 0);
 
-  if (globalLoading) {
+  // Show loading only if we don't have basic server data yet
+  if (globalLoading && availableServers.length === 0) {
     return (
       <Box className={styles.container}>
         <Flex justify="center" align="center" minH="60vh">
@@ -384,6 +394,7 @@ export const ToolsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
               isDisabled={globalLoading || totalEnabledServers === 0}
               className={styles.actionButton}
               size="lg"
+              _hover={{ transform: "translateY(-1px)" }}
             >
               Health Check
             </Button>
@@ -394,23 +405,23 @@ export const ToolsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
 
       {/* Statistics */}
       <Box className={styles.statsContainer}>
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
           <Box className={styles.statCard}>
-            <Text className={styles.statLabel}>Enabled Servers</Text>
+            <Text className={styles.statLabel}>Enabled</Text>
             <Text className={styles.statNumber}>{totalEnabledServers}</Text>
-            <Text className={styles.statHelper}>of {availableServers.length} available</Text>
+            <Text className={styles.statHelper}>of {availableServers.length} total</Text>
           </Box>
           
           <Box className={styles.statCard}>
             <Text className={styles.statLabel}>Connected</Text>
-            <Text className={styles.statNumber} color="#48BB78">{connectedServers}</Text>
-            <Text className={styles.statHelper}>healthy connections</Text>
+            <Text className={styles.statNumber} color="#00ff41">{connectedServers}</Text>
+            <Text className={styles.statHelper}>active now</Text>
           </Box>
           
           <Box className={styles.statCard}>
-            <Text className={styles.statLabel}>Available Tools</Text>
-            <Text className={styles.statNumber} color="#4299E1">{totalAvailableTools}</Text>
-            <Text className={styles.statHelper}>ready to use</Text>
+            <Text className={styles.statLabel}>Tools</Text>
+            <Text className={styles.statNumber} color="#00d435">{totalAvailableTools}</Text>
+            <Text className={styles.statHelper}>available</Text>
           </Box>
         </SimpleGrid>
       </Box>
@@ -448,7 +459,7 @@ export const ToolsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
             <Switch
               isChecked={showOnlyEnabled}
               onChange={(e) => setShowOnlyEnabled(e.target.checked)}
-              colorScheme="blue"
+              colorScheme="green"
             />
           </HStack>
         </HStack>
@@ -491,12 +502,12 @@ export const ToolsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
 
               return (
                 <Box key={server.name} className={styles.toolCard}>
-                  <VStack spacing={4} align="stretch">
+                  <VStack spacing={3} align="stretch">
                     {/* Header */}
-                    <Flex justify="space-between" align="start">
+                    <Flex justify="space-between" align="center">
                       <HStack spacing={3}>
                         <Box className={styles.toolIcon}>
-                          <Settings size={20} color="rgba(255, 255, 255, 0.6)" />
+                          <Settings size={16} color="rgba(255, 255, 255, 0.6)" />
                         </Box>
                         <VStack align="start" spacing={0}>
                           <HStack spacing={2}>
@@ -504,20 +515,25 @@ export const ToolsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                               {server.displayName}
                             </Text>
                             {server.isPopular && (
-                              <Badge colorScheme="blue" size="sm">
-                                <Zap size={8} style={{ marginRight: '2px' }} />
+                              <Badge 
+                                size="xs"
+                                bg="rgba(0, 255, 65, 0.1)"
+                                color="#00ff41"
+                                borderColor="#00ff41"
+                                borderWidth="1px"
+                              >
                                 Popular
                               </Badge>
                             )}
                           </HStack>
-                          <Badge colorScheme="gray" size="xs">
+                          <Text fontSize="xs" color="rgba(255, 255, 255, 0.5)">
                             {server.category}
-                          </Badge>
+                          </Text>
                         </VStack>
                       </HStack>
 
                       <Switch
-                        size="md"
+                        size="sm"
                         isChecked={enabled}
                         isDisabled={isLoading || (!enabled && !hasCredentials)}
                         onChange={(e) => handleToggleServer(server.name, e.target.checked)}
@@ -526,87 +542,93 @@ export const ToolsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                     </Flex>
 
                     {/* Description */}
-                    <Text className={styles.toolDescription}>
+                    <Text className={styles.toolDescription} noOfLines={2}>
                       {server.description}
                     </Text>
 
-                    {/* Status */}
-                    {enabled && status && (
-                      <HStack spacing={4}>
+                    {/* Capabilities - shown in tooltip */}
+                    {server.capabilities && server.capabilities.length > 0 && (
+                      <Tooltip
+                        label={
+                          <VStack align="start" spacing={1}>
+                            <Text fontSize="xs" fontWeight="bold">Capabilities:</Text>
+                            {server.capabilities.map((capability, index) => (
+                              <Text key={index} fontSize="xs">• {capability}</Text>
+                            ))}
+                          </VStack>
+                        }
+                        placement="top"
+                        hasArrow
+                        bg="gray.800"
+                        color="white"
+                      >
                         <HStack spacing={1}>
-                          {getStatusIcon(status.connectionStatus)}
-                          <Text fontSize="xs" className={styles.statusText} data-status={status.connectionStatus}>
-                            {status.connectionStatus}
+                          <Zap size={12} color="#00ff41" />
+                          <Text fontSize="xs" color="#00ff41">
+                            {server.capabilities.length} capabilities
                           </Text>
                         </HStack>
-                        {status.availableTools > 0 && (
-                          <Text fontSize="xs" color="rgba(255, 255, 255, 0.5)">
-                            {status.availableTools} tools
-                          </Text>
-                        )}
-                      </HStack>
+                      </Tooltip>
                     )}
 
-                    {/* Capabilities */}
-                    <Box>
-                      <Text className={styles.capabilitiesLabel}>
-                        Capabilities:
-                      </Text>
-                      <Flex flexWrap="wrap" gap={1}>
-                        {server.capabilities.slice(0, 3).map((capability, index) => (
-                          <Badge key={index} size="xs" colorScheme="purple">
-                            {capability}
-                          </Badge>
-                        ))}
-                        {server.capabilities.length > 3 && (
-                          <Badge size="xs" colorScheme="gray">
-                            +{server.capabilities.length - 3} more
-                          </Badge>
-                        )}
-                      </Flex>
-                    </Box>
-
                     {/* Required Credentials */}
-                    {server.requiredCredentials.length > 0 && (
-                      <Box>
-                        <Text className={styles.credentialsLabel}>
-                          Required credentials:
-                        </Text>
+                    {server.requiredCredentials && server.requiredCredentials.length > 0 && (
+                      <VStack spacing={2} align="stretch">
+                        <Text className={styles.credentialsLabel}>Required API Keys</Text>
                         <Flex flexWrap="wrap" gap={1}>
                           {server.requiredCredentials.map((cred, index) => (
-                            <Badge
-                              key={index}
-                              size="xs"
-                              colorScheme={
-                                userCredentials[cred.name] && userCredentials[cred.name].length > 0
-                                  ? "green"
-                                  : "red"
-                              }
+                            <Badge 
+                              key={index} 
+                              size="xs" 
+                              bg={hasCredentials ? "rgba(0, 255, 65, 0.1)" : "rgba(255, 165, 0, 0.1)"}
+                              color={hasCredentials ? "#00ff41" : "orange.400"}
+                              borderColor={hasCredentials ? "#00ff41" : "orange.400"}
+                              borderWidth="1px"
                             >
                               {cred.displayName}
                             </Badge>
                           ))}
                         </Flex>
-                      </Box>
+                      </VStack>
                     )}
 
-                    {/* Actions */}
-                    {server.documentationUrl && (
-                      <Button
-                        as="a"
-                        href={server.documentationUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        leftIcon={<ExternalLink size={14} />}
-                        size="sm"
-                        variant="ghost"
-                        colorScheme="whiteAlpha"
-                        fontSize="xs"
-                        className={styles.docButton}
-                      >
-                        Documentation
-                      </Button>
-                    )}
+                    {/* Status & Actions */}
+                    <HStack justify="space-between" align="center">
+                      <HStack spacing={3}>
+                        {enabled && status && (
+                          <HStack spacing={1}>
+                            {getStatusIcon(status.connectionStatus)}
+                            <Text fontSize="xs" className={styles.statusText} data-status={status.connectionStatus}>
+                              {status.connectionStatus}
+                            </Text>
+                          </HStack>
+                        )}
+                        {!enabled && server.requiredCredentials.length > 0 && (
+                          <Text fontSize="xs" color={hasCredentials ? "green.400" : "orange.400"}>
+                            {hasCredentials ? "Ready" : "Needs setup"}
+                          </Text>
+                        )}
+                      </HStack>
+                      
+                      {server.documentationUrl && (
+                        <Button
+                          as="a"
+                          href={server.documentationUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          size="xs"
+                          variant="ghost"
+                          className={styles.docButton}
+                          p={1}
+                          _hover={{ 
+                            bg: "rgba(0, 255, 65, 0.1)",
+                            borderColor: "#00ff41" 
+                          }}
+                        >
+                          <ExternalLink size={12} />
+                        </Button>
+                      )}
+                    </HStack>
 
                     {isLoading && (
                       <Box textAlign="center">

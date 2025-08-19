@@ -79,7 +79,7 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
       const response = await fetch("/api/agents/available");
       if (response.ok) {
         const data = await response.json();
-        setAvailableAgents(data);
+        setAvailableAgents(data.agents || []);
       }
     } catch (error) {
       console.error("Failed to fetch available agents:", error);

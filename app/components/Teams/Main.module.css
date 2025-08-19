@@ -8,11 +8,11 @@
   color: white;
   overflow-y: auto;
   position: relative;
-  padding-top: 70px; /* Account for header */
+  padding-top: 46px; /* Match header bar height exactly */
 }
 
 .header {
-  padding: 2rem;
+  padding: 0.25rem 2rem 1rem 2rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background: #000;
 }
@@ -20,7 +20,7 @@
 .title {
   font-size: 2rem;
   font-weight: bold;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #00ff41 0%, #00d435 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -200,8 +200,8 @@
 }
 
 .textarea:focus {
-  border-color: #4299E1 !important;
-  box-shadow: 0 0 0 1px #4299E1 !important;
+  border-color: #00ff41 !important;
+  box-shadow: 0 0 0 1px #00ff41 !important;
   background: rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -232,8 +232,8 @@
 }
 
 .agentSelected {
-  background: rgba(66, 153, 225, 0.1);
-  border-color: rgba(66, 153, 225, 0.3);
+  background: rgba(0, 255, 65, 0.1);
+  border-color: rgba(0, 255, 65, 0.3);
 }
 
 .agentName {
@@ -259,14 +259,14 @@
 }
 
 .submitButton {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  color: white !important;
+  background: linear-gradient(135deg, #00ff41 0%, #00d435 100%) !important;
+  color: black !important;
   border: none;
 }
 
 .submitButton:hover {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
-  color: white !important;
+  background: linear-gradient(135deg, #00e63d 0%, #00c733 100%) !important;
+  color: black !important;
 }
 
 .submitButton:disabled {
@@ -288,8 +288,8 @@
 /* Button overrides - force dark theme */
 .createButton,
 .submitButton {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  color: white !important;
+  background: linear-gradient(135deg, #00ff41 0%, #00d435 100%) !important;
+  color: black !important;
   border: none !important;
 }
 
@@ -299,8 +299,8 @@
 .submitButton:hover,
 .submitButton:focus,
 .submitButton:active {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
-  color: white !important;
+  background: linear-gradient(135deg, #00e63d 0%, #00c733 100%) !important;
+  color: black !important;
   border: none !important;
 }
 

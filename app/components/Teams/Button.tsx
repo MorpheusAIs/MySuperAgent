@@ -1,6 +1,6 @@
 import React from "react";
 import { Flex, Text } from "@chakra-ui/react";
-import { Users } from "lucide-react";
+import { Network } from "lucide-react";
 import { useRouter } from "next/router";
 import styles from "./Button.module.css";
 
@@ -20,9 +20,9 @@ export const TeamsButton: React.FC = () => {
       onClick={handleClick}
       className={styles.menuButton}
     >
-      <Users size={20} className={styles.icon} />
+      <Network size={20} className={styles.icon} />
       <Text fontSize="14px" color="white">
-        Agent Teams
+        Teams
       </Text>
     </Flex>
   );

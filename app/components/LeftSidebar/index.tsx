@@ -1,7 +1,6 @@
 import React, { FC, useState } from "react";
 import {
   Box,
-  Select,
   Text,
   VStack,
   Divider,
@@ -42,12 +41,12 @@ const MenuSection = ({
   title: string;
   children: React.ReactNode;
 }) => (
-  <Box mb={2}>
+  <Box mb={1}>
     <Text
       color="gray.400"
-      fontSize="sm"
+      fontSize="xs"
       px={3}
-      py={2}
+      py={1}
       textTransform="uppercase"
     >
       {title}
@@ -80,10 +79,7 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
   isSidebarOpen,
   onToggleSidebar,
 }) => {
-  const [selectedModel, setSelectedModel] = useState("llama3.2:3b");
   const ToggleIcon = isSidebarOpen ? IconChevronLeft : IconChevronRight;
-
-  const modelOptions = [{ value: "llama3.3:70b", label: "Llama 3.3 (70B)" }];
 
   return (
     <div
@@ -127,7 +123,7 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                   </Tooltip>
                 </MenuSection>
 
-                <Divider my={1} borderColor="whiteAlpha.200" />
+                <Divider my={0.5} borderColor="whiteAlpha.200" />
 
                 <MenuSection title="Advanced">
                   <Tooltip
@@ -172,7 +168,7 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                   </Tooltip>
                 </MenuSection>
 
-                <Divider my={1} borderColor="whiteAlpha.200" />
+                <Divider my={0.5} borderColor="whiteAlpha.200" />
 
                 <MenuSection title="About">
                   <ExternalLinkMenuItem
@@ -206,29 +202,6 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
           </ConnectButton.Custom>
 
           <div className={styles.footer}>
-            <VStack spacing={4} align="stretch" width="100%">
-              <Box width="100%">
-                <Box className={styles.modelSelection}>
-                  <Text className={styles.modelLabel}>Model:</Text>
-                  <Select
-                    value={selectedModel}
-                    onChange={(e) => setSelectedModel(e.target.value)}
-                    className={styles.modelSelect}
-                  >
-                    {modelOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                </Box>
-                {/* <div className={styles.creditsContainer}>
-                  <Text className={styles.creditsLabel}>Morpheus Credits Balance</Text>
-                  <Text className={styles.creditsAmount}>1,250 MOR</Text>
-                </div> */}
-              </Box>
-            </VStack>
-
             <ConnectButton.Custom>
               {({
                 account,

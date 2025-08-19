@@ -48,7 +48,7 @@ interface Agent {
   isPopular: boolean;
   version: string;
   isBuiltIn: boolean;
-  documentation?: string;
+  documentationUrl?: string;
 }
 
 interface AgentStatus {
@@ -70,6 +70,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   const [availableAgents, setAvailableAgents] = useState<Agent[]>([]);
   const [enabledAgents, setEnabledAgents] = useState<AgentStatus[]>([]);
   const [userConfig, setUserConfig] = useState<UserAgentConfig>({});
+  const [defaultsInitialized, setDefaultsInitialized] = useState(false);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [globalLoading, setGlobalLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,24 +81,23 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   const { signMessageAsync } = useSignMessage();
   const toast = useToast();
 
-  const loadAgentData = useCallback(async () => {
+  const loadUserAgentData = useCallback(async () => {
+    if (!address) return;
+    
     try {
       await Promise.all([
-        loadAvailableAgents(),
         loadEnabledAgents(),
         loadUserConfig()
       ]);
     } catch (error) {
-      console.error('Failed to load agent data:', error);
+      console.error('Failed to load user agent data:', error);
       toast({
-        title: 'Failed to Load Data',
-        description: 'Could not load agent information',
+        title: 'Failed to Load User Data',
+        description: 'Could not load your agent status',
         status: 'error',
         duration: 3000,
         isClosable: true,
       });
-    } finally {
-      setGlobalLoading(false);
     }
   }, [address, toast]);
 
@@ -106,7 +106,30 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
       const response = await fetch('/api/agents/available');
       if (response.ok) {
         const data = await response.json();
-        setAvailableAgents(data.agents || []);
+        const agents = data.agents || [];
+        setAvailableAgents(agents);
+        
+        // Initialize default enabled agents (popular ones) if not already initialized
+        if (!defaultsInitialized && agents.length > 0) {
+          const defaultEnabled = agents
+            .filter((agent: Agent) => agent.isPopular)
+            .map((agent: Agent) => ({
+              agentName: agent.name,
+              isEnabled: true,
+              status: 'active' as const,
+              lastUsed: null,
+              tasksCompleted: 0,
+            }));
+          setEnabledAgents(prev => {
+            // Merge with any existing enabled agents
+            const existingNames = prev.map(a => a.agentName);
+            const newAgents = defaultEnabled.filter(
+              (a: AgentStatus) => !existingNames.includes(a.agentName)
+            );
+            return [...prev, ...newAgents];
+          });
+          setDefaultsInitialized(true);
+        }
       }
     } catch (error) {
       console.error('Failed to load available agents:', error);
@@ -146,13 +169,23 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     }
   };
 
+  // Load available agents immediately (no auth needed)
+  useEffect(() => {
+    loadAvailableAgents().finally(() => {
+      setGlobalLoading(false);
+    });
+  }, []);
+  
+  // Load user-specific data when wallet connects
   useEffect(() => {
     if (address) {
-      loadAgentData();
+      loadUserAgentData();
     } else {
-      setGlobalLoading(false);
+      // Clear user data when wallet disconnects
+      setEnabledAgents([]);
+      setUserConfig({});
     }
-  }, [address, loadAgentData]);
+  }, [address, loadUserAgentData]);
 
   const handleToggleAgent = async (agentName: string, enable: boolean) => {
     if (!address) {
@@ -306,7 +339,8 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   const activeAgents = enabledAgents.filter(a => a.status === 'active').length;
   const totalTasksCompleted = enabledAgents.reduce((sum, a) => sum + (a.tasksCompleted || 0), 0);
 
-  if (globalLoading) {
+  // Show loading only if we don't have basic agent data yet
+  if (globalLoading && availableAgents.length === 0) {
     return (
       <Box className={styles.container}>
         <Flex justify="center" align="center" minH="60vh">
@@ -352,6 +386,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
               isDisabled={globalLoading}
               className={styles.actionButton}
               size="lg"
+              _hover={{ transform: "translateY(-1px)" }}
             >
               Refresh Status
             </Button>
@@ -371,13 +406,13 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
           
           <Box className={styles.statCard}>
             <Text className={styles.statLabel}>Active Now</Text>
-            <Text className={styles.statNumber} color="#48BB78">{activeAgents}</Text>
+            <Text className={styles.statNumber} color="#00ff41">{activeAgents}</Text>
             <Text className={styles.statHelper}>ready for tasks</Text>
           </Box>
           
           <Box className={styles.statCard}>
             <Text className={styles.statLabel}>Tasks Completed</Text>
-            <Text className={styles.statNumber} color="#4299E1">{totalTasksCompleted}</Text>
+            <Text className={styles.statNumber} color="#00d435">{totalTasksCompleted}</Text>
             <Text className={styles.statHelper}>total executions</Text>
           </Box>
         </SimpleGrid>
@@ -416,7 +451,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
             <Switch
               isChecked={showOnlyEnabled}
               onChange={(e) => setShowOnlyEnabled(e.target.checked)}
-              colorScheme="blue"
+              colorScheme="green"
             />
           </HStack>
         </HStack>
@@ -445,12 +480,12 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
 
               return (
                 <Box key={agent.name} className={styles.agentCard}>
-                  <VStack spacing={4} align="stretch">
-                    {/* Header */}
-                    <Flex justify="space-between" align="start">
+                  <VStack spacing={3} align="stretch">
+                    {/* Simplified header with smaller icon */}
+                    <Flex justify="space-between" align="center">
                       <HStack spacing={3}>
                         <Box className={styles.agentIcon}>
-                          <Bot size={20} color="rgba(255, 255, 255, 0.6)" />
+                          <Bot size={16} color="rgba(255, 255, 255, 0.6)" />
                         </Box>
                         <VStack align="start" spacing={0}>
                           <HStack spacing={2}>
@@ -458,25 +493,24 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                               {agent.displayName}
                             </Text>
                             {agent.isPopular && (
-                              <Badge colorScheme="purple" size="sm">
-                                <Cpu size={8} style={{ marginRight: '2px' }} />
+                              <Badge 
+                                size="xs"
+                                bg="rgba(0, 255, 65, 0.1)"
+                                color="#00ff41"
+                                borderColor="#00ff41"
+                                borderWidth="1px"
+                              >
                                 Popular
                               </Badge>
                             )}
-                            {agent.isBuiltIn && (
-                              <Badge colorScheme="blue" size="sm">
-                                Built-in
-                              </Badge>
-                            )}
                           </HStack>
-                          <Badge colorScheme="gray" size="xs">
+                          <Text fontSize="xs" color="rgba(255, 255, 255, 0.5)">
                             {agent.category}
-                          </Badge>
+                          </Text>
                         </VStack>
                       </HStack>
-
                       <Switch
-                        size="md"
+                        size="sm"
                         isChecked={enabled}
                         isDisabled={isLoading}
                         onChange={(e) => handleToggleAgent(agent.name, e.target.checked)}
@@ -484,79 +518,76 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                       />
                     </Flex>
 
-                    {/* Description */}
-                    <Text className={styles.agentDescription}>
+                    {/* Truncated description */}
+                    <Text className={styles.agentDescription} noOfLines={2}>
                       {agent.description}
                     </Text>
 
-                    {/* Status */}
-                    {enabled && status && (
-                      <HStack spacing={4}>
+                    {/* Capabilities - shown in tooltip */}
+                    {agent.capabilities && agent.capabilities.length > 0 && (
+                      <Tooltip
+                        label={
+                          <VStack align="start" spacing={1}>
+                            <Text fontSize="xs" fontWeight="bold">Capabilities:</Text>
+                            {agent.capabilities.map((capability, index) => (
+                              <Text key={index} fontSize="xs">• {capability}</Text>
+                            ))}
+                          </VStack>
+                        }
+                        placement="top"
+                        hasArrow
+                        bg="gray.800"
+                        color="white"
+                      >
                         <HStack spacing={1}>
-                          {getStatusIcon(status.status)}
-                          <Text fontSize="xs" className={styles.statusText} data-status={status.status}>
-                            {status.status}
+                          <Cpu size={12} color="#00ff41" />
+                          <Text fontSize="xs" color="#00ff41">
+                            {agent.capabilities.length} capabilities
                           </Text>
                         </HStack>
-                        {status.tasksCompleted > 0 && (
+                      </Tooltip>
+                    )}
+
+                    {/* Version & Status */}
+                    <HStack justify="space-between" align="center">
+                      <HStack spacing={3}>
+                        {enabled && status && (
+                          <HStack spacing={1}>
+                            {getStatusIcon(status.status)}
+                            <Text fontSize="xs" className={styles.statusText} data-status={status.status}>
+                              {status.status}
+                            </Text>
+                          </HStack>
+                        )}
+                        {!enabled && (
                           <Text fontSize="xs" color="rgba(255, 255, 255, 0.5)">
-                            {status.tasksCompleted} tasks
+                            Ready to enable
                           </Text>
                         )}
-                        {status.lastUsed && (
-                          <Text fontSize="xs" color="rgba(255, 255, 255, 0.5)">
-                            Last used: {new Date(status.lastUsed).toLocaleDateString()}
-                          </Text>
-                        )}
+                        <Badge size="xs" colorScheme="gray">
+                          v{agent.version}
+                        </Badge>
                       </HStack>
-                    )}
-
-                    {/* Capabilities */}
-                    <Box>
-                      <Text className={styles.capabilitiesLabel}>
-                        Capabilities:
-                      </Text>
-                      <Flex flexWrap="wrap" gap={1}>
-                        {agent.capabilities.slice(0, 3).map((capability, index) => (
-                          <Badge key={index} size="xs" colorScheme="teal">
-                            {capability}
-                          </Badge>
-                        ))}
-                        {agent.capabilities.length > 3 && (
-                          <Badge size="xs" colorScheme="gray">
-                            +{agent.capabilities.length - 3} more
-                          </Badge>
-                        )}
-                      </Flex>
-                    </Box>
-
-                    {/* Version */}
-                    <HStack spacing={2}>
-                      <Text fontSize="xs" color="rgba(255, 255, 255, 0.6)">
-                        Version:
-                      </Text>
-                      <Badge size="xs" colorScheme="green">
-                        {agent.version}
-                      </Badge>
+                      
+                      {agent.documentationUrl && (
+                        <Button
+                          as="a"
+                          href={agent.documentationUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          size="xs"
+                          variant="ghost"
+                          className={styles.docButton}
+                          p={1}
+                          _hover={{ 
+                            bg: "rgba(0, 255, 65, 0.1)",
+                            borderColor: "#00ff41" 
+                          }}
+                        >
+                          <ExternalLink size={12} />
+                        </Button>
+                      )}
                     </HStack>
-
-                    {/* Actions */}
-                    {agent.documentation && (
-                      <Button
-                        as="a"
-                        href={agent.documentation}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        leftIcon={<ExternalLink size={14} />}
-                        size="sm"
-                        variant="ghost"
-                        colorScheme="whiteAlpha"
-                        fontSize="xs"
-                        className={styles.docButton}
-                      >
-                        Documentation
-                      </Button>
-                    )}
 
                     {isLoading && (
                       <Box textAlign="center">
