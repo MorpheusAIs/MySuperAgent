@@ -72,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Calculate next run time if it's not a one-time job
     if (scheduledJob.schedule_type && scheduledJob.schedule_type !== 'once') {
-      const JobsAPI = await import('@/services/api/jobs');
+      const JobsAPI = await import('@/services/API/jobs');
       nextRunTime = JobsAPI.default.calculateNextRunTime(
         scheduledJob.schedule_type,
         now,
