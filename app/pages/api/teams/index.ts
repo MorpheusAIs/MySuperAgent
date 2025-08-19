@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { AgentTeamDB } from '@/services/database/db';
+import { AgentTeamDB } from '@/services/Database/db';
 
 export default async function handler(
   req: NextApiRequest,
