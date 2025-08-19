@@ -1,5 +1,5 @@
 import JobsAPI from "@/services/API/jobs";
-import { Job } from "@/services/Database/db";
+import { Job } from "@/services/database/db";
 import { useWalletAddress } from "@/services/Wallet/utils";
 import {
   CalendarIcon,

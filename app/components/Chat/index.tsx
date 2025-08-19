@@ -7,7 +7,7 @@ import { useChatContext } from '@/contexts/chat/useChatContext';
 import { trackEvent } from '@/services/analytics';
 import JobsAPI from '@/services/API/jobs';
 import UserPreferencesAPI from '@/services/API/userPreferences';
-import { UserPreferences } from '@/services/Database/db';
+import { UserPreferences } from '@/services/database/db';
 import { useWalletAddress } from '@/services/Wallet/utils';
 import { Box, Text, useBreakpointValue, VStack } from '@chakra-ui/react';
 import { FC, useEffect, useState } from 'react';
