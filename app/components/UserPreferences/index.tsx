@@ -14,8 +14,8 @@ import {
 } from '@chakra-ui/react';
 import { SettingsIcon } from '@chakra-ui/icons';
 import { UserPreferences } from '@/services/database/db';
-import UserPreferencesAPI from '@/services/api/userPreferences';
-import { useWalletAddress } from '@/services/wallet/utils';
+import UserPreferencesAPI from '@/services/API/userPreferences';
+import { useWalletAddress } from '@/services/Wallet/utils';
 
 interface UserPreferencesProps {
   onClose?: () => void;

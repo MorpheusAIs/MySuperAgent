@@ -18,7 +18,7 @@ import {
 import { getMessagesHistory } from "@/services/chat-management/storage";
 import { addMessageToHistory } from "@/services/chat-management/messages";
 import JobsAPI from "@/services/API/jobs";
-import { useWalletAddress } from "@/services/wallet/utils";
+import { useWalletAddress } from "@/services/Wallet/utils";
 import { Job, Message } from "@/services/database/db";
 import { chatReducer, initialState } from "@/contexts/chat/ChatReducer";
 import ChatContext from "@/contexts/chat/ChatContext";

@@ -320,7 +320,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   };
 
   // Filter and search logic
-  const categories = ['all', ...new Set(availableAgents.map(a => a.category))];
+  const categories = ['all', ...Array.from(new Set(availableAgents.map(a => a.category)))];
   
   const filteredAgents = availableAgents.filter(agent => {
     const matchesSearch = agent.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
