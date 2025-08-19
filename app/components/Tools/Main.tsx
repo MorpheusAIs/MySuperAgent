@@ -328,7 +328,7 @@ export const ToolsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   };
 
   // Filter and search logic
-  const categories = ['all', ...new Set(availableServers.map(s => s.category))];
+  const categories = ['all', ...Array.from(new Set(availableServers.map(s => s.category)))];
   
   const filteredServers = availableServers.filter(server => {
     const matchesSearch = server.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||

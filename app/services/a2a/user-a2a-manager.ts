@@ -412,7 +412,7 @@ export class UserA2AManager {
   static async cleanupUserClients(walletAddress: string): Promise<void> {
     const keysToRemove: string[] = [];
     
-    for (const clientKey of this.a2aClients.keys()) {
+    for (const clientKey of Array.from(this.a2aClients.keys())) {
       if (clientKey.startsWith(`${walletAddress}:`)) {
         keysToRemove.push(clientKey);
       }

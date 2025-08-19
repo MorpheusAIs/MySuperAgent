@@ -1,8 +1,7 @@
 import { BaseAgent } from '@/services/agents/core/base-agent';
 import { AgentDefinition } from '@/services/agents/types';
-import { UserMCPManager, MCPServerStatus } from '@/services/mcp/user-mcp-manager';
+import { UserMCPManager, MCPServerStatus, ToolDescriptor } from '@/services/mcp/user-mcp-manager';
 import { UserA2AManager, A2AAgentStatus } from '@/services/a2a/user-a2a-manager';
-import { ToolDescriptor } from '@/services/mcp/server-registry';
 
 class AgentRegistryClass {
   private agents: Map<string, BaseAgent> = new Map();

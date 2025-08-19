@@ -59,7 +59,7 @@ export class CredentialEncryption {
       const iv = crypto.randomBytes(IV_LENGTH);
       
       // Create cipher
-      const cipher = crypto.createCipherGCM(ALGORITHM, key, iv);
+      const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
       cipher.setAAD(Buffer.from(useSalt, 'hex')); // Use salt as additional authenticated data
       
       // Encrypt the value
@@ -97,7 +97,7 @@ export class CredentialEncryption {
       const encrypted = encryptedData.slice(IV_LENGTH * 2, -TAG_LENGTH * 2);
       
       // Create decipher
-      const decipher = crypto.createDecipherGCM(ALGORITHM, key, iv);
+      const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
       decipher.setAAD(Buffer.from(salt, 'hex')); // Same AAD used during encryption
       decipher.setAuthTag(tag);
       

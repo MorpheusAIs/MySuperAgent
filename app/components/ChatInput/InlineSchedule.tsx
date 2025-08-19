@@ -1,5 +1,5 @@
-import JobsAPI from '@/services/API/jobs';
-import { useWalletAddress } from '@/services/Wallet/utils';
+import JobsAPI from '@/services/api/jobs';
+import { useWalletAddress } from '@/services/wallet/utils';
 import { CalendarIcon } from '@chakra-ui/icons';
 import {
   Button,

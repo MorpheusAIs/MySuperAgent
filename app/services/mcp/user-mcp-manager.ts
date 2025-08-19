@@ -450,8 +450,10 @@ export class UserMCPManager {
       }
 
       // Execute the tool
-      const result = await mcpClient.callTool(toolName, args);
-      return result;
+      // TODO: Fix MCPClient tool execution API - callTool method doesn't exist
+      // const result = await mcpClient.callTool(toolName, args);
+      // return result;
+      throw new Error('Tool execution not yet implemented - MCP client API needs to be updated');
 
     } catch (error) {
       console.error(`Error executing tool ${toolName} on ${serverName}:`, error);
@@ -465,7 +467,7 @@ export class UserMCPManager {
   static async cleanupUserClients(walletAddress: string): Promise<void> {
     const keysToRemove: string[] = [];
     
-    for (const [clientKey, mcpClient] of this.mcpClients.entries()) {
+    for (const [clientKey, mcpClient] of Array.from(this.mcpClients.entries())) {
       if (clientKey.startsWith(`${walletAddress}:`)) {
         try {
           await mcpClient.disconnect();
