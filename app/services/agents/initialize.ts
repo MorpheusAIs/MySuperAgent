@@ -1,4 +1,4 @@
-import { AgentRegistry } from './core/AgentRegistry';
+import { AgentRegistry } from './core/agent-registry';
 
 // Initialize agents at module load time
 let initializationPromise: Promise<void> | null = null;

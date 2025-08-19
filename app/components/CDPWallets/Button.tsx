@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { Flex, Text } from "@chakra-ui/react";
 import { Wallet } from "lucide-react";
-import { CDPWalletsModal } from "./Modal";
-import styles from "./CDPWallets.module.css";
+import { CdpWalletsModal } from "./Modal";
+import styles from "./CdpWallets.module.css";
 
-export const CDPWalletsButton: React.FC = () => {
+export const CdpWalletsButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -26,7 +26,7 @@ export const CDPWalletsButton: React.FC = () => {
         </Text>
       </Flex>
 
-      <CDPWalletsModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <CdpWalletsModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </>
   );
 };

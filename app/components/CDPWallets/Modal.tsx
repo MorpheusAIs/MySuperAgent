@@ -29,7 +29,7 @@ import {
   AlertDialogOverlay,
 } from "@chakra-ui/react";
 import { Copy, Download, Star, Trash2 } from "lucide-react";
-import styles from "./CDPWallets.module.css";
+import styles from "./CdpWallets.module.css";
 
 const NETWORKS = [
   "base-mainnet",
@@ -40,7 +40,7 @@ const NETWORKS = [
   "ethereum-sepolia",
 ];
 
-interface CDPWalletsModalProps {
+interface CdpWalletsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
@@ -51,7 +51,7 @@ interface Wallet {
   address: string;
 }
 
-export const CDPWalletsModal: React.FC<CDPWalletsModalProps> = ({
+export const CdpWalletsModal: React.FC<CdpWalletsModalProps> = ({
   isOpen,
   onClose,
 }) => {

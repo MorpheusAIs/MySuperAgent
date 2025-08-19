@@ -14,7 +14,7 @@ import {
   Collapse,
 } from "@chakra-ui/react";
 import { ArrowLeftRight } from "lucide-react";
-import { BASE_AVAILABLE_TOKENS } from "@/services/constants";
+import { BASE_AVAILABLE_TOKENS } from "@/services/config/constants";
 
 interface SwapConfig {
   fromToken: string;

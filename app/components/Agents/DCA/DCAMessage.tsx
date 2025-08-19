@@ -20,7 +20,7 @@ import { Settings2 } from "lucide-react";
 import {
   BASE_AVAILABLE_TOKENS,
   DCA_AVAILABLE_FREQUENCIES,
-} from "@/services/constants";
+} from "@/services/config/constants";
 
 interface DCAConfig {
   originToken: string;

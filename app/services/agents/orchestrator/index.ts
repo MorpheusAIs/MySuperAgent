@@ -1,4 +1,4 @@
-import { AgentRegistry } from '@/services/agents/core/AgentRegistry';
+import { AgentRegistry } from '@/services/agents/core/agent-registry';
 import {
   AgentResponse,
   ChatRequest,
@@ -15,14 +15,15 @@ export class Orchestrator {
     this.requestId = requestId || `orchestrator-${Date.now()}-${Math.random()}`;
   }
 
-  async runOrchestration(
-    request: ChatRequest
-  ): Promise<[string, AgentResponse]> {
+  async runOrchestration(request: ChatRequest, walletAddress?: string): Promise<[string, AgentResponse]> {
     try {
       console.log(`[Orchestrator ${this.requestId}] Starting runOrchestration`);
 
       // Determine which agent(s) to use
       let selectedAgent;
+      let agentType: 'core' | 'mcp' | 'a2a' = 'core';
+      let selectionReasoning = '';
+      
       if (request.selectedAgents && request.selectedAgents.length > 0) {
         // Try to find the first available agent from the selected list
         for (const agentName of request.selectedAgents) {
@@ -31,23 +32,24 @@ export class Orchestrator {
             this.requestId
           );
           if (selectedAgent) {
+            selectionReasoning = `User-selected agent: ${agentName}`;
             break;
           }
         }
 
         // If no selected agent is available, fall back to LLM-based intelligent selection
         if (!selectedAgent) {
-          const selectionResult = await AgentRegistry.selectBestAgentWithLLM(
-            request.prompt.content
-          );
+          const selectionResult = await AgentRegistry.selectBestAgentWithLLM(request.prompt.content, walletAddress);
           selectedAgent = selectionResult.agent;
+          agentType = selectionResult.agentType || 'core';
+          selectionReasoning = `Fallback to LLM selection: ${selectionResult.reasoning}`;
         }
       } else {
-        // Use LLM-based intelligent agent selection
-        const selectionResult = await AgentRegistry.selectBestAgentWithLLM(
-          request.prompt.content
-        );
+        // Use LLM-based intelligent agent selection with user context
+        const selectionResult = await AgentRegistry.selectBestAgentWithLLM(request.prompt.content, walletAddress);
         selectedAgent = selectionResult.agent;
+        agentType = selectionResult.agentType || 'core';
+        selectionReasoning = selectionResult.reasoning;
       }
 
       if (!selectedAgent) {
@@ -60,15 +62,26 @@ export class Orchestrator {
       });
 
       const agentName = selectedAgent.getDefinition().name;
+
+      // Get available agents for this user
+      let availableAgents: Array<{ name: string; type?: string }>;
+      if (walletAddress) {
+        const userAgents = await AgentRegistry.getUserAvailableAgents(walletAddress);
+        availableAgents = userAgents.map(a => ({ name: a.name, type: a.type }));
+      } else {
+        availableAgents = AgentRegistry.getAvailableAgents().map(a => ({ name: a.name, type: 'core' }));
+      }
+
       const agentResponse: AgentResponse = {
         responseType: ResponseType.SUCCESS,
         content: response.content || 'No response generated',
         metadata: {
           ...response.metadata,
           selectedAgent: agentName,
-          availableAgents: AgentRegistry.getAvailableAgents().map(
-            (a) => a.name
-          ),
+          agentType,
+          selectionReasoning,
+          availableAgents,
+          userSpecificAgents: walletAddress ? true : false,
         },
       };
 
@@ -84,7 +97,7 @@ export class Orchestrator {
     }
   }
 
-  async streamOrchestration(request: ChatRequest, res: any): Promise<void> {
+  async streamOrchestration(request: ChatRequest, res: any, walletAddress?: string): Promise<void> {
     try {
       console.log(
         `[Orchestrator ${this.requestId}] Starting streamOrchestration`
@@ -92,7 +105,9 @@ export class Orchestrator {
 
       // Determine which agent(s) to use for streaming
       let selectedAgent;
+      let agentType: 'core' | 'mcp' | 'a2a' = 'core';
       let selectionMethod = 'unknown';
+      let selectionReasoning = '';
 
       if (request.selectedAgents && request.selectedAgents.length > 0) {
         // Try to find the first available agent from the selected list
@@ -103,25 +118,26 @@ export class Orchestrator {
           );
           if (selectedAgent) {
             selectionMethod = 'user_selected';
+            selectionReasoning = `User-selected agent: ${agentName}`;
             break;
           }
         }
 
         // If no selected agent is available, fall back to LLM-based intelligent selection
         if (!selectedAgent) {
-          const selectionResult = await AgentRegistry.selectBestAgentWithLLM(
-            request.prompt.content
-          );
+          const selectionResult = await AgentRegistry.selectBestAgentWithLLM(request.prompt.content, walletAddress);
           selectedAgent = selectionResult.agent;
+          agentType = selectionResult.agentType || 'core';
           selectionMethod = 'llm_intelligent_fallback';
+          selectionReasoning = `Fallback to LLM selection: ${selectionResult.reasoning}`;
         }
       } else {
-        // Use LLM-based intelligent agent selection
-        const selectionResult = await AgentRegistry.selectBestAgentWithLLM(
-          request.prompt.content
-        );
+        // Use LLM-based intelligent agent selection with user context
+        const selectionResult = await AgentRegistry.selectBestAgentWithLLM(request.prompt.content, walletAddress);
         selectedAgent = selectionResult.agent;
+        agentType = selectionResult.agentType || 'core';
         selectionMethod = 'llm_intelligent';
+        selectionReasoning = selectionResult.reasoning;
       }
 
       if (!selectedAgent) {

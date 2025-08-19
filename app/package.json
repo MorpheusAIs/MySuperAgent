@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "node scripts/pre-build-fix.js && next build",
     "start": "next start",
-    "lint": "next lint",
-    "db-init": "node migrations/db-init.js"
+    "lint": "next lint"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.23",

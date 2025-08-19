@@ -1,6 +1,6 @@
 import axios from 'axios';
-import BASE_URL from '@/services/constants';
-import { Job, Message } from '@/services/Database/db';
+import BASE_URL from '@/services/config/constants';
+import { Job, Message } from '@/services/database/db';
 import { BaseAPIClient } from './BaseAPIClient';
 
 export class JobsAPI extends BaseAPIClient {

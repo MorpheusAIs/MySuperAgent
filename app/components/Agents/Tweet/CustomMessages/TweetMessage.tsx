@@ -15,7 +15,7 @@ import {
 } from "@chakra-ui/react";
 import { FaPaperPlane, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 import { postTweet, regenerateTweet } from "@/components/Agents/Tweet/hooks";
-import { getHttpClient } from "@/services/constants";
+import { getHttpClient } from "@/services/config/constants";
 import styles from "./TweetMessage.module.css";
 
 type TweetProps = {

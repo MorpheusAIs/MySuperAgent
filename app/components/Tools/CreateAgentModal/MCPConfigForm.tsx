@@ -14,7 +14,7 @@ import {
 import { AddIcon, DeleteIcon, CopyIcon, CheckIcon } from "@chakra-ui/icons";
 import styles from "./MCPConfigForm.module.css";
 import { generateShellScript } from "./scriptGenerator";
-import { downloadFile } from "@/services/fileUtils";
+import { downloadFile } from "@/services/utils/file-utils";
 import { MCPConfig, FormErrors } from "./types";
 
 interface MCPConfigFormProps {

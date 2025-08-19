@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ChatRequest, AgentResponse } from '@/services/agents/types';
-import { AgentRegistry } from '@/services/agents/core/AgentRegistry';
+import { AgentRegistry } from '@/services/agents/core/agent-registry';
 import { orchestrator } from '@/services/agents/orchestrator';
 import { initializeAgents } from '@/services/agents/initialize';
 
@@ -14,6 +14,7 @@ export default async function handler(
 
   try {
     const chatRequest: ChatRequest = req.body;
+    const walletAddress = req.body.walletAddress; // Extract wallet address from request
 
     // Ensure agents are initialized
     await initializeAgents();
@@ -37,11 +38,11 @@ export default async function handler(
       agentResponse = await agent.chat(chatRequest);
       currentAgent = agentName;
     } else if (chatRequest.useResearch) {
-      // Use orchestrator for multi-agent flow
-      [currentAgent, agentResponse] = await orchestrator.runOrchestration(chatRequest);
+      // Use orchestrator for multi-agent flow with user context
+      [currentAgent, agentResponse] = await orchestrator.runOrchestration(chatRequest, walletAddress);
     } else {
-      // Use intelligent agent selection for regular chat
-      const selection = await AgentRegistry.selectBestAgentWithLLM(chatRequest.prompt.content);
+      // Use intelligent agent selection for regular chat with user context
+      const selection = await AgentRegistry.selectBestAgentWithLLM(chatRequest.prompt.content, walletAddress);
       const selectedAgent = selection.agent;
       if (!selectedAgent) {
         return res.status(500).json({ error: 'No suitable agent found' });
@@ -49,14 +50,24 @@ export default async function handler(
       agentResponse = await selectedAgent.chat(chatRequest);
       currentAgent = selectedAgent.getDefinition().name;
       
-      // Add agent selection metadata
+      // Add agent selection metadata with user-specific context
+      const availableAgents = walletAddress 
+        ? (await AgentRegistry.getUserAvailableAgents(walletAddress)).map(a => ({ name: a.name, type: a.type }))
+        : AgentRegistry.getAvailableAgents().map(a => ({ name: a.name, type: 'core' }));
+      
       if (agentResponse.metadata) {
         agentResponse.metadata.selectedAgent = currentAgent;
-        agentResponse.metadata.availableAgents = AgentRegistry.getAvailableAgents().map(a => a.name);
+        agentResponse.metadata.agentType = selection.agentType;
+        agentResponse.metadata.selectionReasoning = selection.reasoning;
+        agentResponse.metadata.availableAgents = availableAgents;
+        agentResponse.metadata.userSpecificAgents = walletAddress ? true : false;
       } else {
         agentResponse.metadata = {
           selectedAgent: currentAgent,
-          availableAgents: AgentRegistry.getAvailableAgents().map(a => a.name),
+          agentType: selection.agentType,
+          selectionReasoning: selection.reasoning,
+          availableAgents,
+          userSpecificAgents: walletAddress ? true : false,
         };
       }
     }

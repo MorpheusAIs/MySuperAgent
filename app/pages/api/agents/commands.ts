@@ -11,7 +11,7 @@ export default async function handler(
   try {
     // Try to load AgentRegistry, but provide a fallback if it fails
     try {
-      const { AgentRegistry } = await import('@/services/agents/core/AgentRegistry');
+      const { AgentRegistry } = await import('@/services/agents/core/agent-registry');
       
       // Initialize agents if not already done
       if (!AgentRegistry.isInitialized()) {

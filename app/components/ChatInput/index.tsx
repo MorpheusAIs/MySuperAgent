@@ -1,7 +1,7 @@
 import { SendIcon } from "@/components/CustomIcon/SendIcon";
 import { ScheduleButton } from "@/components/ScheduleButton";
 import { ToolsButton } from "@/components/Tools/ToolsButton";
-import BASE_URL from "@/services/constants";
+import BASE_URL from "@/services/config/constants";
 import { isFeatureEnabled } from "@/services/featureFlags";
 import {
   AttachmentIcon,

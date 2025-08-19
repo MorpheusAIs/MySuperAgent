@@ -19,7 +19,6 @@ export default async function handler(
 
   try {
     const chatRequest: ChatRequest = req.body;
-
     // Generate request ID if not provided
     if (!chatRequest.requestId) {
       chatRequest.requestId = uuidv4();

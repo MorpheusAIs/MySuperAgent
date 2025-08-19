@@ -1,4 +1,4 @@
-// CDPWallets.tsx
+// CdpWallets.tsx
 import React, { useState, useEffect } from "react";
 import {
   Button,
@@ -30,7 +30,7 @@ import { DeleteWalletDialog } from "./DeleteWalletDialog";
 import { trackEvent } from "@/services/analytics";
 import styles from "./index.module.css";
 
-export const CDPWallets: React.FC = () => {
+export const CdpWallets: React.FC = () => {
   // Form state
   const [newWalletName, setNewWalletName] = useState("");
   const [selectedNetwork, setSelectedNetwork] = useState(NETWORKS[0]);

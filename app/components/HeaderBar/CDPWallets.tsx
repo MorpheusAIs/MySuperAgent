@@ -58,7 +58,7 @@ interface Wallet {
   address: string;
 }
 
-export const CDPWallets: React.FC = () => {
+export const CdpWallets: React.FC = () => {
   // Hooks must be called before any conditional returns
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [activeWallet, setActiveWallet] = useState<string | null>(null);

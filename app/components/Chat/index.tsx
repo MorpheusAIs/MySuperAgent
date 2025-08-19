@@ -5,10 +5,10 @@ import { MessageCounter } from '@/components/MessageCounter';
 import { MessageList } from '@/components/MessageList';
 import { useChatContext } from '@/contexts/chat/useChatContext';
 import { trackEvent } from '@/services/analytics';
-import JobsAPI from '@/services/API/jobs';
-import UserPreferencesAPI from '@/services/API/userPreferences';
-import { UserPreferences } from '@/services/Database/db';
-import { useWalletAddress } from '@/services/Wallet/utils';
+import JobsAPI from '@/services/api/jobs';
+import UserPreferencesAPI from '@/services/api/userPreferences';
+import { UserPreferences } from '@/services/database/db';
+import { useWalletAddress } from '@/services/wallet/utils';
 import { Box, Text, useBreakpointValue, VStack } from '@chakra-ui/react';
 import { FC, useEffect, useState } from 'react';
 import styles from './index.module.css';
@@ -179,7 +179,7 @@ export const Chat: FC<{
     try {
       // Import localStorage utilities
       const { createNewConversation } = await import(
-        '@/services/ChatManagement/conversations'
+        '@/services/chat-management/conversations'
       );
 
       // Create a new localStorage conversation

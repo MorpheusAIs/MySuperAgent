@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { UserPreferences } from '@/services/Database/db';
-import BASE_URL from '@/services/constants';
+import { UserPreferences } from '@/services/database/db';
+import BASE_URL from '@/services/config/constants';
 import { BaseAPIClient } from './BaseAPIClient';
 
 export interface UpdateUserPreferencesRequest {

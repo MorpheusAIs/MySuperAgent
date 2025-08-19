@@ -6,7 +6,7 @@ export {
   setUploadedFileStatus,
   getLastMessage,
   getChatHistoryAsString,
-} from "@/services/ChatManagement/storage";
+} from "@/services/chat-management/storage";
 
 // Conversation management
 export {
@@ -14,13 +14,13 @@ export {
   deleteConversation,
   getAllConversations,
   updateConversationTitle,
-} from "@/services/ChatManagement/conversations";
+} from "@/services/chat-management/conversations";
 
 // Message management
 export {
   addMessageToHistory,
   clearMessagesHistory,
-} from "@/services/ChatManagement/messages";
+} from "@/services/chat-management/messages";
 
 // API integration
-export { writeMessage, uploadFile } from "@/services/ChatManagement/api";
+export { writeMessage, uploadFile } from "@/services/chat-management/api";
