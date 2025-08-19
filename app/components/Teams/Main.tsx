@@ -1,26 +1,35 @@
-import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
-  Text,
   Button,
-  VStack,
-  HStack,
-  Input,
-  Textarea,
+  Checkbox,
+  Collapse,
+  Divider,
+  Flex,
   FormControl,
   FormLabel,
-  Checkbox,
+  HStack,
   IconButton,
-  useToast,
-  Flex,
-  Spinner,
-  Divider,
-  Collapse,
+  Input,
   SimpleGrid,
-} from "@chakra-ui/react";
-import { Edit2, Trash2, Plus, Users, Bot, ChevronUp, ChevronDown, X } from "lucide-react";
-import { useAccount } from "wagmi";
-import styles from "./Main.module.css";
+  Spinner,
+  Text,
+  Textarea,
+  useToast,
+  VStack,
+} from '@chakra-ui/react';
+import {
+  ArrowLeft,
+  Bot,
+  ChevronUp,
+  Edit2,
+  Plus,
+  Trash2,
+  Users,
+  X,
+} from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useAccount } from 'wagmi';
+import styles from './Main.module.css';
 
 interface Agent {
   name: string;
@@ -45,17 +54,17 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   const [editingTeam, setEditingTeam] = useState<AgentTeam | null>(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    name: "",
-    description: "",
+    name: '',
+    description: '',
     agents: [] as string[],
   });
-  
+
   const { address } = useAccount();
   const toast = useToast();
 
   const fetchTeams = useCallback(async () => {
     if (!address) return;
-    
+
     try {
       const response = await fetch(`/api/teams?wallet_address=${address}`);
       if (response.ok) {
@@ -63,10 +72,10 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
         setTeams(data);
       }
     } catch (error) {
-      console.error("Failed to fetch teams:", error);
+      console.error('Failed to fetch teams:', error);
       toast({
-        title: "Error fetching teams",
-        status: "error",
+        title: 'Error fetching teams',
+        status: 'error',
         duration: 3000,
       });
     } finally {
@@ -76,13 +85,13 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
 
   const fetchAvailableAgents = useCallback(async () => {
     try {
-      const response = await fetch("/api/agents/available");
+      const response = await fetch('/api/agents/available');
       if (response.ok) {
         const data = await response.json();
         setAvailableAgents(data.agents || []);
       }
     } catch (error) {
-      console.error("Failed to fetch available agents:", error);
+      console.error('Failed to fetch available agents:', error);
     }
   }, []);
 
@@ -96,9 +105,9 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   const handleCreateTeam = async () => {
     if (!address || !formData.name || formData.agents.length === 0) {
       toast({
-        title: "Missing required fields",
-        description: "Please provide a name and select at least one agent",
-        status: "warning",
+        title: 'Missing required fields',
+        description: 'Please provide a name and select at least one agent',
+        status: 'warning',
         duration: 3000,
       });
       return;
@@ -108,7 +117,7 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
       const response = await fetch("/api/teams", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           ...formData,
@@ -118,21 +127,21 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
 
       if (response.ok) {
         toast({
-          title: "Team created successfully",
-          status: "success",
+          title: 'Team created successfully',
+          status: 'success',
           duration: 3000,
         });
         setShowCreateForm(false);
         resetForm();
         fetchTeams();
       } else {
-        throw new Error("Failed to create team");
+        throw new Error('Failed to create team');
       }
     } catch (error) {
-      console.error("Error creating team:", error);
+      console.error('Error creating team:', error);
       toast({
-        title: "Failed to create team",
-        status: "error",
+        title: 'Failed to create team',
+        status: 'error',
         duration: 3000,
       });
     }
@@ -141,9 +150,9 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   const handleUpdateTeam = async () => {
     if (!editingTeam || !formData.name || formData.agents.length === 0) {
       toast({
-        title: "Missing required fields",
-        description: "Please provide a name and select at least one agent",
-        status: "warning",
+        title: 'Missing required fields',
+        description: 'Please provide a name and select at least one agent',
+        status: 'warning',
         duration: 3000,
       });
       return;
@@ -153,35 +162,35 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
       const response = await fetch(`/api/teams/${editingTeam.id}`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         toast({
-          title: "Team updated successfully",
-          status: "success",
+          title: 'Team updated successfully',
+          status: 'success',
           duration: 3000,
         });
         setEditingTeam(null);
         resetForm();
         fetchTeams();
       } else {
-        throw new Error("Failed to update team");
+        throw new Error('Failed to update team');
       }
     } catch (error) {
-      console.error("Error updating team:", error);
+      console.error('Error updating team:', error);
       toast({
-        title: "Failed to update team",
-        status: "error",
+        title: 'Failed to update team',
+        status: 'error',
         duration: 3000,
       });
     }
   };
 
   const handleDeleteTeam = async (teamId: string) => {
-    if (!confirm("Are you sure you want to delete this team?")) return;
+    if (!confirm('Are you sure you want to delete this team?')) return;
 
     try {
       const response = await fetch(`/api/teams/${teamId}`, {
@@ -190,19 +199,19 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
 
       if (response.ok) {
         toast({
-          title: "Team deleted successfully",
-          status: "success",
+          title: 'Team deleted successfully',
+          status: 'success',
           duration: 3000,
         });
         fetchTeams();
       } else {
-        throw new Error("Failed to delete team");
+        throw new Error('Failed to delete team');
       }
     } catch (error) {
-      console.error("Error deleting team:", error);
+      console.error('Error deleting team:', error);
       toast({
-        title: "Failed to delete team",
-        status: "error",
+        title: 'Failed to delete team',
+        status: 'error',
         duration: 3000,
       });
     }
@@ -220,8 +229,8 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
 
   const resetForm = () => {
     setFormData({
-      name: "",
-      description: "",
+      name: '',
+      description: '',
       agents: [],
     });
     setEditingTeam(null);
@@ -233,10 +242,10 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   };
 
   const handleAgentToggle = (agentName: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       agents: prev.agents.includes(agentName)
-        ? prev.agents.filter(a => a !== agentName)
+        ? prev.agents.filter((a) => a !== agentName)
         : [...prev.agents, agentName],
     }));
   };
@@ -258,13 +267,15 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
         <VStack spacing={4} align="stretch">
           <HStack justify="space-between" align="center">
             <VStack align="start" spacing={1}>
-              <Text className={styles.title}>Agent Teams</Text>
+              <Text className={styles.title}>Teams</Text>
               <Text className={styles.subtitle}>
                 Create and manage teams of AI agents for complex tasks
               </Text>
             </VStack>
             <Button
-              leftIcon={showCreateForm ? <ChevronUp size={20} /> : <Plus size={20} />}
+              leftIcon={
+                showCreateForm ? <ChevronUp size={20} /> : <Plus size={20} />
+              }
               onClick={() => {
                 if (showCreateForm) {
                   cancelForm();
@@ -276,7 +287,7 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
               className={styles.createButton}
               size="lg"
             >
-              {showCreateForm ? "Cancel" : "Create Team"}
+              {showCreateForm ? 'Cancel' : 'Create Team'}
             </Button>
           </HStack>
           <Divider borderColor="rgba(255, 255, 255, 0.1)" />
@@ -288,9 +299,9 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
         <Box className={styles.formContainer}>
           <VStack spacing={6} align="stretch">
             <Text className={styles.formTitle}>
-              {editingTeam ? "Edit Agent Team" : "Create New Agent Team"}
+              {editingTeam ? 'Edit Agent Team' : 'Create New Agent Team'}
             </Text>
-            
+
             <HStack spacing={4} align="start">
               <VStack spacing={4} flex={1}>
                 <FormControl isRequired>
@@ -306,7 +317,9 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel className={styles.formLabel}>Description</FormLabel>
+                  <FormLabel className={styles.formLabel}>
+                    Description
+                  </FormLabel>
                   <Textarea
                     value={formData.description}
                     onChange={(e) =>
@@ -330,7 +343,9 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                         <Box
                           key={agent.name}
                           className={`${styles.agentOption} ${
-                            formData.agents.includes(agent.name) ? styles.agentSelected : ""
+                            formData.agents.includes(agent.name)
+                              ? styles.agentSelected
+                              : ''
                           }`}
                           onClick={() => handleAgentToggle(agent.name)}
                         >
@@ -338,13 +353,15 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                             <Checkbox
                               isChecked={formData.agents.includes(agent.name)}
                               onChange={() => handleAgentToggle(agent.name)}
-                              colorScheme="blue"
+                              colorScheme="green"
                               size="lg"
                             />
                             <VStack align="start" spacing={1} flex={1}>
                               <HStack spacing={2}>
-                                <Bot size={16} color="#4299E1" />
-                                <Text className={styles.agentName}>{agent.name}</Text>
+                                <Bot size={16} color="#00ff41" />
+                                <Text className={styles.agentName}>
+                                  {agent.name}
+                                </Text>
                               </HStack>
                               <Text className={styles.agentDescription}>
                                 {agent.description}
@@ -372,9 +389,11 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                 onClick={editingTeam ? handleUpdateTeam : handleCreateTeam}
                 isDisabled={!formData.name || formData.agents.length === 0}
                 className={styles.submitButton}
-                leftIcon={editingTeam ? <Edit2 size={16} /> : <Plus size={16} />}
+                leftIcon={
+                  editingTeam ? <Edit2 size={16} /> : <Plus size={16} />
+                }
               >
-                {editingTeam ? "Update Team" : "Create Team"}
+                {editingTeam ? 'Update Team' : 'Create Team'}
               </Button>
             </HStack>
           </VStack>
@@ -388,9 +407,12 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
             <VStack spacing={6}>
               <Users size={64} color="rgba(255, 255, 255, 0.3)" />
               <VStack spacing={3}>
-                <Text className={styles.emptyTitle}>No agent teams created yet</Text>
+                <Text className={styles.emptyTitle}>
+                  No agent teams created yet
+                </Text>
                 <Text className={styles.emptySubtitle}>
-                  Create your first team to start orchestrating multiple agents together
+                  Create your first team to start orchestrating multiple agents
+                  together
                 </Text>
               </VStack>
               <Button
@@ -412,11 +434,15 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
               <Box key={team.id} className={styles.teamCard}>
                 <HStack justify="space-between" align="start">
                   <HStack spacing={3} align="start" flex={1}>
-                    <Users size={24} color="#4299E1" style={{ marginTop: '2px', flexShrink: 0 }} />
+                    <Users
+                      size={24}
+                      color="#00ff41"
+                      style={{ marginTop: '2px', flexShrink: 0 }}
+                    />
                     <VStack align="start" spacing={2} flex={1}>
                       <Text className={styles.teamName}>{team.name}</Text>
                       <Text className={styles.teamDescription}>
-                        {team.description || "No description provided"}
+                        {team.description || 'No description provided'}
                       </Text>
                       <HStack spacing={2} wrap="wrap">
                         <Text className={styles.agentsLabel}>

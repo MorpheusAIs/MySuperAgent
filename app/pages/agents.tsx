@@ -23,7 +23,7 @@ const AgentsPage: NextPage = () => {
         <Box
           className={styles.chatWrapper}
           style={{
-            marginLeft: isSidebarOpen ? "360px" : 0,
+            marginLeft: isSidebarOpen ? '360px' : 0,
           }}
         >
           <AgentsMain isSidebarOpen={isSidebarOpen} />
