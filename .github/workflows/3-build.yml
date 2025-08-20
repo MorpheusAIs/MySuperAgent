@@ -17,7 +17,7 @@ jobs:
     - name: Install pnpm
       uses: pnpm/action-setup@v4
       with:
-        version: 8
+        version: 10.12.1
     
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -30,11 +30,6 @@ jobs:
       run: |
         cd app
         pnpm install --frozen-lockfile
-    
-    - name: TypeScript type check
-      run: |
-        cd app
-        npx tsc --noEmit
     
     - name: Check for case-sensitive import issues
       run: |

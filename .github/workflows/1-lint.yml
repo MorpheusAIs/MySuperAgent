@@ -35,7 +35,7 @@ jobs:
     - name: Install pnpm
       uses: pnpm/action-setup@v4
       with:
-        version: 8
+        version: 10.12.1
     
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -53,6 +53,11 @@ jobs:
       run: |
         cd app
         pnpm lint
+    
+    - name: Run TypeScript Check
+      run: |
+        cd app
+        pnpm exec tsc --noEmit
     
     - name: Check for lint errors
       if: failure()
