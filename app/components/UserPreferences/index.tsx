@@ -14,7 +14,7 @@ import {
 } from '@chakra-ui/react';
 import { SettingsIcon } from '@chakra-ui/icons';
 import { UserPreferences } from '@/services/database/db';
-import UserPreferencesAPI from '@/services/api/userPreferences';
+import UserPreferencesAPI from '@/services/api-clients/userPreferences';
 import { useWalletAddress } from '@/services/wallet/utils';
 
 interface UserPreferencesProps {
@@ -52,7 +52,7 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({ onClose }) 
           setPreferences(userPrefs);
         } else {
           // Set wallet address for new preferences
-          setPreferences(prev => ({
+          setPreferences((prev: UserPreferences) => ({
             ...prev,
             wallet_address: walletAddress,
           }));
@@ -60,7 +60,7 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({ onClose }) 
       } catch (error: any) {
         console.error('Error loading user preferences:', error);
         // Set wallet address even on error
-        setPreferences(prev => ({
+        setPreferences((prev: UserPreferences) => ({
           ...prev,
           wallet_address: getAddress() || '',
         }));
@@ -128,8 +128,8 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({ onClose }) 
     }
   };
 
-  const handlePreferenceChange = (key: keyof UserPreferences, value: any) => {
-    setPreferences(prev => ({
+  const handlePreferenceChange = (key: keyof UserPreferences, value: string | boolean) => {
+    setPreferences((prev: UserPreferences) => ({
       ...prev,
       [key]: value,
     }));

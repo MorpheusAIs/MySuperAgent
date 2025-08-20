@@ -1,4 +1,4 @@
-import { runMigrations } from '../services/database/migrations';
+import { runMigrations } from '@/services/database/migrations';
 
 let initialized = false;
 

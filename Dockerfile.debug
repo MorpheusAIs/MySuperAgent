@@ -1,0 +1,22 @@
+FROM ubuntu:22.04
+
+# Install Node.js and pnpm
+RUN apt-get update && apt-get install -y curl
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+RUN apt-get install -y nodejs
+RUN npm install -g pnpm@10.12.1
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY app/package.json app/pnpm-lock.yaml ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY app/ ./
+
+# Run TypeScript check
+CMD ["pnpm", "exec", "tsc", "--noEmit"]
