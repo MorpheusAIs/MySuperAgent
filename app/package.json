@@ -67,6 +67,7 @@
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
     "ts-jest": "^29.4.1",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "5.4.2"
   },
   "description": "This is a front-end for the Morpheus local install. It connects directly to agents that expose an API in OpenAI chat completion format, see README",
