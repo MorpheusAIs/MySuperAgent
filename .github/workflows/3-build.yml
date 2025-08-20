@@ -36,8 +36,8 @@ jobs:
         cd app
         echo "🔍 Checking for case-sensitivity issues in imports..."
         
-        # Find all TypeScript/JavaScript imports
-        grep -r "from ['\"]@/" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" | \
+        # Find all TypeScript/JavaScript imports (excluding node_modules)
+        grep -r "from ['\"]@/" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" --exclude-dir=node_modules --exclude-dir=.next | \
         while IFS=: read -r file line; do
           import_path=$(echo "$line" | grep -o "@/[^'\"]*")
           

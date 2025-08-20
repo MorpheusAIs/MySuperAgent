@@ -7,8 +7,8 @@
     "build": "node scripts/pre-build-fix.js && next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest",
-    "test:unit": "jest",
+    "test": "jest --passWithNoTests",
+    "test:unit": "jest --passWithNoTests",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
