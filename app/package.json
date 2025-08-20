@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "node scripts/pre-build-fix.js && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "jest",
+    "test:unit": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.23",
@@ -51,12 +55,18 @@
   "devDependencies": {
     "@swc/cli": "^0.3.12",
     "@swc/core": "^1.4.17",
+    "@testing-library/jest-dom": "^6.7.0",
+    "@testing-library/react": "^16.3.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "18.19.49",
     "@types/pg": "^8.11.10",
     "@types/react": "18.3.5",
     "@types/react-dom": "^18.3.5",
     "eslint": "^8.15.0",
     "eslint-config-next": "^14.1.3",
+    "jest": "^30.0.5",
+    "jest-environment-jsdom": "^30.0.5",
+    "ts-jest": "^29.4.1",
     "typescript": "5.4.2"
   },
   "description": "This is a front-end for the Morpheus local install. It connects directly to agents that expose an API in OpenAI chat completion format, see README",

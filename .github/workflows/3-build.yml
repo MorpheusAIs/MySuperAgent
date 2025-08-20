@@ -1,0 +1,98 @@
+name: C - Build & Case Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 8
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'pnpm'
+        cache-dependency-path: app/pnpm-lock.yaml
+    
+    - name: Install dependencies
+      run: |
+        cd app
+        pnpm install --frozen-lockfile
+    
+    - name: TypeScript type check
+      run: |
+        cd app
+        npx tsc --noEmit
+    
+    - name: Check for case-sensitive import issues
+      run: |
+        cd app
+        echo "🔍 Checking for case-sensitivity issues in imports..."
+        
+        # Find all TypeScript/JavaScript imports
+        grep -r "from ['\"]@/" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" | \
+        while IFS=: read -r file line; do
+          import_path=$(echo "$line" | grep -o "@/[^'\"]*")
+          
+          # Convert @/ to actual path
+          actual_path="./$(echo "$import_path" | sed 's|@/||')"
+          
+          # Check if path exists (case-sensitive on Linux)
+          if [[ ! -e "$actual_path" && ! -e "$actual_path.ts" && ! -e "$actual_path.tsx" && ! -e "$actual_path.js" && ! -e "$actual_path.jsx" && ! -d "$actual_path" ]]; then
+            echo "❌ ERROR: Import path '$import_path' in $file does not exist (case-sensitive check)"
+            echo "   File: $file"
+            echo "   Import: $import_path"
+            exit 1
+          fi
+        done
+        
+        echo "✅ No case-sensitivity issues found"
+    
+    - name: Check naming conventions
+      run: |
+        cd app
+        echo "🔍 Checking naming conventions..."
+        
+        # Check that service directories are lowercase
+        for dir in services/*; do
+          if [[ -d "$dir" ]]; then
+            dirname=$(basename "$dir")
+            if [[ "$dirname" =~ [A-Z] ]]; then
+              echo "❌ ERROR: Service directory '$dirname' should be lowercase"
+              exit 1
+            fi
+          fi
+        done
+        
+        # Check that component directories start with capital letter
+        for dir in components/*; do
+          if [[ -d "$dir" ]]; then
+            dirname=$(basename "$dir")
+            if [[ ! "$dirname" =~ ^[A-Z] ]]; then
+              echo "❌ ERROR: Component directory '$dirname' should start with capital letter"
+              exit 1
+            fi
+          fi
+        done
+        
+        echo "✅ Naming conventions check passed"
+    
+    - name: Build application
+      run: |
+        cd app
+        pnpm run build
+      env:
+        NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co' }}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'example-key' }}
