@@ -429,6 +429,12 @@ export class JobDB {
     const query = 'DELETE FROM jobs WHERE id = $1;';
     await pool.query(query, [jobId]);
   }
+
+  static async getTotalCompletedJobsCount(): Promise<number> {
+    const query = `SELECT COUNT(*) as total FROM jobs WHERE status = 'completed';`;
+    const result = await pool.query(query);
+    return parseInt(result.rows[0].total, 10);
+  }
 }
 
 export class MessageDB {

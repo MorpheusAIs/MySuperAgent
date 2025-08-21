@@ -67,6 +67,25 @@
   background-color: #343639 !important;
 }
 
+.scheduleReadyButton {
+  background-color: #48BB78 !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  height: 32px !important;
+  padding: 6px 12px !important;
+  border: none !important;
+  font-weight: 500 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(72, 187, 120, 0.3) !important;
+}
+
+.scheduleReadyButton:hover {
+  background-color: #38A169 !important;
+  transform: translateY(0px);
+  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4) !important;
+}
+
 .dayButton {
   background-color: #27292c;
   color: #ddd;
@@ -86,11 +105,16 @@
 }
 
 .daySelected {
-  background-color: #2f854f !important;
+  background-color: #48BB78 !important;
   color: white !important;
-  border-color: #2f854f !important;
+  border-color: #48BB78 !important;
+  box-shadow: 0 0 0 2px rgba(72, 187, 120, 0.3) !important;
+  transform: translateY(-1px);
 }
 
 .daySelected:hover {
-  background-color: #286c42 !important;
+  background-color: #38A169 !important;
+  border-color: #38A169 !important;
+  box-shadow: 0 0 0 2px rgba(72, 187, 120, 0.5) !important;
+  transform: translateY(0px);
 }
