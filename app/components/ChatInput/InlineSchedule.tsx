@@ -28,7 +28,7 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
   const [jobName, setJobName] = useState('');
   const [scheduleType, setScheduleType] = useState<
     'once' | 'hourly' | 'daily' | 'weekly' | 'custom'
-  >('hourly');
+  >('daily');
   const [scheduleTime, setScheduleTime] = useState('09:00');
   const [scheduleDate, setScheduleDate] = useState('');
   const [intervalDays, setIntervalDays] = useState(1);
@@ -258,12 +258,14 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
         <Button
           leftIcon={<CalendarIcon />}
           size="sm"
-          className={styles.actionButton}
+          className={jobName ? styles.scheduleReadyButton : styles.actionButton}
           onClick={handleSubmit}
           isLoading={isLoading}
           isDisabled={!jobName}
+          colorScheme={jobName ? "green" : undefined}
+          variant={jobName ? "solid" : "ghost"}
         >
-          Schedule
+          {jobName ? 'Create Schedule' : 'Schedule'}
         </Button>
       </HStack>
 

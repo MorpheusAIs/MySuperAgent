@@ -22,11 +22,11 @@ export default async function handler(
       });
     }
 
-    // Get total count of all messages ever processed
-    const totalMessages = await DB.MessageDB.getTotalMessageCount();
+    // Get total count of all jobs completed
+    const totalJobs = await DB.JobDB.getTotalCompletedJobsCount();
 
     return res.status(200).json({
-      totalMessages,
+      totalMessages: totalJobs, // Keep the same key for backward compatibility
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

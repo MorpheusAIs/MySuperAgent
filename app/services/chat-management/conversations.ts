@@ -16,7 +16,7 @@ export const createNewConversation = (): string => {
   data.conversations[newId] = {
     id: newId,
     name: "New Conversation",
-    messages: [{ ...DEFAULT_MESSAGE, timestamp }],
+    messages: DEFAULT_MESSAGE ? [{ ...DEFAULT_MESSAGE, timestamp }] : [],
     createdAt: timestamp,
     hasUploadedFile: false,
   };

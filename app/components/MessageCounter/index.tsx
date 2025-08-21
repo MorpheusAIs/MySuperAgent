@@ -73,7 +73,7 @@ export const MessageCounter: FC<MessageCounterProps> = ({
           </Text>
           <Text as="span" color={color}>
             {' '}
-            has processed{' '}
+            has completed{' '}
           </Text>
           <Text
             as="span"
@@ -86,7 +86,7 @@ export const MessageCounter: FC<MessageCounterProps> = ({
           </Text>
           <Text as="span" color={color}>
             {' '}
-            messages
+            jobs
           </Text>
         </Text>
       </Box>
@@ -109,7 +109,7 @@ export const MessageCounter: FC<MessageCounterProps> = ({
           </Text>
           <Text as="span" color={color}>
             {' '}
-            is ready to process messages
+            is ready to complete jobs
           </Text>
         </Text>
       </Box>
@@ -135,7 +135,7 @@ export const MessageCounter: FC<MessageCounterProps> = ({
         </Text>
         <Text as="span" color={color}>
           {' '}
-          has processed{' '}
+          has completed{' '}
         </Text>
         <Text
           as="span"
@@ -148,7 +148,7 @@ export const MessageCounter: FC<MessageCounterProps> = ({
         </Text>
         <Text as="span" color={hasError ? 'rgba(255, 255, 255, 0.5)' : color}>
           {' '}
-          messages{hasError ? ' (cached)' : ''}
+          jobs{hasError ? ' (cached)' : ''}
         </Text>
       </Text>
     </Box>
