@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { JobDB, MessageDB } from '@/services/database/db';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  
   const walletAddress = req.headers['x-wallet-address'] as string;
 
   if (!walletAddress) {

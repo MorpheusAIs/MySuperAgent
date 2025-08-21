@@ -1,0 +1,145 @@
+.mainContainer {
+  width: 100%;
+  height: 100vh;
+  padding: 32px 40px;
+  background: #0A0A0A;
+  overflow-y: auto;
+}
+
+.header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 24px;
+  margin-bottom: 32px;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.tabList {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 12px 24px 16px;
+  margin: 0;
+  position: relative;
+  border-radius: 0;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  min-width: auto;
+  flex-shrink: 0;
+}
+
+.tab:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Active tab styling */
+.tab[aria-selected="true"] {
+  color: white;
+  background: transparent;
+}
+
+.tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 1px 1px 0 0;
+}
+
+.tabPanels {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tabContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 0;
+  
+  /* Custom scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.tabContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tabContent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabContent::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.tabContent::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .mainContainer {
+    padding: 20px 16px;
+  }
+  
+  .tab {
+    padding: 10px 16px 14px;
+    font-size: 13px;
+  }
+  
+  .tabList {
+    gap: 8px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .tabList::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .mainContainer {
+    padding: 16px 12px;
+  }
+  
+  .header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .tab {
+    padding: 8px 12px 12px;
+    font-size: 12px;
+    min-width: max-content;
+  }
+}
