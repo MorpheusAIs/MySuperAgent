@@ -1,7 +1,6 @@
 import { ChatMessage } from "@/services/types";
 import { getStorageData, saveStorageData } from "@/services/local-storage/core";
 import {
-  DEFAULT_MESSAGE,
   DEFAULT_CONVERSATION_ID,
 } from "@/services/local-storage/config";
 import { getOrCreateConversation } from "@/services/chat-management/storage";
@@ -38,10 +37,8 @@ export const clearMessagesHistory = (
   const convId = getOrCreateConversation(conversationId);
 
   if (data.conversations[convId]) {
-    // Keep only the default message
-    data.conversations[convId].messages = [
-      { ...DEFAULT_MESSAGE, timestamp: Date.now() },
-    ];
+    // Clear all messages - don't keep any default message
+    data.conversations[convId].messages = [];
     data.conversations[convId].hasUploadedFile = false;
     saveStorageData(data);
   }

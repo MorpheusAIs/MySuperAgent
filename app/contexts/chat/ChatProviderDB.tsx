@@ -81,25 +81,6 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
           return await loadLocalStorageData();
         }
         const jobs = await JobsAPI.getJobs(walletAddress);
-        
-        // If no jobs exist, create a default job
-        if (jobs.length === 0) {
-          const defaultJob = await JobsAPI.createJob(walletAddress, {
-            name: 'Default Conversation',
-            initial_message: 'Hello! How can I help you today?',
-            is_scheduled: false,
-            has_uploaded_file: false
-          });
-          
-          // Create initial message
-          await JobsAPI.createMessage(walletAddress, defaultJob.id, {
-            role: 'assistant',
-            content: 'Hello! How can I help you today?',
-            order_index: 0
-          });
-          
-          jobs.push(defaultJob);
-        }
 
         // Load messages for each job and set up state
         for (const job of jobs) {
@@ -117,11 +98,18 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
           });
         }
 
-        // Set current conversation to the first job (most recent)
+        // Set current conversation to the first job (most recent) if any exist
         if (jobs.length > 0) {
           dispatch({
             type: "SET_CURRENT_CONVERSATION",
             payload: jobs[0].id,
+          });
+        } else {
+          // No jobs exist, don't set a current conversation
+          // User will create their first job through the UI
+          dispatch({
+            type: "SET_CURRENT_CONVERSATION",
+            payload: "",
           });
         }
       } catch (error) {

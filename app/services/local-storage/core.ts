@@ -13,7 +13,7 @@ export const initializeStorage = (): LocalStorageData => {
       [DEFAULT_CONVERSATION_ID]: {
         id: DEFAULT_CONVERSATION_ID,
         name: DEFAULT_CONVERSATION_NAME,
-        messages: [DEFAULT_MESSAGE],
+        messages: DEFAULT_MESSAGE ? [DEFAULT_MESSAGE] : [],
         createdAt: Date.now(),
         hasUploadedFile: false,
       },
