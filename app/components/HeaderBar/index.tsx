@@ -40,15 +40,19 @@ export const HeaderBar: FC<HeaderBarProps> = ({ onBackToJobs }) => {
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
               size="sm"
-              bg="rgba(255, 255, 255, 0.05)"
+              bg="#27292c"
               color="white"
-              borderColor="rgba(255, 255, 255, 0.2)"
-              _hover={{ borderColor: "rgba(255, 255, 255, 0.3)" }}
-              _focus={{ borderColor: "#00ff41", boxShadow: "0 0 0 1px #00ff41" }}
+              borderColor="rgba(255, 255, 255, 0.1)"
+              _hover={{ borderColor: "rgba(255, 255, 255, 0.2)" }}
+              _focus={{ borderColor: "rgba(255, 255, 255, 0.2)", boxShadow: "none" }}
+              borderRadius="8px"
+              fontSize="14px"
+              height="32px"
               width="180px"
+              fontWeight="400"
             >
               {modelOptions.map((option) => (
-                <option key={option.value} value={option.value} style={{ background: "#1A202C" }}>
+                <option key={option.value} value={option.value} style={{ background: "#27292c", color: "white" }}>
                   {option.label}
                 </option>
               ))}

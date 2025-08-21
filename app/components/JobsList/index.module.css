@@ -169,6 +169,40 @@
   border: none;
 }
 
+.timeFilter {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 12px !important;
+  color: #e2e8f0 !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+.timeFilter:hover {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.timeFilter:focus {
+  border-color: rgba(103, 232, 249, 0.6) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)) !important;
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.3),
+    0 0 0 2px rgba(103, 232, 249, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.timeFilter option {
+  background-color: #1a1a1a;
+  color: #e2e8f0;
+  border: none;
+}
+
 .paginationControls {
   margin-top: 16px;
   padding-top: 12px;

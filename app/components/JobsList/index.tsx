@@ -1,10 +1,13 @@
 import JobsAPI from "@/services/api-clients/jobs";
 import { Job } from "@/services/database/db";
 import { useWalletAddress } from "@/services/wallet/utils";
+import { ScheduledJobEditModal } from "@/components/ScheduledJobEditModal";
 import {
   CalendarIcon,
   ChatIcon,
   CheckCircleIcon,
+  DeleteIcon,
+  EditIcon,
   RepeatIcon,
   SearchIcon,
   SettingsIcon,
@@ -158,7 +161,8 @@ const ScheduledJobItem: FC<{
   onToggle: (jobId: string) => void;
   onRun: (jobId: string) => void;
   onEdit?: (jobId: string) => void;
-}> = ({ job, onToggle, onRun, onEdit }) => {
+  onDelete?: (jobId: string) => void;
+}> = ({ job, onToggle, onRun, onEdit, onDelete }) => {
   const nextRun = job.next_run_time ? new Date(job.next_run_time) : null;
   const isOverdue = nextRun && nextRun < new Date() && job.is_active;
   const now = new Date();
@@ -301,60 +305,114 @@ const ScheduledJobItem: FC<{
 
         <Divider borderColor="rgba(255, 255, 255, 0.1)" />
 
-        {/* Action Buttons */}
-        <HStack spacing={2} justify="flex-end">
-          {job.is_active && (
-            <Tooltip label="Run now" placement="top">
-              <IconButton
-                aria-label="Run job now"
-                icon={<TriangleUpIcon />}
-                size="sm"
-                variant="ghost"
-                colorScheme="green"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRun(job.id);
-                }}
-                className={styles.actionButton}
-              />
-            </Tooltip>
-          )}
+        {/* Action buttons bar - always visible for scheduled jobs */}
+        <Box
+          borderTop="1px solid"
+          borderColor="rgba(255, 255, 255, 0.05)"
+          bg="rgba(255, 255, 255, 0.02)"
+          px={0}
+          py={3}
+        >
+          <HStack justify="space-between" align="center">
+            <Text fontSize="xs" color="gray.500" fontWeight="medium">
+              Actions
+            </Text>
+            <HStack spacing={1}>
+              {job.is_active && (
+                <Tooltip label="Run now" placement="top">
+                  <IconButton
+                    aria-label="Run job now"
+                    icon={<TriangleUpIcon w={3} h={3} />}
+                    size="xs"
+                    variant="ghost"
+                    colorScheme="green"
+                    _hover={{
+                      bg: "rgba(34, 197, 94, 0.1)",
+                      transform: "scale(1.1)"
+                    }}
+                    _active={{
+                      bg: "rgba(34, 197, 94, 0.2)"
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRun(job.id);
+                    }}
+                  />
+                </Tooltip>
+              )}
 
-          {onEdit && (
-            <Tooltip label="Edit schedule" placement="top">
-              <IconButton
-                aria-label="Edit schedule"
-                icon={<SettingsIcon />}
-                size="sm"
-                variant="ghost"
-                colorScheme="blue"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(job.id);
-                }}
-                className={styles.actionButton}
-              />
-            </Tooltip>
-          )}
+              {onEdit && (
+                <Tooltip label="Edit schedule" placement="top">
+                  <IconButton
+                    aria-label="Edit schedule"
+                    icon={<SettingsIcon w={3} h={3} />}
+                    size="xs"
+                    variant="ghost"
+                    colorScheme="blue"
+                    _hover={{
+                      bg: "rgba(59, 130, 246, 0.1)",
+                      transform: "scale(1.1)"
+                    }}
+                    _active={{
+                      bg: "rgba(59, 130, 246, 0.2)"
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(job.id);
+                    }}
+                  />
+                </Tooltip>
+              )}
 
-          <Tooltip
-            label={job.is_active ? "Deactivate" : "Activate"}
-            placement="top"
-          >
-            <IconButton
-              aria-label={job.is_active ? "Deactivate job" : "Activate job"}
-              icon={job.is_active ? <SmallCloseIcon /> : <CheckCircleIcon />}
-              size="sm"
-              variant="ghost"
-              colorScheme={job.is_active ? "red" : "green"}
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggle(job.id);
-              }}
-              className={styles.actionButton}
-            />
-          </Tooltip>
-        </HStack>
+              <Tooltip
+                label={job.is_active ? "Deactivate" : "Activate"}
+                placement="top"
+              >
+                <IconButton
+                  aria-label={job.is_active ? "Deactivate job" : "Activate job"}
+                  icon={job.is_active ? <SmallCloseIcon w={3} h={3} /> : <CheckCircleIcon w={3} h={3} />}
+                  size="xs"
+                  variant="ghost"
+                  colorScheme={job.is_active ? "orange" : "green"}
+                  _hover={{
+                    bg: job.is_active ? "rgba(249, 115, 22, 0.1)" : "rgba(34, 197, 94, 0.1)",
+                    transform: "scale(1.1)"
+                  }}
+                  _active={{
+                    bg: job.is_active ? "rgba(249, 115, 22, 0.2)" : "rgba(34, 197, 94, 0.2)"
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggle(job.id);
+                  }}
+                />
+              </Tooltip>
+
+              {onDelete && (
+                <Tooltip label="Delete job permanently" placement="top">
+                  <IconButton
+                    aria-label="Delete job"
+                    icon={<DeleteIcon w={3} h={3} />}
+                    size="xs"
+                    variant="ghost"
+                    colorScheme="red"
+                    _hover={{
+                      bg: "rgba(239, 68, 68, 0.1)",
+                      transform: "scale(1.1)"
+                    }}
+                    _active={{
+                      bg: "rgba(239, 68, 68, 0.2)"
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(job.id);
+                    }}
+                  />
+                </Tooltip>
+              )}
+            </HStack>
+          </HStack>
+        </Box>
       </VStack>
     </Box>
   );
@@ -364,7 +422,9 @@ const JobItem: FC<{
   job: Job;
   onClick: (jobId: string) => void;
   messageCount?: number;
-}> = ({ job, onClick, messageCount = 0 }) => {
+  onDelete?: (jobId: string) => void;
+  onEdit?: (jobId: string) => void;
+}> = ({ job, onClick, messageCount = 0, onDelete, onEdit }) => {
   const status = getJobStatus(job);
 
   // Get title and description from job
@@ -379,80 +439,171 @@ const JobItem: FC<{
     job.description || job.initial_message || "No description";
 
   return (
-    <Button
+    <Box
       key={job.id}
       className={styles.jobItem}
-      onClick={() => onClick(job.id)}
-      variant="ghost"
-      size="lg"
-      h="auto"
-      p={4}
-      justifyContent="flex-start"
-      _hover={{ bg: "rgba(255, 255, 255, 0.02)" }}
-      _active={{ bg: "rgba(255, 255, 255, 0.01)" }}
+      p={0}
+      borderRadius="lg"
       w="100%"
       overflow="hidden"
+      position="relative"
+      role="group"
+      border="1px solid"
+      borderColor="rgba(255, 255, 255, 0.05)"
+      bg="rgba(255, 255, 255, 0.01)"
+      _hover={{ 
+        bg: "rgba(255, 255, 255, 0.03)",
+        borderColor: "rgba(255, 255, 255, 0.1)",
+        "& .job-actions": { opacity: 1 },
+        transform: "translateY(-1px)",
+        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)"
+      }}
+      transition="all 0.2s ease"
     >
-      <VStack align="stretch" spacing={2} width="100%">
-        <HStack justify="space-between" align="flex-start" spacing={3}>
-          <VStack align="flex-start" spacing={1} flex={1} minW={0}>
-            <Text
-              fontSize="md"
-              fontWeight="semibold"
-              color="gray.200"
-              textAlign="left"
-              noOfLines={1}
-              w="100%"
+      {/* Main clickable area */}
+      <Box
+        cursor="pointer"
+        p={4}
+        pb={3}
+        onClick={() => onClick(job.id)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick(job.id);
+          }
+        }}
+      >
+        <VStack align="stretch" spacing={3} width="100%">
+          {/* Header with title and status */}
+          <HStack justify="space-between" align="flex-start" spacing={3}>
+            <VStack align="flex-start" spacing={1} flex={1} minW={0}>
+              <Text
+                fontSize="md"
+                fontWeight="semibold"
+                color="gray.200"
+                textAlign="left"
+                noOfLines={1}
+                w="100%"
+              >
+                {title}
+              </Text>
+              <Text
+                fontSize="sm"
+                color="gray.500"
+                textAlign="left"
+                noOfLines={2}
+                w="100%"
+              >
+                {description}
+              </Text>
+            </VStack>
+            
+            <Badge
+              colorScheme={getStatusColor(status)}
+              variant="subtle"
+              size="sm"
+              flexShrink={0}
             >
-              {title}
-            </Text>
-            <Text
-              fontSize="sm"
-              color="gray.500"
-              textAlign="left"
-              noOfLines={2}
-              w="100%"
-            >
-              {description}
-            </Text>
-          </VStack>
-          <Badge
-            colorScheme={getStatusColor(status)}
-            variant="subtle"
-            size="sm"
-            flexShrink={0}
-          >
-            {status}
-          </Badge>
-        </HStack>
+              {status}
+            </Badge>
+          </HStack>
 
-        <HStack justify="space-between" fontSize="xs" color="gray.600" w="100%">
-          <HStack spacing={4} flexShrink={0}>
-            <HStack spacing={1}>
-              <ChatIcon w={3} h={3} />
-              <Text>{messageCount} messages</Text>
-            </HStack>
-            <HStack spacing={1}>
-              <TimeIcon w={3} h={3} />
-              <Text>{formatTimeAgo(new Date(job.created_at))}</Text>
+          {/* Metadata row */}
+          <HStack justify="space-between" fontSize="xs" color="gray.600" w="100%">
+            <HStack spacing={4} flexShrink={0}>
+              <HStack spacing={1}>
+                <ChatIcon w={3} h={3} />
+                <Text>{messageCount} messages</Text>
+              </HStack>
+              <HStack spacing={1}>
+                <TimeIcon w={3} h={3} />
+                <Text>{formatTimeAgo(new Date(job.created_at))}</Text>
+              </HStack>
             </HStack>
           </HStack>
-        </HStack>
 
-        {job.status === "completed" && (
-          <Text
-            fontSize="xs"
-            color="gray.600"
-            textAlign="left"
-            noOfLines={1}
-            fontStyle="italic"
-            w="100%"
-          >
-            &quot;Job completed successfully&quot;
+          {job.status === "completed" && (
+            <Text
+              fontSize="xs"
+              color="gray.600"
+              textAlign="left"
+              noOfLines={1}
+              fontStyle="italic"
+              w="100%"
+            >
+              &quot;Job completed successfully&quot;
+            </Text>
+          )}
+        </VStack>
+      </Box>
+
+      {/* Action buttons bar - appears on hover */}
+      <Box
+        className="job-actions"
+        opacity={0}
+        borderTop="1px solid"
+        borderColor="rgba(255, 255, 255, 0.05)"
+        bg="rgba(255, 255, 255, 0.02)"
+        px={4}
+        py={2}
+        transition="all 0.2s ease"
+      >
+        <HStack justify="space-between" align="center">
+          <Text fontSize="xs" color="gray.500" fontWeight="medium">
+            Quick Actions
           </Text>
-        )}
-      </VStack>
-    </Button>
+          <HStack spacing={1}>
+            {onEdit && (
+              <Tooltip label="Edit job name" placement="top">
+                <IconButton
+                  aria-label="Edit job"
+                  icon={<EditIcon w={3} h={3} />}
+                  size="xs"
+                  variant="ghost"
+                  colorScheme="blue"
+                  _hover={{
+                    bg: "rgba(59, 130, 246, 0.1)",
+                    transform: "scale(1.1)"
+                  }}
+                  _active={{
+                    bg: "rgba(59, 130, 246, 0.2)"
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(job.id);
+                  }}
+                />
+              </Tooltip>
+            )}
+            
+            {onDelete && (
+              <Tooltip label="Delete job permanently" placement="top">
+                <IconButton
+                  aria-label="Delete job"
+                  icon={<DeleteIcon w={3} h={3} />}
+                  size="xs"
+                  variant="ghost"
+                  colorScheme="red"
+                  _hover={{
+                    bg: "rgba(239, 68, 68, 0.1)",
+                    transform: "scale(1.1)"
+                  }}
+                  _active={{
+                    bg: "rgba(239, 68, 68, 0.2)"
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(job.id);
+                  }}
+                />
+              </Tooltip>
+            )}
+          </HStack>
+        </HStack>
+      </Box>
+    </Box>
   );
 };
 
@@ -469,9 +620,12 @@ export const JobsList: FC<JobsListProps> = ({
   const [scheduledJobsLoading, setScheduledJobsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [timeFilter, setTimeFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [scheduledPage, setScheduledPage] = useState(1);
   const [previousPage, setPreviousPage] = useState(1);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [jobToEdit, setJobToEdit] = useState<Job | null>(null);
   const { getAddress } = useWalletAddress();
   const toast = useToast();
 
@@ -564,9 +718,11 @@ export const JobsList: FC<JobsListProps> = ({
     loadAllData();
   }, [loadAllData, refreshKey]); // Add refreshKey to trigger reload when jobs are created
 
-  // Filter jobs based on search and status
+  // Filter jobs based on search, status, and time
   const filterJobs = useCallback(
     (jobsList: Job[]) => {
+      const now = new Date();
+      
       return jobsList.filter((job) => {
         const matchesSearch =
           searchQuery === "" ||
@@ -580,10 +736,37 @@ export const JobsList: FC<JobsListProps> = ({
         const matchesStatus =
           statusFilter === "all" || job.status === statusFilter;
 
-        return matchesSearch && matchesStatus;
+        const jobDate = new Date(job.created_at);
+        let matchesTime = true;
+        
+        if (timeFilter !== "all") {
+          const dayInMs = 24 * 60 * 60 * 1000;
+          const diffTime = now.getTime() - jobDate.getTime();
+          
+          switch (timeFilter) {
+            case "today":
+              matchesTime = diffTime < dayInMs && jobDate.toDateString() === now.toDateString();
+              break;
+            case "yesterday":
+              const yesterday = new Date(now.getTime() - dayInMs);
+              matchesTime = jobDate.toDateString() === yesterday.toDateString();
+              break;
+            case "week":
+              matchesTime = diffTime < 7 * dayInMs;
+              break;
+            case "month":
+              matchesTime = diffTime < 30 * dayInMs;
+              break;
+            case "older":
+              matchesTime = diffTime >= 30 * dayInMs;
+              break;
+          }
+        }
+
+        return matchesSearch && matchesStatus && matchesTime;
       });
     },
-    [searchQuery, statusFilter]
+    [searchQuery, statusFilter, timeFilter]
   );
 
   // Apply filters and pagination
@@ -717,16 +900,135 @@ export const JobsList: FC<JobsListProps> = ({
 
   const handleEditSchedule = useCallback(
     async (jobId: string) => {
-      // TODO: Implement schedule editing modal
-      toast({
-        title: "Schedule Editing",
-        description: "Schedule editing functionality coming soon!",
-        status: "info",
-        duration: 2000,
-        isClosable: true,
-      });
+      // Find the job to edit
+      const job = scheduledJobs.find(j => j.id === jobId);
+      if (!job) {
+        toast({
+          title: "Job not found",
+          description: "Could not find the scheduled job to edit",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+      
+      // Open the edit modal with the selected job
+      setJobToEdit(job);
+      setIsEditModalOpen(true);
     },
-    [toast]
+    [scheduledJobs, toast]
+  );
+
+  const handleDeleteJob = useCallback(
+    async (jobId: string) => {
+      // Show confirmation dialog
+      const confirmed = window.confirm(
+        "Are you sure you want to delete this job? This action cannot be undone and will permanently remove the job and all its messages."
+      );
+      
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        const walletAddress = getAddress();
+        if (!walletAddress) {
+          toast({
+            title: "Wallet not connected",
+            description: "Please connect your wallet to delete jobs",
+            status: "warning",
+            duration: 3000,
+            isClosable: true,
+          });
+          return;
+        }
+
+        await JobsAPI.deleteJob(walletAddress, jobId);
+        
+        // Refresh all data
+        await loadAllData();
+
+        toast({
+          title: "Job deleted successfully",
+          description: "The job and all its messages have been removed",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      } catch (error) {
+        console.error("Error deleting job:", error);
+        toast({
+          title: "Error deleting job",
+          description: error instanceof Error ? error.message : "Failed to delete job",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    },
+    [getAddress, loadAllData, toast]
+  );
+
+  const handleEditJob = useCallback(
+    async (jobId: string) => {
+      // Find the job to edit
+      const job = jobs.find(j => j.id === jobId);
+      if (!job) {
+        toast({
+          title: "Job not found",
+          description: "Could not find the job to edit",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      // Simple inline edit for job name
+      const newName = window.prompt("Enter new job name:", job.name);
+      if (newName && newName.trim() !== "" && newName !== job.name) {
+        try {
+          const walletAddress = getAddress();
+          if (!walletAddress) {
+            toast({
+              title: "Wallet not connected",
+              description: "Please connect your wallet to edit jobs",
+              status: "warning",
+              duration: 3000,
+              isClosable: true,
+            });
+            return;
+          }
+
+          await JobsAPI.updateJob(jobId, {
+            wallet_address: walletAddress,
+            name: newName.trim()
+          });
+          
+          // Refresh all data
+          await loadAllData();
+
+          toast({
+            title: "Job updated successfully",
+            description: `Job renamed to "${newName.trim()}"`,
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+          });
+        } catch (error) {
+          console.error("Error updating job:", error);
+          toast({
+            title: "Error updating job",
+            description: error instanceof Error ? error.message : "Failed to update job",
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+          });
+        }
+      }
+    },
+    [jobs, getAddress, loadAllData, toast]
   );
 
   if (
@@ -776,7 +1078,7 @@ export const JobsList: FC<JobsListProps> = ({
             setScheduledPage(1);
             setPreviousPage(1);
           }}
-          width="150px"
+          width="120px"
           className={styles.statusFilter}
         >
           <option value="all">All Status</option>
@@ -784,6 +1086,26 @@ export const JobsList: FC<JobsListProps> = ({
           <option value="running">Running</option>
           <option value="completed">Completed</option>
           <option value="failed">Failed</option>
+        </Select>
+        <Select
+          size="sm"
+          value={timeFilter}
+          onChange={(e) => {
+            setTimeFilter(e.target.value);
+            // Reset pages when filtering
+            setCurrentPage(1);
+            setScheduledPage(1);
+            setPreviousPage(1);
+          }}
+          width="120px"
+          className={styles.timeFilter}
+        >
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="week">Past Week</option>
+          <option value="month">Past Month</option>
+          <option value="older">Older</option>
         </Select>
       </Box>
 
@@ -848,7 +1170,7 @@ export const JobsList: FC<JobsListProps> = ({
                 <>
                   <VStack spacing={2} width="100%" align="stretch" pb={2}>
                     {currentJobs.map((job) => (
-                      <JobItem key={job.id} job={job} onClick={onJobClick} />
+                      <JobItem key={job.id} job={job} onClick={onJobClick} onDelete={handleDeleteJob} onEdit={handleEditJob} />
                     ))}
                   </VStack>
                   <PaginationControls
@@ -887,6 +1209,7 @@ export const JobsList: FC<JobsListProps> = ({
                         onToggle={handleScheduledJobToggle}
                         onRun={handleRunJob}
                         onEdit={handleEditSchedule}
+                        onDelete={handleDeleteJob}
                       />
                     ))}
                   </VStack>
@@ -914,7 +1237,7 @@ export const JobsList: FC<JobsListProps> = ({
                 <>
                   <VStack spacing={2} width="100%" align="stretch" pb={2}>
                     {previousJobs.map((job) => (
-                      <JobItem key={job.id} job={job} onClick={onJobClick} />
+                      <JobItem key={job.id} job={job} onClick={onJobClick} onDelete={handleDeleteJob} onEdit={handleEditJob} />
                     ))}
                   </VStack>
                   <PaginationControls
@@ -928,6 +1251,21 @@ export const JobsList: FC<JobsListProps> = ({
           </TabPanel>
         </TabPanels>
       </Tabs>
+      
+      {/* Schedule Edit Modal */}
+      <ScheduledJobEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setJobToEdit(null);
+        }}
+        job={jobToEdit}
+        onJobUpdated={() => {
+          setIsEditModalOpen(false);
+          setJobToEdit(null);
+          loadAllData(); // Reload jobs after update
+        }}
+      />
     </Box>
   );
 };

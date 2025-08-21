@@ -13,6 +13,10 @@ import {
   isValidAgentType,
 } from "@/services/types";
 
+// Action State Detection
+import { detectActionState, messageEndsInActionState } from "@/services/utils/action-state-detection";
+import { ActionStateMessage } from "@/components/ActionStateMessages";
+
 // Agent Message Components
 import { Tweet } from "@/components/Agents/Tweet/CustomMessages/TweetMessage";
 import CryptoChartMessage from "@/components/Agents/CryptoData/CryptoChartMessage";
@@ -306,6 +310,40 @@ const messageRenderers: MessageRenderer[] = [
       );
     },
   },
+  
+  // Action state renderer - check for action states in string content
+  {
+    check: (message) => 
+      typeof message.content === "string" && 
+      message.role === "assistant" &&
+      messageEndsInActionState(message.content as string),
+    render: (message) => {
+      const content = message.content as string;
+      const actionState = detectActionState(content);
+      
+      return (
+        <ActionStateMessage
+          actionState={actionState}
+          originalContent={content}
+          onAction={(action, data) => {
+            // Handle action clicks - this could trigger different behaviors
+            // based on the action type and current context
+            console.log('Action triggered:', action, data);
+            
+            // This could be expanded to:
+            // - Show modals for specific actions
+            // - Trigger API calls
+            // - Update the conversation state
+            // - Navigate to different pages
+            // - Connect wallets
+            // - Open MCP configuration
+            // etc.
+          }}
+        />
+      );
+    },
+  },
+  
   // Default string content renderer
   {
     check: (message) => typeof message.content === "string",

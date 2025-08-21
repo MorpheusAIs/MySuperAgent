@@ -449,11 +449,50 @@ export class UserMCPManager {
         throw new Error(`MCP client not available for server: ${serverName}`);
       }
 
-      // Execute the tool
-      // TODO: Fix MCPClient tool execution API - callTool method doesn't exist
-      // const result = await mcpClient.callTool(toolName, args);
-      // return result;
-      throw new Error('Tool execution not yet implemented - MCP client API needs to be updated');
+      // Execute the tool using MCP protocol
+      try {
+        // Check if the tool is available
+        const tools = await mcpClient.getTools();
+        if (!tools || !tools[toolName]) {
+          throw new Error(`Tool "${toolName}" not found on server ${serverName}`);
+        }
+
+        // Execute the tool - try different possible method names
+        let result;
+        const client = mcpClient as any; // Use type assertion for dynamic method access
+        
+        if (typeof client.callTool === 'function') {
+          result = await client.callTool(toolName, args);
+        } else if (typeof client.executeTool === 'function') {
+          result = await client.executeTool(toolName, args);
+        } else if (typeof client.runTool === 'function') {
+          result = await client.runTool(toolName, args);
+        } else if (typeof client.invoke === 'function') {
+          result = await client.invoke(toolName, args);
+        } else {
+          // If no standard method exists, try using the tools API directly
+          console.warn(`[UserMCPManager] No standard tool execution method found for ${serverName}, attempting fallback`);
+          
+          // Some MCP clients might use a different pattern
+          // Try to call the tool through the tools object if it's callable
+          const tool = tools[toolName];
+          if (typeof tool === 'function') {
+            result = await tool(args);
+          } else if (tool && typeof tool.execute === 'function') {
+            result = await tool.execute(args);
+          } else if (tool && typeof tool.run === 'function') {
+            result = await tool.run(args);
+          } else {
+            throw new Error(`No supported tool execution method found for MCP client. Available methods: ${Object.getOwnPropertyNames(client).filter(prop => typeof client[prop] === 'function').join(', ')}`);
+          }
+        }
+
+        console.log(`[UserMCPManager] Successfully executed tool ${toolName} on ${serverName}`);
+        return result;
+      } catch (toolError) {
+        console.error(`[UserMCPManager] Tool execution error:`, toolError);
+        throw toolError;
+      }
 
     } catch (error) {
       console.error(`Error executing tool ${toolName} on ${serverName}:`, error);
