@@ -9,22 +9,33 @@ import {
   Text,
   useToast,
 } from '@chakra-ui/react';
-import { FC, useState } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useState,
+} from 'react';
 import styles from './InlineSchedule.module.css';
 
 interface InlineScheduleProps {
   message: string;
   onJobCreated?: (jobId: string) => void;
   onClose?: () => void;
+  onScheduleReadyChange?: (isReady: boolean) => void;
+}
+
+export interface InlineScheduleRef {
+  triggerSchedule: () => Promise<void>;
+  isScheduleReady: () => boolean;
 }
 
 const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export const InlineSchedule: FC<InlineScheduleProps> = ({
-  message,
-  onJobCreated,
-  onClose,
-}) => {
+export const InlineSchedule = forwardRef<
+  InlineScheduleRef,
+  InlineScheduleProps
+>(({ message, onJobCreated, onClose, onScheduleReadyChange }, ref) => {
   const [jobName, setJobName] = useState('');
   const [scheduleType, setScheduleType] = useState<
     'once' | 'hourly' | 'daily' | 'weekly' | 'custom'
@@ -37,6 +48,29 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const { getAddress } = useWalletAddress();
   const toast = useToast();
+
+  // Helper function to check if schedule is ready
+  const isScheduleReady = useCallback(() => {
+    if (!jobName) return false;
+
+    if (scheduleType === 'once') {
+      return !!(scheduleDate && scheduleTime);
+    }
+
+    return true; // For hourly, daily, weekly, custom - they have defaults
+  }, [jobName, scheduleType, scheduleDate, scheduleTime]);
+
+  // Expose functions to parent via ref
+  useImperativeHandle(ref, () => ({
+    triggerSchedule: handleSubmit,
+    isScheduleReady,
+  }));
+
+  // Notify parent when schedule readiness changes
+  useEffect(() => {
+    const ready = isScheduleReady();
+    onScheduleReadyChange?.(ready);
+  }, [isScheduleReady, onScheduleReadyChange]);
 
   const handleSubmit = async () => {
     if (!jobName) {
@@ -262,8 +296,8 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
           onClick={handleSubmit}
           isLoading={isLoading}
           isDisabled={!jobName}
-          colorScheme={jobName ? "green" : undefined}
-          variant={jobName ? "solid" : "ghost"}
+          colorScheme={jobName ? 'green' : undefined}
+          variant={jobName ? 'solid' : 'ghost'}
         >
           {jobName ? 'Create Schedule' : 'Schedule'}
         </Button>
@@ -354,4 +388,6 @@ export const InlineSchedule: FC<InlineScheduleProps> = ({
       )}
     </div>
   );
-};
+});
+
+InlineSchedule.displayName = 'InlineSchedule';

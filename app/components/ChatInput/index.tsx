@@ -1,19 +1,20 @@
-import { SendIcon } from "@/components/CustomIcon/SendIcon";
-import { ScheduleButton } from "@/components/ScheduleButton";
-import { ToolsButton } from "@/components/Tools/ToolsButton";
-import BASE_URL from "@/services/config/constants";
-import { isFeatureEnabled } from "@/services/featureFlags";
+import { SendIcon } from '@/components/CustomIcon/SendIcon';
+import { ScheduleButton } from '@/components/ScheduleButton';
+import { ToolsButton } from '@/components/Tools/ToolsButton';
+import BASE_URL from '@/services/config/constants';
+import { isFeatureEnabled } from '@/services/featureFlags';
 import {
   AttachmentIcon,
   CloseIcon,
   QuestionOutlineIcon,
-} from "@chakra-ui/icons";
-import { Button, IconButton, Textarea, useMediaQuery } from "@chakra-ui/react";
-import React, { FC, useEffect, useRef, useState } from "react";
-import { Command } from "./Commands";
-import { CommandsPortal } from "./CommandsPortal";
-import styles from "./index.module.css";
-import { InlineSchedule } from "./InlineSchedule";
+  TimeIcon,
+} from '@chakra-ui/icons';
+import { Button, IconButton, Textarea, useMediaQuery } from '@chakra-ui/react';
+import React, { FC, useEffect, useRef, useState } from 'react';
+import { Command } from './Commands';
+import { CommandsPortal } from './CommandsPortal';
+import styles from './index.module.css';
+import { InlineSchedule, InlineScheduleRef } from './InlineSchedule';
 
 type ChatInputProps = {
   onSubmit: (
@@ -34,28 +35,30 @@ export const ChatInput: FC<ChatInputProps> = ({
   isSidebarOpen,
   onToggleHelp,
   showPrefilledOptions,
-  placeholder = "Ask anything",
+  placeholder = 'Ask anything',
 }) => {
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [commands, setCommands] = useState<Command[]>([]);
   const [showCommands, setShowCommands] = useState(false);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
-  const [isMobile] = useMediaQuery("(max-width: 768px)");
+  const [isMobile] = useMediaQuery('(max-width: 768px)');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isScheduleReady, setIsScheduleReady] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scheduleRef = useRef<InlineScheduleRef>(null);
 
   // Add this useEffect to prevent focus zoom on mobile
   useEffect(() => {
     // Add meta viewport tag to prevent zoom
-    const viewportMeta = document.createElement("meta");
-    viewportMeta.name = "viewport";
+    const viewportMeta = document.createElement('meta');
+    viewportMeta.name = 'viewport';
     viewportMeta.content =
-      "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no";
+      'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
 
     // Check if there's already a viewport meta tag
     const existingMeta = document.querySelector('meta[name="viewport"]');
@@ -63,8 +66,8 @@ export const ChatInput: FC<ChatInputProps> = ({
     if (existingMeta) {
       // Update existing meta tag
       existingMeta.setAttribute(
-        "content",
-        "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+        'content',
+        'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no'
       );
     } else {
       // Add new meta tag
@@ -85,13 +88,13 @@ export const ChatInput: FC<ChatInputProps> = ({
       .then((res) => res.json())
       .then((data) => setCommands(data.commands || []))
       .catch((error) => {
-        console.error("Error fetching commands:", error);
+        console.error('Error fetching commands:', error);
         setCommands([]); // Set empty array on error
       });
   }, []);
 
   // Filter commands based on input
-  const filteredCommands = message.startsWith("/")
+  const filteredCommands = message.startsWith('/')
     ? commands.filter((cmd) =>
         cmd.command.toLowerCase().includes(message.slice(1).toLowerCase())
       )
@@ -99,7 +102,7 @@ export const ChatInput: FC<ChatInputProps> = ({
 
   // Show/hide commands dropdown based on input
   useEffect(() => {
-    setShowCommands(message.startsWith("/") && filteredCommands.length > 0);
+    setShowCommands(message.startsWith('/') && filteredCommands.length > 0);
     setSelectedCommandIndex(0);
   }, [message, filteredCommands.length]);
 
@@ -112,26 +115,26 @@ export const ChatInput: FC<ChatInputProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (showCommands) {
       switch (e.key) {
-        case "ArrowDown":
+        case 'ArrowDown':
           e.preventDefault();
           setSelectedCommandIndex((prev) =>
             Math.min(prev + 1, filteredCommands.length - 1)
           );
           break;
-        case "ArrowUp":
+        case 'ArrowUp':
           e.preventDefault();
           setSelectedCommandIndex((prev) => Math.max(prev - 1, 0));
           break;
-        case "Tab":
-        case "Enter":
+        case 'Tab':
+        case 'Enter':
           e.preventDefault();
           handleCommandSelect(filteredCommands[selectedCommandIndex]);
           break;
-        case "Escape":
+        case 'Escape':
           setShowCommands(false);
           break;
       }
-    } else if (e.key === "Enter" && !e.shiftKey) {
+    } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
@@ -191,18 +194,25 @@ export const ChatInput: FC<ChatInputProps> = ({
 
     try {
       setIsSubmitting(true);
+
+      // If schedule is shown and ready, trigger scheduling instead of normal submission
+      if (showSchedule && isScheduleReady && scheduleRef.current) {
+        await scheduleRef.current.triggerSchedule();
+        return;
+      }
+
       const messageToSend = message;
       const filesToSend = [...attachedFiles];
 
       // Clear input immediately to improve UX
-      setMessage("");
+      setMessage('');
       setAttachedFiles([]);
       setShowSchedule(false);
 
       // Submit the message with research always enabled
       await onSubmit(messageToSend, filesToSend, true);
     } catch (error) {
-      console.error("Error submitting message:", error);
+      console.error('Error submitting message:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -214,7 +224,11 @@ export const ChatInput: FC<ChatInputProps> = ({
 
   const handleScheduleJobCreated = (jobId: string) => {
     setShowSchedule(false);
-    setMessage("");
+    setMessage('');
+  };
+
+  const handleScheduleReadyChange = (ready: boolean) => {
+    setIsScheduleReady(ready);
   };
 
   return (
@@ -230,7 +244,7 @@ export const ChatInput: FC<ChatInputProps> = ({
 
       <div className={styles.flexContainer}>
         <div
-          className={`${styles.inputWrapper} ${isDragOver ? styles.dragOver : ""}`}
+          className={`${styles.inputWrapper} ${isDragOver ? styles.dragOver : ''}`}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDragOver={handleDragOver}
@@ -257,7 +271,7 @@ export const ChatInput: FC<ChatInputProps> = ({
               onChange={(e) => setMessage(e.target.value)}
               placeholder={
                 attachedFiles.length > 0
-                  ? `${attachedFiles.length} file${attachedFiles.length > 1 ? "s" : ""} attached - ${placeholder}`
+                  ? `${attachedFiles.length} file${attachedFiles.length > 1 ? 's' : ''} attached - ${placeholder}`
                   : placeholder
               }
               minH="36px"
@@ -274,13 +288,32 @@ export const ChatInput: FC<ChatInputProps> = ({
                 disabled ||
                 (!message && attachedFiles.length === 0)
               }
-              aria-label="Send"
+              aria-label={showSchedule && isScheduleReady ? 'Schedule' : 'Send'}
               onClick={handleSubmit}
               icon={
-                <SendIcon
-                  width={isMobile ? "20px" : "24px"}
-                  height={isMobile ? "20px" : "24px"}
-                />
+                showSchedule && isScheduleReady ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '2px',
+                    }}
+                  >
+                    <TimeIcon
+                      width={isMobile ? '16px' : '18px'}
+                      height={isMobile ? '16px' : '18px'}
+                    />
+                    <SendIcon
+                      width={isMobile ? '16px' : '18px'}
+                      height={isMobile ? '16px' : '18px'}
+                    />
+                  </div>
+                ) : (
+                  <SendIcon
+                    width={isMobile ? '20px' : '24px'}
+                    height={isMobile ? '20px' : '24px'}
+                  />
+                )
               }
             />
           </div>
@@ -294,7 +327,7 @@ export const ChatInput: FC<ChatInputProps> = ({
                   className={styles.attachmentPreview}
                 >
                   <div className={styles.attachmentImageContainer}>
-                    {file.type?.startsWith("image/") ? (
+                    {file.type?.startsWith('image/') ? (
                       <img
                         src={URL.createObjectURL(file)}
                         alt={file.name}
@@ -330,12 +363,12 @@ export const ChatInput: FC<ChatInputProps> = ({
                 size="sm"
                 onClick={handleFileUpload}
               />
-              {isFeatureEnabled("feature.prefilled_options") && (
+              {isFeatureEnabled('feature.prefilled_options') && (
                 <Button
                   leftIcon={<QuestionOutlineIcon />}
                   size="sm"
                   className={`${styles.actionButton} ${
-                    showPrefilledOptions ? styles.activeButton : ""
+                    showPrefilledOptions ? styles.activeButton : ''
                   }`}
                   onClick={onToggleHelp}
                 >
@@ -351,7 +384,7 @@ export const ChatInput: FC<ChatInputProps> = ({
             </div>
 
             {/* Right aligned tools button */}
-            {isFeatureEnabled("feature.tools_configuration") && (
+            {isFeatureEnabled('feature.tools_configuration') && (
               <div className={styles.rightActions}>
                 <ToolsButton apiBaseUrl={BASE_URL} />
               </div>
@@ -361,9 +394,11 @@ export const ChatInput: FC<ChatInputProps> = ({
           {/* Inline Schedule Component */}
           {showSchedule && (
             <InlineSchedule
+              ref={scheduleRef}
               message={message}
               onJobCreated={handleScheduleJobCreated}
               onClose={() => setShowSchedule(false)}
+              onScheduleReadyChange={handleScheduleReadyChange}
             />
           )}
         </div>
