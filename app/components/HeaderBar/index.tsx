@@ -1,20 +1,26 @@
-import { Box, HStack, Spacer, Select, Text } from "@chakra-ui/react";
-import Image from "next/image";
-import { FC, useState } from "react";
-import { CustomConnectButton } from "./CustomConnectButton";
-import styles from "./index.module.css";
+import { Box, HStack, Select, Spacer, Text } from '@chakra-ui/react';
+import Image from 'next/image';
+import { useRouter } from 'next/router';
+import { FC, useState } from 'react';
+import { CustomConnectButton } from './CustomConnectButton';
+import styles from './index.module.css';
 
 interface HeaderBarProps {
   onBackToJobs?: () => void;
 }
 
 export const HeaderBar: FC<HeaderBarProps> = ({ onBackToJobs }) => {
-  const [selectedModel, setSelectedModel] = useState("llama3.3:70b");
-  const modelOptions = [{ value: "llama3.3:70b", label: "Llama 3.3 (70B)" }];
-  
+  const [selectedModel, setSelectedModel] = useState('llama3.3:70b');
+  const modelOptions = [{ value: 'llama3.3:70b', label: 'Llama 3.3 (70B)' }];
+  const router = useRouter();
+
   const handleLogoClick = () => {
     if (onBackToJobs) {
+      // If we have a local callback (e.g., switching views within same page), use it
       onBackToJobs();
+    } else {
+      // Otherwise, navigate to dashboard home page
+      router.push('/');
     }
   };
 
@@ -22,13 +28,9 @@ export const HeaderBar: FC<HeaderBarProps> = ({ onBackToJobs }) => {
     <Box className={styles.headerBar}>
       <HStack spacing={0} width="100%" px={4}>
         <Box className={styles.logo} flexShrink={0}>
-          {onBackToJobs ? (
-            <Box onClick={handleLogoClick} cursor="pointer">
-              <Image src="/assets/logo.svg" alt="logo" width={60} height={30} />
-            </Box>
-          ) : (
+          <Box onClick={handleLogoClick} cursor="pointer">
             <Image src="/assets/logo.svg" alt="logo" width={60} height={30} />
-          )}
+          </Box>
         </Box>
         <Spacer />
         <HStack spacing={4}>
@@ -43,8 +45,11 @@ export const HeaderBar: FC<HeaderBarProps> = ({ onBackToJobs }) => {
               bg="#27292c"
               color="white"
               borderColor="rgba(255, 255, 255, 0.1)"
-              _hover={{ borderColor: "rgba(255, 255, 255, 0.2)" }}
-              _focus={{ borderColor: "rgba(255, 255, 255, 0.2)", boxShadow: "none" }}
+              _hover={{ borderColor: 'rgba(255, 255, 255, 0.2)' }}
+              _focus={{
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                boxShadow: 'none',
+              }}
               borderRadius="8px"
               fontSize="14px"
               height="32px"
@@ -52,7 +57,11 @@ export const HeaderBar: FC<HeaderBarProps> = ({ onBackToJobs }) => {
               fontWeight="400"
             >
               {modelOptions.map((option) => (
-                <option key={option.value} value={option.value} style={{ background: "#27292c", color: "white" }}>
+                <option
+                  key={option.value}
+                  value={option.value}
+                  style={{ background: '#27292c', color: 'white' }}
+                >
                   {option.label}
                 </option>
               ))}
