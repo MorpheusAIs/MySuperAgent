@@ -1,30 +1,31 @@
-import React, { FC, useState, useEffect } from 'react';
+import UserPreferencesAPI from '@/services/api-clients/userPreferences';
+import { UserPreferences } from '@/services/database/db';
+import { useWalletAddress } from '@/services/wallet/utils';
 import {
   Box,
-  VStack,
+  Button,
+  Divider,
   FormControl,
   FormLabel,
-  Switch,
+  HStack,
   Select,
-  Button,
+  Switch,
   Text,
   useToast,
-  HStack,
-  Divider,
+  VStack,
 } from '@chakra-ui/react';
-import { SettingsIcon } from '@chakra-ui/icons';
-import { UserPreferences } from '@/services/database/db';
-import UserPreferencesAPI from '@/services/api-clients/userPreferences';
-import { useWalletAddress } from '@/services/wallet/utils';
+import { FC, useEffect, useState } from 'react';
 
 interface UserPreferencesProps {
   onClose?: () => void;
 }
 
-export const UserPreferencesComponent: FC<UserPreferencesProps> = ({ onClose }) => {
+export const UserPreferencesComponent: FC<UserPreferencesProps> = ({
+  onClose,
+}) => {
   const [preferences, setPreferences] = useState<UserPreferences>({
     wallet_address: '',
-    auto_schedule_jobs: false,
+    auto_schedule_jobs: true,
     default_schedule_type: 'daily',
     default_schedule_time: '09:00:00',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -47,7 +48,8 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({ onClose }) 
           setIsLoading(false);
           return;
         }
-        const userPrefs = await UserPreferencesAPI.getUserPreferences(walletAddress);
+        const userPrefs =
+          await UserPreferencesAPI.getUserPreferences(walletAddress);
         if (userPrefs) {
           setPreferences(userPrefs);
         } else {
@@ -128,7 +130,10 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({ onClose }) 
     }
   };
 
-  const handlePreferenceChange = (key: keyof UserPreferences, value: string | boolean) => {
+  const handlePreferenceChange = (
+    key: keyof UserPreferences,
+    value: string | boolean
+  ) => {
     setPreferences((prev: UserPreferences) => ({
       ...prev,
       [key]: value,
@@ -156,18 +161,31 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({ onClose }) 
 
         {/* Auto-scheduling preferences */}
         <VStack spacing={3} align="stretch">
-          <FormControl display="flex" alignItems="center" justifyContent="space-between">
+          <FormControl
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+          >
             <FormLabel mb="0" fontSize="14px" fontWeight="500" color="white">
               Auto-schedule all jobs
             </FormLabel>
             <Switch
               isChecked={preferences.auto_schedule_jobs}
-              onChange={(e) => handlePreferenceChange('auto_schedule_jobs', e.target.checked)}
+              onChange={(e) =>
+                handlePreferenceChange('auto_schedule_jobs', e.target.checked)
+              }
+              colorScheme="green"
               sx={{
                 '.chakra-switch__track': {
                   bg: 'rgba(255, 255, 255, 0.1)',
                   _checked: {
-                    bg: 'rgba(255, 255, 255, 0.3)',
+                    bg: '#48BB78 !important',
+                  },
+                },
+                '.chakra-switch__thumb': {
+                  bg: 'white',
+                  _checked: {
+                    bg: 'white',
                   },
                 },
               }}
@@ -175,26 +193,51 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({ onClose }) 
           </FormControl>
 
           <Text fontSize="12px" color="rgba(255, 255, 255, 0.6)">
-            When enabled, all new jobs will be automatically scheduled using your default settings
+            When enabled, all new jobs will be automatically scheduled using
+            your default settings
           </Text>
 
           {preferences.auto_schedule_jobs && (
-            <VStack spacing={3} align="stretch" pl={4} borderLeft="1px solid" borderColor="rgba(255, 255, 255, 0.1)">
+            <VStack
+              spacing={3}
+              align="stretch"
+              pl={4}
+              borderLeft="1px solid"
+              borderColor="rgba(255, 255, 255, 0.1)"
+            >
               <FormControl>
                 <FormLabel fontSize="14px" fontWeight="500" color="white">
                   Default Schedule Type
                 </FormLabel>
                 <Select
                   value={preferences.default_schedule_type}
-                  onChange={(e) => handlePreferenceChange('default_schedule_type', e.target.value)}
+                  onChange={(e) =>
+                    handlePreferenceChange(
+                      'default_schedule_type',
+                      e.target.value
+                    )
+                  }
                   bg="rgba(255, 255, 255, 0.05)"
                   borderColor="rgba(255, 255, 255, 0.1)"
                   color="white"
-                  _hover={{ borderColor: "rgba(255, 255, 255, 0.2)" }}
-                  _focus={{ borderColor: "rgba(255, 255, 255, 0.3)", boxShadow: "none" }}
+                  _hover={{ borderColor: 'rgba(255, 255, 255, 0.2)' }}
+                  _focus={{
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    boxShadow: 'none',
+                  }}
                 >
-                  <option value="daily" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>Daily</option>
-                  <option value="weekly" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>Weekly</option>
+                  <option
+                    value="daily"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    Daily
+                  </option>
+                  <option
+                    value="weekly"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    Weekly
+                  </option>
                 </Select>
               </FormControl>
 
@@ -204,26 +247,99 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({ onClose }) 
                 </FormLabel>
                 <Select
                   value={preferences.default_schedule_time}
-                  onChange={(e) => handlePreferenceChange('default_schedule_time', e.target.value)}
+                  onChange={(e) =>
+                    handlePreferenceChange(
+                      'default_schedule_time',
+                      e.target.value
+                    )
+                  }
                   bg="rgba(255, 255, 255, 0.05)"
                   borderColor="rgba(255, 255, 255, 0.1)"
                   color="white"
-                  _hover={{ borderColor: "rgba(255, 255, 255, 0.2)" }}
-                  _focus={{ borderColor: "rgba(255, 255, 255, 0.3)", boxShadow: "none" }}
+                  _hover={{ borderColor: 'rgba(255, 255, 255, 0.2)' }}
+                  _focus={{
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    boxShadow: 'none',
+                  }}
                 >
-                  <option value="06:00:00" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>6:00 AM</option>
-                  <option value="07:00:00" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>7:00 AM</option>
-                  <option value="08:00:00" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>8:00 AM</option>
-                  <option value="09:00:00" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>9:00 AM</option>
-                  <option value="10:00:00" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>10:00 AM</option>
-                  <option value="11:00:00" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>11:00 AM</option>
-                  <option value="12:00:00" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>12:00 PM</option>
-                  <option value="13:00:00" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>1:00 PM</option>
-                  <option value="14:00:00" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>2:00 PM</option>
-                  <option value="15:00:00" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>3:00 PM</option>
-                  <option value="16:00:00" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>4:00 PM</option>
-                  <option value="17:00:00" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>5:00 PM</option>
-                  <option value="18:00:00" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>6:00 PM</option>
+                  <option
+                    value="06:00:00"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    6:00 AM
+                  </option>
+                  <option
+                    value="07:00:00"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    7:00 AM
+                  </option>
+                  <option
+                    value="08:00:00"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    8:00 AM
+                  </option>
+                  <option
+                    value="09:00:00"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    9:00 AM
+                  </option>
+                  <option
+                    value="10:00:00"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    10:00 AM
+                  </option>
+                  <option
+                    value="11:00:00"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    11:00 AM
+                  </option>
+                  <option
+                    value="12:00:00"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    12:00 PM
+                  </option>
+                  <option
+                    value="13:00:00"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    1:00 PM
+                  </option>
+                  <option
+                    value="14:00:00"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    2:00 PM
+                  </option>
+                  <option
+                    value="15:00:00"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    3:00 PM
+                  </option>
+                  <option
+                    value="16:00:00"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    4:00 PM
+                  </option>
+                  <option
+                    value="17:00:00"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    5:00 PM
+                  </option>
+                  <option
+                    value="18:00:00"
+                    style={{ backgroundColor: '#1a1a1a', color: 'white' }}
+                  >
+                    6:00 PM
+                  </option>
                 </Select>
               </FormControl>
 
@@ -260,7 +376,7 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({ onClose }) 
               onClick={onClose}
               isDisabled={isSaving}
               color="rgba(255, 255, 255, 0.7)"
-              _hover={{ bg: "rgba(255, 255, 255, 0.05)" }}
+              _hover={{ bg: 'rgba(255, 255, 255, 0.05)' }}
             >
               Cancel
             </Button>
@@ -271,8 +387,8 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({ onClose }) 
             loadingText="Saving..."
             bg="rgba(255, 255, 255, 0.1)"
             color="white"
-            _hover={{ bg: "rgba(255, 255, 255, 0.15)" }}
-            _active={{ bg: "rgba(255, 255, 255, 0.2)" }}
+            _hover={{ bg: 'rgba(255, 255, 255, 0.15)' }}
+            _active={{ bg: 'rgba(255, 255, 255, 0.2)' }}
           >
             Save Preferences
           </Button>

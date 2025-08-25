@@ -3,7 +3,8 @@
   border-bottom: 2px solid gray;
   padding: 8px 0;
   width: 100%;
-  z-index: 1401;
+  position: relative;
+  z-index: 1500;
 }
 
 .logo {

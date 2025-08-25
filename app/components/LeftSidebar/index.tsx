@@ -1,37 +1,31 @@
-import React, { FC, useState } from "react";
+import { AgentsButton } from '@/components/Agents/Button';
+import { CdpWalletsButton } from '@/components/CdpWallets/Button';
+import { StyledTooltip } from '@/components/Common/StyledTooltip';
+import { ApiCredentialsButton } from '@/components/Credentials/Button';
+import { DashboardButton } from '@/components/Dashboard/Button';
+import { SettingsButton } from '@/components/Settings';
+import { SyncButton } from '@/components/Sync/Button';
+import { TeamsButton } from '@/components/Teams/Button';
+import { ToolsButton } from '@/components/Tools/Button';
+import { SchedulingPreferencesButton } from '@/components/UserPreferences/Button';
+import { Box, Divider, Flex, Text, Tooltip } from '@chakra-ui/react';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
-  Box,
-  Text,
-  VStack,
-  Divider,
-  Tooltip,
-  Flex,
-} from "@chakra-ui/react";
-import {
+  IconBrandDiscord,
+  IconBrandGithub,
+  IconBrandTwitter,
   IconChevronLeft,
   IconChevronRight,
-  IconBrandDiscord,
-  IconBrandTwitter,
-  IconBrandGithub,
   IconQuestionMark,
   IconWorld,
-} from "@tabler/icons-react";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { DashboardButton } from "@/components/Dashboard/Button";
-import { ToolsButton } from "@/components/Tools/Button";
-import { AgentsButton } from "@/components/Agents/Button";
-import { TeamsButton } from "@/components/Teams/Button";
-import { ApiCredentialsButton } from "@/components/Credentials/Button";
-import { CdpWalletsButton } from "@/components/CdpWallets/Button";
-import { SettingsButton } from "@/components/Settings";
-import { SyncButton } from "@/components/Sync/Button";
-import { SchedulingPreferencesButton } from "@/components/UserPreferences/Button";
-import { StyledTooltip } from "@/components/Common/StyledTooltip";
-import styles from "./index.module.css";
+} from '@tabler/icons-react';
+import React, { FC } from 'react';
+import styles from './index.module.css';
 
 export type LeftSidebarProps = {
   isSidebarOpen: boolean;
   onToggleSidebar: (open: boolean) => void;
+  isHeaderVisible?: boolean;
 };
 
 const MenuSection = ({
@@ -66,7 +60,7 @@ const ExternalLinkMenuItem = ({
 }) => (
   <div
     className={styles.externalMenuItem}
-    onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
+    onClick={() => window.open(href, '_blank', 'noopener,noreferrer')}
   >
     <Flex align="center" gap={3}>
       {Icon && <Icon size={20} />}
@@ -78,17 +72,24 @@ const ExternalLinkMenuItem = ({
 export const LeftSidebar: FC<LeftSidebarProps> = ({
   isSidebarOpen,
   onToggleSidebar,
+  isHeaderVisible = true,
 }) => {
   const ToggleIcon = isSidebarOpen ? IconChevronLeft : IconChevronRight;
 
   return (
     <div
       className={`${styles.sidebarContainer} ${
-        !isSidebarOpen ? styles.collapsed : ""
+        !isSidebarOpen ? styles.collapsed : ''
       }`}
     >
       <div className={styles.sidebar}>
-        <div className={styles.container}>
+        <div
+          className={styles.container}
+          style={{
+            paddingTop: isHeaderVisible ? '70px' : '16px',
+            transition: 'padding-top 0.3s ease',
+          }}
+        >
           <ConnectButton.Custom>
             {({ account }) => (
               <div className={styles.mainContent}>
@@ -100,7 +101,7 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                   >
                     <div className={styles.menuItem}>
                       <Box
-                        pointerEvents={account ? "auto" : "none"}
+                        pointerEvents={account ? 'auto' : 'none'}
                         opacity={account ? 1 : 0.5}
                       >
                         <SettingsButton />
@@ -114,7 +115,7 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                   >
                     <div className={styles.menuItem}>
                       <Box
-                        pointerEvents={account ? "auto" : "none"}
+                        pointerEvents={account ? 'auto' : 'none'}
                         opacity={account ? 1 : 0.5}
                       >
                         <SchedulingPreferencesButton />
@@ -133,7 +134,7 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                   >
                     <div>
                       <Box
-                        pointerEvents={account ? "auto" : "none"}
+                        pointerEvents={account ? 'auto' : 'none'}
                         opacity={account ? 1 : 0.5}
                         pl={1}
                       >
@@ -217,11 +218,11 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                 return (
                   <div
                     {...(!ready && {
-                      "aria-hidden": true,
+                      'aria-hidden': true,
                       style: {
                         opacity: 0,
-                        pointerEvents: "none",
-                        userSelect: "none",
+                        pointerEvents: 'none',
+                        userSelect: 'none',
                       },
                     })}
                     className={styles.connectButtonWrapper}
@@ -232,8 +233,8 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                     >
                       <div className={styles.accountInfo}>
                         {connected
-                          ? "Active session logged in as " + account.displayName
-                          : "Connect Wallet to Enable Full Functionality"}
+                          ? 'Active session logged in as ' + account.displayName
+                          : 'Connect Wallet to Enable Full Functionality'}
                       </div>
                     </div>
                   </div>
@@ -246,6 +247,10 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
 
       <button
         className={styles.toggleButton}
+        style={{
+          top: isHeaderVisible ? '72px' : '16px',
+          transition: 'top 0.3s ease',
+        }}
         onClick={() => onToggleSidebar(!isSidebarOpen)}
         aria-label="Toggle sidebar"
       >

@@ -1,7 +1,7 @@
-import JobsAPI from "@/services/api-clients/jobs";
-import { Job } from "@/services/database/db";
-import { useWalletAddress } from "@/services/wallet/utils";
-import { ScheduledJobEditModal } from "@/components/ScheduledJobEditModal";
+import { ScheduledJobEditModal } from '@/components/ScheduledJobEditModal';
+import JobsAPI from '@/services/api-clients/jobs';
+import { Job } from '@/services/database/db';
+import { useWalletAddress } from '@/services/wallet/utils';
 import {
   CalendarIcon,
   ChatIcon,
@@ -14,7 +14,7 @@ import {
   SmallCloseIcon,
   TimeIcon,
   TriangleUpIcon,
-} from "@chakra-ui/icons";
+} from '@chakra-ui/icons';
 import {
   Badge,
   Box,
@@ -35,9 +35,9 @@ import {
   Tooltip,
   useToast,
   VStack,
-} from "@chakra-ui/react";
-import { FC, useCallback, useEffect, useMemo, useState } from "react";
-import styles from "./index.module.css";
+} from '@chakra-ui/react';
+import { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import styles from './index.module.css';
 
 interface JobsListProps {
   onJobClick: (jobId: string) => void;
@@ -52,7 +52,7 @@ interface JobsListProps {
 
 const getJobStatus = (
   job: Job
-): "pending" | "running" | "completed" | "failed" | "cancelled" => {
+): 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' => {
   return job.status;
 };
 
@@ -60,11 +60,11 @@ const isCurrentJob = (job: Job) => {
   const status = getJobStatus(job);
 
   // Current jobs are those in progress or completed within the last 24 hours
-  if (status === "pending" || status === "running") {
+  if (status === 'pending' || status === 'running') {
     return true;
   }
 
-  if (status === "completed") {
+  if (status === 'completed') {
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
     return new Date(job.created_at) > oneDayAgo;
@@ -77,11 +77,11 @@ const isPreviousJob = (job: Job) => {
   const status = getJobStatus(job);
 
   // Previous jobs are completed/failed jobs older than 24 hours
-  if (status === "failed") {
+  if (status === 'failed') {
     return true;
   }
 
-  if (status === "completed") {
+  if (status === 'completed') {
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
     return new Date(job.created_at) <= oneDayAgo;
@@ -91,21 +91,21 @@ const isPreviousJob = (job: Job) => {
 };
 
 const getStatusColor = (
-  status: "pending" | "running" | "completed" | "failed" | "cancelled"
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
 ) => {
   switch (status) {
-    case "pending":
-      return "gray";
-    case "running":
-      return "blue";
-    case "completed":
-      return "green";
-    case "failed":
-      return "red";
-    case "cancelled":
-      return "orange";
+    case 'pending':
+      return 'gray';
+    case 'running':
+      return 'blue';
+    case 'completed':
+      return 'green';
+    case 'failed':
+      return 'red';
+    case 'cancelled':
+      return 'orange';
     default:
-      return "gray";
+      return 'gray';
   }
 };
 
@@ -168,29 +168,29 @@ const ScheduledJobItem: FC<{
   const now = new Date();
 
   const formatScheduleDescription = (job: Job): string => {
-    if (!job.schedule_type) return "Unknown";
+    if (!job.schedule_type) return 'Unknown';
 
     switch (job.schedule_type) {
-      case "once":
-        return "One time";
-      case "hourly":
-        return "Hourly";
-      case "daily":
-        return "Daily";
-      case "weekly":
-        return "Weekly";
-      case "custom":
-        return job.interval_days ? `Every ${job.interval_days} days` : "Custom";
+      case 'once':
+        return 'One time';
+      case 'hourly':
+        return 'Hourly';
+      case 'daily':
+        return 'Daily';
+      case 'weekly':
+        return 'Weekly';
+      case 'custom':
+        return job.interval_days ? `Every ${job.interval_days} days` : 'Custom';
       default:
         return job.schedule_type;
     }
   };
 
   const getTimeUntilNext = (): string => {
-    if (!nextRun || !job.is_active) return "";
+    if (!nextRun || !job.is_active) return '';
 
     const diff = nextRun.getTime() - now.getTime();
-    if (diff <= 0) return "Overdue";
+    if (diff <= 0) return 'Overdue';
 
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -206,12 +206,12 @@ const ScheduledJobItem: FC<{
       className={styles.scheduledJobItem}
       border="1px solid"
       borderColor={
-        job.is_active ? (isOverdue ? "red.400" : "blue.400") : "gray.600"
+        job.is_active ? (isOverdue ? 'red.400' : 'blue.400') : 'gray.600'
       }
       borderRadius="12px"
       p={4}
       bg="rgba(255, 255, 255, 0.02)"
-      _hover={{ bg: "rgba(255, 255, 255, 0.04)" }}
+      _hover={{ bg: 'rgba(255, 255, 255, 0.04)' }}
       transition="all 0.2s ease"
     >
       <VStack align="stretch" spacing={3} width="100%">
@@ -222,7 +222,7 @@ const ScheduledJobItem: FC<{
               <RepeatIcon
                 w={4}
                 h={4}
-                color={job.is_active ? "blue.400" : "gray.500"}
+                color={job.is_active ? 'blue.400' : 'gray.500'}
               />
               <Text
                 fontSize="md"
@@ -242,18 +242,18 @@ const ScheduledJobItem: FC<{
               noOfLines={2}
               w="100%"
             >
-              {job.description || job.initial_message.substring(0, 120) + "..."}
+              {job.description || job.initial_message.substring(0, 120) + '...'}
             </Text>
           </VStack>
 
           {/* Status Badge */}
           <Badge
-            colorScheme={job.is_active ? (isOverdue ? "red" : "blue") : "gray"}
+            colorScheme={job.is_active ? (isOverdue ? 'red' : 'blue') : 'gray'}
             variant="subtle"
             size="sm"
             flexShrink={0}
           >
-            {!job.is_active ? "inactive" : isOverdue ? "overdue" : "active"}
+            {!job.is_active ? 'inactive' : isOverdue ? 'overdue' : 'active'}
           </Badge>
         </HStack>
 
@@ -269,7 +269,7 @@ const ScheduledJobItem: FC<{
             {job.run_count > 0 && (
               <Text fontSize="xs" color="gray.500">
                 Executed {job.run_count}
-                {job.max_runs ? `/${job.max_runs}` : ""} times
+                {job.max_runs ? `/${job.max_runs}` : ''} times
               </Text>
             )}
           </HStack>
@@ -279,13 +279,13 @@ const ScheduledJobItem: FC<{
               <HStack spacing={2} color="gray.400">
                 <TimeIcon w={3} h={3} />
                 <Text>
-                  Next run: {nextRun.toLocaleDateString()} at{" "}
+                  Next run: {nextRun.toLocaleDateString()} at{' '}
                   {nextRun.toLocaleTimeString()}
                 </Text>
               </HStack>
               <Text
                 fontSize="xs"
-                color={isOverdue ? "red.400" : "blue.400"}
+                color={isOverdue ? 'red.400' : 'blue.400'}
                 fontWeight="medium"
               >
                 {getTimeUntilNext()}
@@ -296,7 +296,7 @@ const ScheduledJobItem: FC<{
           {job.last_run_at && (
             <HStack spacing={2} fontSize="xs" color="gray.600">
               <Text>
-                Last run: {new Date(job.last_run_at).toLocaleDateString()} at{" "}
+                Last run: {new Date(job.last_run_at).toLocaleDateString()} at{' '}
                 {new Date(job.last_run_at).toLocaleTimeString()}
               </Text>
             </HStack>
@@ -327,11 +327,11 @@ const ScheduledJobItem: FC<{
                     variant="ghost"
                     colorScheme="green"
                     _hover={{
-                      bg: "rgba(34, 197, 94, 0.1)",
-                      transform: "scale(1.1)"
+                      bg: 'rgba(34, 197, 94, 0.1)',
+                      transform: 'scale(1.1)',
                     }}
                     _active={{
-                      bg: "rgba(34, 197, 94, 0.2)"
+                      bg: 'rgba(34, 197, 94, 0.2)',
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -350,11 +350,11 @@ const ScheduledJobItem: FC<{
                     variant="ghost"
                     colorScheme="blue"
                     _hover={{
-                      bg: "rgba(59, 130, 246, 0.1)",
-                      transform: "scale(1.1)"
+                      bg: 'rgba(59, 130, 246, 0.1)',
+                      transform: 'scale(1.1)',
                     }}
                     _active={{
-                      bg: "rgba(59, 130, 246, 0.2)"
+                      bg: 'rgba(59, 130, 246, 0.2)',
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -365,21 +365,31 @@ const ScheduledJobItem: FC<{
               )}
 
               <Tooltip
-                label={job.is_active ? "Deactivate" : "Activate"}
+                label={job.is_active ? 'Deactivate' : 'Activate'}
                 placement="top"
               >
                 <IconButton
-                  aria-label={job.is_active ? "Deactivate job" : "Activate job"}
-                  icon={job.is_active ? <SmallCloseIcon w={3} h={3} /> : <CheckCircleIcon w={3} h={3} />}
+                  aria-label={job.is_active ? 'Deactivate job' : 'Activate job'}
+                  icon={
+                    job.is_active ? (
+                      <SmallCloseIcon w={3} h={3} />
+                    ) : (
+                      <CheckCircleIcon w={3} h={3} />
+                    )
+                  }
                   size="xs"
                   variant="ghost"
-                  colorScheme={job.is_active ? "orange" : "green"}
+                  colorScheme={job.is_active ? 'orange' : 'green'}
                   _hover={{
-                    bg: job.is_active ? "rgba(249, 115, 22, 0.1)" : "rgba(34, 197, 94, 0.1)",
-                    transform: "scale(1.1)"
+                    bg: job.is_active
+                      ? 'rgba(249, 115, 22, 0.1)'
+                      : 'rgba(34, 197, 94, 0.1)',
+                    transform: 'scale(1.1)',
                   }}
                   _active={{
-                    bg: job.is_active ? "rgba(249, 115, 22, 0.2)" : "rgba(34, 197, 94, 0.2)"
+                    bg: job.is_active
+                      ? 'rgba(249, 115, 22, 0.2)'
+                      : 'rgba(34, 197, 94, 0.2)',
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -397,11 +407,11 @@ const ScheduledJobItem: FC<{
                     variant="ghost"
                     colorScheme="red"
                     _hover={{
-                      bg: "rgba(239, 68, 68, 0.1)",
-                      transform: "scale(1.1)"
+                      bg: 'rgba(239, 68, 68, 0.1)',
+                      transform: 'scale(1.1)',
                     }}
                     _active={{
-                      bg: "rgba(239, 68, 68, 0.2)"
+                      bg: 'rgba(239, 68, 68, 0.2)',
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -429,14 +439,14 @@ const JobItem: FC<{
 
   // Get title and description from job
   const title =
-    job.name !== "New Job"
+    job.name !== 'New Job'
       ? job.name
       : job.initial_message
         ? job.initial_message.substring(0, 50) +
-          (job.initial_message.length > 50 ? "..." : "")
-        : "Untitled Job";
+          (job.initial_message.length > 50 ? '...' : '')
+        : 'Untitled Job';
   const description =
-    job.description || job.initial_message || "No description";
+    job.description || job.initial_message || 'No description';
 
   return (
     <Box
@@ -451,12 +461,12 @@ const JobItem: FC<{
       border="1px solid"
       borderColor="rgba(255, 255, 255, 0.05)"
       bg="rgba(255, 255, 255, 0.01)"
-      _hover={{ 
-        bg: "rgba(255, 255, 255, 0.03)",
-        borderColor: "rgba(255, 255, 255, 0.1)",
-        "& .job-actions": { opacity: 1 },
-        transform: "translateY(-1px)",
-        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)"
+      _hover={{
+        bg: 'rgba(255, 255, 255, 0.03)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        '& .job-actions': { opacity: 1 },
+        transform: 'translateY(-1px)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
       }}
       transition="all 0.2s ease"
     >
@@ -499,7 +509,7 @@ const JobItem: FC<{
                 {description}
               </Text>
             </VStack>
-            
+
             <Badge
               colorScheme={getStatusColor(status)}
               variant="subtle"
@@ -511,7 +521,12 @@ const JobItem: FC<{
           </HStack>
 
           {/* Metadata row */}
-          <HStack justify="space-between" fontSize="xs" color="gray.600" w="100%">
+          <HStack
+            justify="space-between"
+            fontSize="xs"
+            color="gray.600"
+            w="100%"
+          >
             <HStack spacing={4} flexShrink={0}>
               <HStack spacing={1}>
                 <ChatIcon w={3} h={3} />
@@ -524,7 +539,7 @@ const JobItem: FC<{
             </HStack>
           </HStack>
 
-          {job.status === "completed" && (
+          {job.status === 'completed' && (
             <Text
               fontSize="xs"
               color="gray.600"
@@ -564,11 +579,11 @@ const JobItem: FC<{
                   variant="ghost"
                   colorScheme="blue"
                   _hover={{
-                    bg: "rgba(59, 130, 246, 0.1)",
-                    transform: "scale(1.1)"
+                    bg: 'rgba(59, 130, 246, 0.1)',
+                    transform: 'scale(1.1)',
                   }}
                   _active={{
-                    bg: "rgba(59, 130, 246, 0.2)"
+                    bg: 'rgba(59, 130, 246, 0.2)',
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -577,7 +592,7 @@ const JobItem: FC<{
                 />
               </Tooltip>
             )}
-            
+
             {onDelete && (
               <Tooltip label="Delete job permanently" placement="top">
                 <IconButton
@@ -587,11 +602,11 @@ const JobItem: FC<{
                   variant="ghost"
                   colorScheme="red"
                   _hover={{
-                    bg: "rgba(239, 68, 68, 0.1)",
-                    transform: "scale(1.1)"
+                    bg: 'rgba(239, 68, 68, 0.1)',
+                    transform: 'scale(1.1)',
                   }}
                   _active={{
-                    bg: "rgba(239, 68, 68, 0.2)"
+                    bg: 'rgba(239, 68, 68, 0.2)',
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -618,9 +633,9 @@ export const JobsList: FC<JobsListProps> = ({
   const [scheduledJobs, setScheduledJobs] = useState<Job[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [scheduledJobsLoading, setScheduledJobsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [timeFilter, setTimeFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [timeFilter, setTimeFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [scheduledPage, setScheduledPage] = useState(1);
   const [previousPage, setPreviousPage] = useState(1);
@@ -637,7 +652,7 @@ export const JobsList: FC<JobsListProps> = ({
     setScheduledJobsLoading(false);
 
     try {
-      const { getStorageData } = await import("@/services/local-storage/core");
+      const { getStorageData } = await import('@/services/local-storage/core');
       const data = getStorageData();
 
       // Convert localStorage conversations to Job-like objects
@@ -645,16 +660,16 @@ export const JobsList: FC<JobsListProps> = ({
         ([id, conversation]) => ({
           id,
           name: conversation.name,
-          description: "",
+          description: '',
           initial_message:
-            conversation.messages?.[0]?.content || "No messages yet",
-          status: "completed" as const,
+            conversation.messages?.[0]?.content || 'No messages yet',
+          status: 'completed' as const,
           created_at: new Date(conversation.createdAt || Date.now()),
           updated_at: new Date(conversation.createdAt || Date.now()),
           completed_at: new Date(conversation.createdAt || Date.now()),
           is_scheduled: false,
           has_uploaded_file: conversation.hasUploadedFile || false,
-          wallet_address: "",
+          wallet_address: '',
           run_count: 0,
           is_active: true,
           schedule_type: null,
@@ -671,7 +686,7 @@ export const JobsList: FC<JobsListProps> = ({
       setJobs(localJobs);
       setScheduledJobs([]);
     } catch (error: any) {
-      console.error("Error loading localStorage conversations:", error);
+      console.error('Error loading localStorage conversations:', error);
       setJobs([]);
       setScheduledJobs([]);
     } finally {
@@ -695,7 +710,7 @@ export const JobsList: FC<JobsListProps> = ({
       const jobsList = await JobsAPI.getJobs(walletAddress);
       setJobs(jobsList);
     } catch (error: any) {
-      console.error("Error loading jobs:", error);
+      console.error('Error loading jobs:', error);
       setJobs([]);
     } finally {
       setJobsLoading(false);
@@ -707,7 +722,7 @@ export const JobsList: FC<JobsListProps> = ({
       const scheduledJobsList = await JobsAPI.getScheduledJobs(walletAddress);
       setScheduledJobs(scheduledJobsList);
     } catch (error: any) {
-      console.error("Error loading scheduled jobs:", error);
+      console.error('Error loading scheduled jobs:', error);
       setScheduledJobs([]);
     } finally {
       setScheduledJobsLoading(false);
@@ -722,10 +737,10 @@ export const JobsList: FC<JobsListProps> = ({
   const filterJobs = useCallback(
     (jobsList: Job[]) => {
       const now = new Date();
-      
+
       return jobsList.filter((job) => {
         const matchesSearch =
-          searchQuery === "" ||
+          searchQuery === '' ||
           job.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (job.description &&
             job.description
@@ -734,30 +749,32 @@ export const JobsList: FC<JobsListProps> = ({
           job.initial_message.toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesStatus =
-          statusFilter === "all" || job.status === statusFilter;
+          statusFilter === 'all' || job.status === statusFilter;
 
         const jobDate = new Date(job.created_at);
         let matchesTime = true;
-        
-        if (timeFilter !== "all") {
+
+        if (timeFilter !== 'all') {
           const dayInMs = 24 * 60 * 60 * 1000;
           const diffTime = now.getTime() - jobDate.getTime();
-          
+
           switch (timeFilter) {
-            case "today":
-              matchesTime = diffTime < dayInMs && jobDate.toDateString() === now.toDateString();
+            case 'today':
+              matchesTime =
+                diffTime < dayInMs &&
+                jobDate.toDateString() === now.toDateString();
               break;
-            case "yesterday":
+            case 'yesterday':
               const yesterday = new Date(now.getTime() - dayInMs);
               matchesTime = jobDate.toDateString() === yesterday.toDateString();
               break;
-            case "week":
+            case 'week':
               matchesTime = diffTime < 7 * dayInMs;
               break;
-            case "month":
+            case 'month':
               matchesTime = diffTime < 30 * dayInMs;
               break;
-            case "older":
+            case 'older':
               matchesTime = diffTime >= 30 * dayInMs;
               break;
           }
@@ -810,9 +827,9 @@ export const JobsList: FC<JobsListProps> = ({
         const walletAddress = getAddress();
         if (!walletAddress) {
           toast({
-            title: "Wallet not connected",
-            description: "Please connect your wallet to update jobs",
-            status: "warning",
+            title: 'Wallet not connected',
+            description: 'Please connect your wallet to update jobs',
+            status: 'warning',
             duration: 3000,
             isClosable: true,
           });
@@ -829,17 +846,17 @@ export const JobsList: FC<JobsListProps> = ({
           await loadAllData();
 
           toast({
-            title: `Job ${job.is_active ? "deactivated" : "activated"}`,
-            status: "success",
+            title: `Job ${job.is_active ? 'deactivated' : 'activated'}`,
+            status: 'success',
             duration: 2000,
             isClosable: true,
           });
         }
       } catch (error) {
-        console.error("Error toggling scheduled job:", error);
+        console.error('Error toggling scheduled job:', error);
         toast({
-          title: "Error updating job",
-          status: "error",
+          title: 'Error updating job',
+          status: 'error',
           duration: 3000,
           isClosable: true,
         });
@@ -854,9 +871,9 @@ export const JobsList: FC<JobsListProps> = ({
         const walletAddress = getAddress();
         if (!walletAddress) {
           toast({
-            title: "Wallet not connected",
-            description: "Please connect your wallet to run jobs",
-            status: "warning",
+            title: 'Wallet not connected',
+            description: 'Please connect your wallet to run jobs',
+            status: 'warning',
             duration: 3000,
             isClosable: true,
           });
@@ -877,19 +894,19 @@ export const JobsList: FC<JobsListProps> = ({
         }
 
         toast({
-          title: "Job executed successfully",
+          title: 'Job executed successfully',
           description: `Created new job instance: ${newJob.name}`,
-          status: "success",
+          status: 'success',
           duration: 3000,
           isClosable: true,
         });
       } catch (error) {
-        console.error("Error running scheduled job:", error);
+        console.error('Error running scheduled job:', error);
         toast({
-          title: "Error running job",
+          title: 'Error running job',
           description:
-            error instanceof Error ? error.message : "Failed to run job",
-          status: "error",
+            error instanceof Error ? error.message : 'Failed to run job',
+          status: 'error',
           duration: 3000,
           isClosable: true,
         });
@@ -901,18 +918,18 @@ export const JobsList: FC<JobsListProps> = ({
   const handleEditSchedule = useCallback(
     async (jobId: string) => {
       // Find the job to edit
-      const job = scheduledJobs.find(j => j.id === jobId);
+      const job = scheduledJobs.find((j) => j.id === jobId);
       if (!job) {
         toast({
-          title: "Job not found",
-          description: "Could not find the scheduled job to edit",
-          status: "error",
+          title: 'Job not found',
+          description: 'Could not find the scheduled job to edit',
+          status: 'error',
           duration: 3000,
           isClosable: true,
         });
         return;
       }
-      
+
       // Open the edit modal with the selected job
       setJobToEdit(job);
       setIsEditModalOpen(true);
@@ -924,9 +941,9 @@ export const JobsList: FC<JobsListProps> = ({
     async (jobId: string) => {
       // Show confirmation dialog
       const confirmed = window.confirm(
-        "Are you sure you want to delete this job? This action cannot be undone and will permanently remove the job and all its messages."
+        'Are you sure you want to delete this job? This action cannot be undone and will permanently remove the job and all its messages.'
       );
-      
+
       if (!confirmed) {
         return;
       }
@@ -935,9 +952,9 @@ export const JobsList: FC<JobsListProps> = ({
         const walletAddress = getAddress();
         if (!walletAddress) {
           toast({
-            title: "Wallet not connected",
-            description: "Please connect your wallet to delete jobs",
-            status: "warning",
+            title: 'Wallet not connected',
+            description: 'Please connect your wallet to delete jobs',
+            status: 'warning',
             duration: 3000,
             isClosable: true,
           });
@@ -945,23 +962,24 @@ export const JobsList: FC<JobsListProps> = ({
         }
 
         await JobsAPI.deleteJob(walletAddress, jobId);
-        
+
         // Refresh all data
         await loadAllData();
 
         toast({
-          title: "Job deleted successfully",
-          description: "The job and all its messages have been removed",
-          status: "success",
+          title: 'Job deleted successfully',
+          description: 'The job and all its messages have been removed',
+          status: 'success',
           duration: 3000,
           isClosable: true,
         });
       } catch (error) {
-        console.error("Error deleting job:", error);
+        console.error('Error deleting job:', error);
         toast({
-          title: "Error deleting job",
-          description: error instanceof Error ? error.message : "Failed to delete job",
-          status: "error",
+          title: 'Error deleting job',
+          description:
+            error instanceof Error ? error.message : 'Failed to delete job',
+          status: 'error',
           duration: 3000,
           isClosable: true,
         });
@@ -973,12 +991,12 @@ export const JobsList: FC<JobsListProps> = ({
   const handleEditJob = useCallback(
     async (jobId: string) => {
       // Find the job to edit
-      const job = jobs.find(j => j.id === jobId);
+      const job = jobs.find((j) => j.id === jobId);
       if (!job) {
         toast({
-          title: "Job not found",
-          description: "Could not find the job to edit",
-          status: "error",
+          title: 'Job not found',
+          description: 'Could not find the job to edit',
+          status: 'error',
           duration: 3000,
           isClosable: true,
         });
@@ -986,15 +1004,15 @@ export const JobsList: FC<JobsListProps> = ({
       }
 
       // Simple inline edit for job name
-      const newName = window.prompt("Enter new job name:", job.name);
-      if (newName && newName.trim() !== "" && newName !== job.name) {
+      const newName = window.prompt('Enter new job name:', job.name);
+      if (newName && newName.trim() !== '' && newName !== job.name) {
         try {
           const walletAddress = getAddress();
           if (!walletAddress) {
             toast({
-              title: "Wallet not connected",
-              description: "Please connect your wallet to edit jobs",
-              status: "warning",
+              title: 'Wallet not connected',
+              description: 'Please connect your wallet to edit jobs',
+              status: 'warning',
               duration: 3000,
               isClosable: true,
             });
@@ -1003,25 +1021,26 @@ export const JobsList: FC<JobsListProps> = ({
 
           await JobsAPI.updateJob(jobId, {
             wallet_address: walletAddress,
-            name: newName.trim()
+            name: newName.trim(),
           });
-          
+
           // Refresh all data
           await loadAllData();
 
           toast({
-            title: "Job updated successfully",
+            title: 'Job updated successfully',
             description: `Job renamed to "${newName.trim()}"`,
-            status: "success",
+            status: 'success',
             duration: 3000,
             isClosable: true,
           });
         } catch (error) {
-          console.error("Error updating job:", error);
+          console.error('Error updating job:', error);
           toast({
-            title: "Error updating job",
-            description: error instanceof Error ? error.message : "Failed to update job",
-            status: "error",
+            title: 'Error updating job',
+            description:
+              error instanceof Error ? error.message : 'Failed to update job',
+            status: 'error',
             duration: 3000,
             isClosable: true,
           });
@@ -1120,21 +1139,9 @@ export const JobsList: FC<JobsListProps> = ({
           <Tab
             className={styles.tab}
             _selected={{
-              bg: "rgba(255, 255, 255, 0.08)",
-              color: "gray.200",
-              borderColor: "transparent",
-            }}
-            fontSize="sm"
-            fontWeight="medium"
-          >
-            Current Jobs ({allCurrentJobs.length})
-          </Tab>
-          <Tab
-            className={styles.tab}
-            _selected={{
-              bg: "rgba(255, 255, 255, 0.08)",
-              color: "gray.200",
-              borderColor: "transparent",
+              bg: 'rgba(255, 255, 255, 0.08)',
+              color: 'gray.200',
+              borderColor: 'transparent',
             }}
             fontSize="sm"
             fontWeight="medium"
@@ -1144,9 +1151,21 @@ export const JobsList: FC<JobsListProps> = ({
           <Tab
             className={styles.tab}
             _selected={{
-              bg: "rgba(255, 255, 255, 0.08)",
-              color: "gray.200",
-              borderColor: "transparent",
+              bg: 'rgba(255, 255, 255, 0.08)',
+              color: 'gray.200',
+              borderColor: 'transparent',
+            }}
+            fontSize="sm"
+            fontWeight="medium"
+          >
+            Current Jobs ({allCurrentJobs.length})
+          </Tab>
+          <Tab
+            className={styles.tab}
+            _selected={{
+              bg: 'rgba(255, 255, 255, 0.08)',
+              color: 'gray.200',
+              borderColor: 'transparent',
             }}
             fontSize="sm"
             fontWeight="medium"
@@ -1156,33 +1175,7 @@ export const JobsList: FC<JobsListProps> = ({
         </TabList>
 
         <TabPanels className={styles.tabPanelsContainer}>
-          <TabPanel p={0} h="100%">
-            <Box className={styles.scrollableContent}>
-              {allCurrentJobs.length === 0 ? (
-                <Box className={styles.emptyTabState}>
-                  <Text fontSize="sm" color="gray.600" textAlign="center">
-                    {searchQuery || statusFilter !== "all"
-                      ? "No jobs match your search criteria"
-                      : "No current jobs"}
-                  </Text>
-                </Box>
-              ) : (
-                <>
-                  <VStack spacing={2} width="100%" align="stretch" pb={2}>
-                    {currentJobs.map((job) => (
-                      <JobItem key={job.id} job={job} onClick={onJobClick} onDelete={handleDeleteJob} onEdit={handleEditJob} />
-                    ))}
-                  </VStack>
-                  <PaginationControls
-                    currentPage={currentPage}
-                    totalPages={currentTotalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                </>
-              )}
-            </Box>
-          </TabPanel>
-
+          {/* First TabPanel: Scheduled Jobs */}
           <TabPanel p={0} pt={4} h="100%">
             <Box className={styles.scrollableContent}>
               {scheduledJobsLoading ? (
@@ -1194,9 +1187,9 @@ export const JobsList: FC<JobsListProps> = ({
               ) : allActiveScheduledJobs.length === 0 ? (
                 <Box className={styles.emptyTabState}>
                   <Text fontSize="sm" color="gray.600" textAlign="center">
-                    {searchQuery || statusFilter !== "all"
-                      ? "No jobs match your search criteria"
-                      : "No scheduled jobs yet"}
+                    {searchQuery || statusFilter !== 'all'
+                      ? 'No jobs match your search criteria'
+                      : 'No scheduled jobs yet'}
                   </Text>
                 </Box>
               ) : (
@@ -1223,21 +1216,62 @@ export const JobsList: FC<JobsListProps> = ({
             </Box>
           </TabPanel>
 
+          {/* Second TabPanel: Current Jobs */}
+          <TabPanel p={0} h="100%">
+            <Box className={styles.scrollableContent}>
+              {allCurrentJobs.length === 0 ? (
+                <Box className={styles.emptyTabState}>
+                  <Text fontSize="sm" color="gray.600" textAlign="center">
+                    {searchQuery || statusFilter !== 'all'
+                      ? 'No jobs match your search criteria'
+                      : 'No current jobs'}
+                  </Text>
+                </Box>
+              ) : (
+                <>
+                  <VStack spacing={2} width="100%" align="stretch" pb={2}>
+                    {currentJobs.map((job) => (
+                      <JobItem
+                        key={job.id}
+                        job={job}
+                        onClick={onJobClick}
+                        onDelete={handleDeleteJob}
+                        onEdit={handleEditJob}
+                      />
+                    ))}
+                  </VStack>
+                  <PaginationControls
+                    currentPage={currentPage}
+                    totalPages={currentTotalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </>
+              )}
+            </Box>
+          </TabPanel>
+
+          {/* Third TabPanel: Previous Jobs */}
           <TabPanel p={0} pt={4} h="100%">
             <Box className={styles.scrollableContent}>
               {allPreviousJobs.length === 0 ? (
                 <Box className={styles.emptyTabState}>
                   <Text fontSize="sm" color="gray.600" textAlign="center">
-                    {searchQuery || statusFilter !== "all"
-                      ? "No jobs match your search criteria"
-                      : "No completed jobs yet"}
+                    {searchQuery || statusFilter !== 'all'
+                      ? 'No jobs match your search criteria'
+                      : 'No completed jobs yet'}
                   </Text>
                 </Box>
               ) : (
                 <>
                   <VStack spacing={2} width="100%" align="stretch" pb={2}>
                     {previousJobs.map((job) => (
-                      <JobItem key={job.id} job={job} onClick={onJobClick} onDelete={handleDeleteJob} onEdit={handleEditJob} />
+                      <JobItem
+                        key={job.id}
+                        job={job}
+                        onClick={onJobClick}
+                        onDelete={handleDeleteJob}
+                        onEdit={handleEditJob}
+                      />
                     ))}
                   </VStack>
                   <PaginationControls
@@ -1251,7 +1285,7 @@ export const JobsList: FC<JobsListProps> = ({
           </TabPanel>
         </TabPanels>
       </Tabs>
-      
+
       {/* Schedule Edit Modal */}
       <ScheduledJobEditModal
         isOpen={isEditModalOpen}
