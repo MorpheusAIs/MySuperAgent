@@ -1,23 +1,23 @@
-import React, { useState } from "react";
 import {
   Box,
   Container,
-  Text,
+  Heading,
   Tab,
   TabList,
   TabPanel,
   TabPanels,
   Tabs,
+  Text,
   VStack,
-  Heading,
-  useColorModeValue,
-} from "@chakra-ui/react";
-import { AgentSelection } from "./AgentSelection";
-import { GeneralSettings } from "./GeneralSettings";
-import { UserCredentials } from "./UserCredentials";
-import { MCPConfiguration } from "./MCPConfiguration";
-import { A2AManagement } from "./A2AManagement";
-import styles from "./Main.module.css";
+} from '@chakra-ui/react';
+import React, { useState } from 'react';
+import { A2AManagement } from './A2AManagement';
+import { AgentSelection } from './AgentSelection';
+import { GeneralSettings } from './GeneralSettings';
+import styles from './Main.module.css';
+import { MCPConfiguration } from './MCPConfiguration';
+import { RulesAndMemories } from './RulesAndMemories';
+import { UserCredentials } from './UserCredentials';
 
 interface SettingsMainProps {
   isSidebarOpen?: boolean;
@@ -29,16 +29,17 @@ export const SettingsMain: React.FC<SettingsMainProps> = ({
   const [tabIndex, setTabIndex] = useState(0);
 
   return (
-    <Container maxW="full" h="100vh" bg="#0A0A0A" color="white" p={0}>
+    <Container maxW="full" minH="100vh" bg="#0A0A0A" color="white" p={0}>
       <Box className={styles.mainContainer}>
-        <VStack spacing={6} align="stretch" h="full">
+        <VStack spacing={6} align="stretch" minH="full">
           {/* Header */}
           <Box className={styles.header}>
             <Heading size="lg" fontWeight="600" color="white">
               SuperAgent Configurations
             </Heading>
             <Text fontSize="md" color="rgba(255, 255, 255, 0.7)" mt={2}>
-              Customize your SuperAgent experience with these comprehensive settings
+              Customize your SuperAgent experience with these comprehensive
+              settings
             </Text>
           </Box>
 
@@ -60,6 +61,11 @@ export const SettingsMain: React.FC<SettingsMainProps> = ({
                 <Tab className={styles.tab}>
                   <Text fontSize="sm" fontWeight="500">
                     General
+                  </Text>
+                </Tab>
+                <Tab className={styles.tab}>
+                  <Text fontSize="sm" fontWeight="500">
+                    Rules & Memories
                   </Text>
                 </Tab>
                 <Tab className={styles.tab}>
@@ -88,6 +94,11 @@ export const SettingsMain: React.FC<SettingsMainProps> = ({
                 <TabPanel p={0} h="full">
                   <Box className={styles.tabContent}>
                     <GeneralSettings onSave={() => {}} />
+                  </Box>
+                </TabPanel>
+                <TabPanel p={0} h="full">
+                  <Box className={styles.tabContent}>
+                    <RulesAndMemories onSave={() => {}} />
                   </Box>
                 </TabPanel>
                 <TabPanel p={0} h="full">
