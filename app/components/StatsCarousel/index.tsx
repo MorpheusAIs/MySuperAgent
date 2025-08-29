@@ -63,6 +63,7 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
       justifyContent={textAlign}
       fontSize={fontSize}
       fontWeight="500"
+      pl={20}
     >
       {/* Neo is ALWAYS visible */}
       <Text
@@ -72,7 +73,8 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent"
         }}
-        fontWeight="600"
+        fontWeight="700"
+        fontSize="3xl"
         display="inline"
       >
         Neo
