@@ -1,7 +1,7 @@
 import { ChatInput } from '@/components/ChatInput';
 import PrefilledOptions from '@/components/ChatInput/PrefilledOptions';
 import { JobsList } from '@/components/JobsList';
-import { MessageCounter } from '@/components/MessageCounter';
+import { StatsCarousel } from '@/components/StatsCarousel';
 import { MessageList } from '@/components/MessageList';
 import { useChatContext } from '@/contexts/chat/useChatContext';
 import { trackEvent } from '@/services/analytics';
@@ -275,7 +275,7 @@ export const Chat: FC<{
       >
         {/* Header */}
         <VStack spacing={6} pt={20} pb={4}>
-          <MessageCounter />
+          <StatsCarousel />
           <Text
             fontSize="2xl"
             fontWeight="bold"

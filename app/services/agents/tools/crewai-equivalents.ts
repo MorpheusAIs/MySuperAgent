@@ -1,30 +1,60 @@
 import { createTool } from '@mastra/core';
 import { z } from 'zod';
 
-// BraveSearchTool equivalent
+// BraveSearchTool equivalent - Enhanced for real-time news
 export const braveSearchTool = createTool({
   id: 'brave_search',
-  description: 'Search the web using Brave Search API for comprehensive results with privacy protection',
+  description: 'Search the web using Brave Search API for comprehensive results with privacy protection. Automatically prioritizes recent news for news-related queries.',
   inputSchema: z.object({
     query: z.string().describe('The search query'),
     count: z.number().optional().default(10).describe('Number of search results to return'),
+    search_type: z.enum(['web', 'news']).optional().describe('Type of search - use "news" for current events and news queries'),
+    freshness: z.enum(['pd', 'pw', 'pm', 'py']).optional().describe('Freshness filter: pd=past day, pw=past week, pm=past month, py=past year'),
   }),
-  execute: async ({ context: { query, count = 10 } }) => {
+  execute: async ({ context: { query, count = 10, search_type, freshness } }) => {
     try {
       const braveApiKey = process.env.BRAVE_API_KEY;
       if (!braveApiKey) {
         return 'Brave Search requires BRAVE_API_KEY environment variable. Please configure this.';
       }
 
-      const response = await fetch(
-        `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${count}`,
-        {
-          headers: {
-            'X-Subscription-Token': braveApiKey,
-            'Accept': 'application/json',
-          },
+      // Auto-detect news queries
+      const isNewsQuery = search_type === 'news' || 
+        query.toLowerCase().includes('news') ||
+        query.toLowerCase().includes('latest') ||
+        query.toLowerCase().includes('recent') ||
+        query.toLowerCase().includes('today') ||
+        query.toLowerCase().includes('breaking') ||
+        query.toLowerCase().includes('current events') ||
+        query.toLowerCase().includes('summary');
+
+      // Build URL with appropriate parameters for real-time results
+      let searchUrl;
+      let searchParams = new URLSearchParams({
+        q: query,
+        count: count.toString()
+      });
+
+      // For news queries, prioritize freshness
+      if (isNewsQuery) {
+        searchParams.append('freshness', freshness || 'pd'); // Default to past day for news
+        searchParams.append('search_type', 'news');
+        // Use news endpoint for better news results
+        searchUrl = `https://api.search.brave.com/res/v1/news/search?${searchParams.toString()}`;
+      } else {
+        // For regular queries, still use freshness if specified
+        if (freshness) {
+          searchParams.append('freshness', freshness);
         }
-      );
+        searchUrl = `https://api.search.brave.com/res/v1/web/search?${searchParams.toString()}`;
+      }
+
+      const response = await fetch(searchUrl, {
+        headers: {
+          'X-Subscription-Token': braveApiKey,
+          'Accept': 'application/json',
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`Brave Search API error: ${response.status}`);
@@ -32,15 +62,32 @@ export const braveSearchTool = createTool({
 
       const data = await response.json();
       
-      if (!data.web?.results) {
-        return `No search results found for: "${query}"`;
+      // Handle both news and web results
+      const results = data.results || data.web?.results || data.news?.results;
+      
+      if (!results || results.length === 0) {
+        return `No search results found for: "${query}"${isNewsQuery ? ' (searched recent news)' : ''}`;
       }
 
-      const results = data.web.results.slice(0, count).map((result: any, index: number) => {
-        return `${index + 1}. ${result.title}\n   URL: ${result.url}\n   Description: ${result.description}\n`;
+      const formattedResults = results.slice(0, count).map((result: any, index: number) => {
+        let resultText = `${index + 1}. ${result.title}\n   URL: ${result.url}`;
+        
+        if (result.description) {
+          resultText += `\n   Description: ${result.description}`;
+        }
+        
+        // Include published date for news results
+        if (result.published_date || result.age) {
+          resultText += `\n   Published: ${result.published_date || result.age}`;
+        }
+
+        return resultText + '\n';
       }).join('\n');
 
-      return `Search results for "${query}":\n\n${results}`;
+      const searchTypeNote = isNewsQuery ? ' (Recent News)' : '';
+      const freshnessNote = freshness ? ` (${freshness === 'pd' ? 'Past Day' : freshness === 'pw' ? 'Past Week' : freshness === 'pm' ? 'Past Month' : 'Past Year'})` : '';
+      
+      return `Search results for "${query}"${searchTypeNote}${freshnessNote}:\n\n${formattedResults}`;
     } catch (error) {
       return `Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }

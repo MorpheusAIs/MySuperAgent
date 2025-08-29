@@ -435,6 +435,35 @@ export class JobDB {
     const result = await pool.query(query);
     return parseInt(result.rows[0].total, 10);
   }
+
+  static async getRecurringJobsCount(): Promise<number> {
+    const query = `SELECT COUNT(*) as total FROM jobs WHERE is_scheduled = true AND schedule_type IS NOT NULL;`;
+    const result = await pool.query(query);
+    return parseInt(result.rows[0].total, 10);
+  }
+
+  static async getActiveScheduledJobsCount(): Promise<number> {
+    const query = `SELECT COUNT(*) as total FROM jobs WHERE is_scheduled = true AND is_active = true;`;
+    const result = await pool.query(query);
+    return parseInt(result.rows[0].total, 10);
+  }
+
+  static async getCompletedJobsToday(): Promise<number> {
+    const query = `
+      SELECT COUNT(*) as total FROM jobs 
+      WHERE status = 'completed' 
+      AND DATE(completed_at) = CURRENT_DATE;
+    `;
+    const result = await pool.query(query);
+    return parseInt(result.rows[0].total, 10);
+  }
+
+  static async calculateTimeSaved(): Promise<number> {
+    // Estimate time saved based on completed jobs
+    // Assuming each job saves on average 30 minutes
+    const totalCompleted = await this.getTotalCompletedJobsCount();
+    return Math.round((totalCompleted * 0.5) * 100) / 100; // 0.5 hours per job, rounded to 2 decimals
+  }
 }
 
 export class MessageDB {

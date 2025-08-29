@@ -17,6 +17,17 @@ export type AnalyticsEvent =
   | 'agent.error'
   | 'agent.selection_saved'
   
+  // Job management events
+  | 'job.clicked'
+  | 'job.scheduled_toggle'
+  | 'job.scheduled_run'
+  | 'job.deleted'
+  | 'job.delete_cancelled'
+  | 'job.search'
+  | 'job.filter_changed'
+  | 'job.tab_changed'
+  | 'job.pagination'
+  
   // Wallet operation events
   | 'wallet.created'
   | 'wallet.restored'
@@ -60,6 +71,13 @@ export interface EventProperties {
   wallet?: string;
   walletId?: string;
   
+  // Job properties
+  jobId?: string;
+  jobName?: string;
+  jobStatus?: string;
+  isScheduled?: boolean;
+  scheduleType?: string;
+  
   // Specific event properties
   error?: string;
   duration?: number;
@@ -97,6 +115,20 @@ export interface EventProperties {
   subtaskCount?: number;
   totalTokens?: number;
   agentCount?: number;
+  
+  // UI interaction properties
+  inputMethod?: string;
+  searchQuery?: string;
+  searchLength?: number;
+  filterType?: string;
+  filterValue?: string;
+  previousValue?: string;
+  fromTab?: string;
+  toTab?: string;
+  tabIndex?: number;
+  fromPage?: number;
+  toPage?: number;
+  section?: string;
   
   // Feature flags (for analytics correlation)
   featureFlags?: Record<string, boolean | string>;

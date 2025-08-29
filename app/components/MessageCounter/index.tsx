@@ -7,123 +7,107 @@ interface MessageCounterProps {
   textAlign?: any;
 }
 
+interface ComprehensiveStats {
+  stats: {
+    totalJobs: number;
+    recurringJobs: number;
+    activeScheduledJobs: number;
+    completedToday: number;
+    timeSavedHours: number;
+    efficiencyScore: number;
+    uptime: string;
+  };
+  carouselMessages: string[];
+  timestamp: string;
+}
+
 export const MessageCounter: FC<MessageCounterProps> = ({
   fontSize = '2xl',
   color = 'rgba(255, 255, 255, 0.7)',
   textAlign = 'center',
 }) => {
-  const [totalMessages, setTotalMessages] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+  const [stats, setStats] = useState<ComprehensiveStats | null>(null);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
 
-  const fetchMessageCount = useCallback(async () => {
+  const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch('/api/v1/stats/messages');
+      const response = await fetch('/api/v1/stats/comprehensive');
       if (response.ok) {
         const data = await response.json();
-        if (typeof data.totalMessages === 'number') {
-          setTotalMessages(data.totalMessages);
-          setHasError(false);
-          setRetryCount(0);
-        } else {
-          throw new Error('Invalid response format');
-        }
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        setStats(data);
       }
     } catch (error) {
-      console.error('Failed to fetch message count:', error);
-      setHasError(true);
-      setRetryCount((prev) => prev + 1);
-
-      if (totalMessages === null && retryCount < 3) {
-        return;
-      }
-
-      setIsLoading(false);
-    } finally {
-      if (!hasError || retryCount >= 3) {
-        setIsLoading(false);
-      }
+      console.error('Failed to fetch comprehensive stats:', error);
     }
-  }, [totalMessages, retryCount, hasError]);
+  }, []);
 
+  // Fetch stats only once on mount and set up polling
   useEffect(() => {
-    fetchMessageCount();
+    fetchStats();
+    // Poll every 30 seconds
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, [fetchStats]);
 
-    // Set up polling every 5 seconds
-    const interval = setInterval(fetchMessageCount, 5000);
+  // Carousel animation logic
+  useEffect(() => {
+    const messages = stats?.carouselMessages || [
+      'has completed 0 jobs',
+      'is ready to assist you',
+      'handles automated tasks',
+      'saves you time'
+    ];
+
+    if (messages.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentMessageIndex((prev) => (prev + 1) % messages.length);
+    }, 4000); // Change every 4 seconds
 
     return () => clearInterval(interval);
-  }, [fetchMessageCount]);
+  }, [stats]);
 
-  if (isLoading) {
-    return (
-      <Box textAlign={textAlign}>
-        <Text fontSize={fontSize} fontWeight="500">
-          <Text
-            as="span"
-            background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-            bgClip="text"
-            color="transparent"
-            fontWeight="600"
-          >
-            SuperAgent
-          </Text>
-          <Text as="span" color={color}>
-            {' '}
-            has completed{' '}
-          </Text>
-          <Text
-            as="span"
-            background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-            bgClip="text"
-            color="transparent"
-            fontWeight="600"
-          >
-            __
-          </Text>
-          <Text as="span" color={color}>
-            {' '}
-            jobs
-          </Text>
-        </Text>
-      </Box>
-    );
-  }
-
-  // Show error state if we have an error and no cached data
-  if (hasError && totalMessages === null) {
-    return (
-      <Box textAlign={textAlign}>
-        <Text fontSize={fontSize} fontWeight="500">
-          <Text
-            as="span"
-            background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-            bgClip="text"
-            color="transparent"
-            fontWeight="600"
-          >
-            SuperAgent
-          </Text>
-          <Text as="span" color={color}>
-            {' '}
-            is ready to complete jobs
-          </Text>
-        </Text>
-      </Box>
-    );
-  }
-
-  // If we have an error but cached data, show cached data
-  if (totalMessages === null) {
-    return null;
-  }
+  const messages = stats?.carouselMessages || [
+    'has completed 0 jobs',
+    'is ready to assist you', 
+    'handles automated tasks',
+    'saves you time'
+  ];
 
   return (
-    <Box textAlign={textAlign}>
-      <Text fontSize={fontSize} fontWeight="500">
+    <Box 
+      textAlign={textAlign} 
+      position="relative" 
+      height="40px" 
+      overflow="hidden"
+    >
+      <style jsx global>{`
+        @keyframes slideUp {
+          0% {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          10% {
+            transform: translateY(0);
+            opacity: 1;
+          }
+          90% {
+            transform: translateY(0);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(-100%);
+            opacity: 0;
+          }
+        }
+        
+        .carousel-text {
+          animation: slideUp 4s ease-in-out infinite;
+        }
+      `}</style>
+      
+      <Text fontSize={fontSize} fontWeight="500" display="inline-flex" alignItems="baseline">
+        {/* Neo is ALWAYS visible and fixed */}
         <Text
           as="span"
           background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
@@ -131,25 +115,39 @@ export const MessageCounter: FC<MessageCounterProps> = ({
           color="transparent"
           fontWeight="600"
         >
-          SuperAgent
+          Neo
         </Text>
-        <Text as="span" color={color}>
+        
+        <Text as="span" color={color} mx={1}>
           {' '}
-          has completed{' '}
         </Text>
-        <Text
+        
+        {/* Carousel container - inline-block to stay on same line */}
+        <Box
           as="span"
-          background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-          bgClip="text"
-          color="transparent"
-          fontWeight="600"
+          display="inline-block"
+          position="relative"
+          height="1.5em"
+          width="auto"
+          overflow="hidden"
+          verticalAlign="baseline"
         >
-          {totalMessages.toLocaleString()}
-        </Text>
-        <Text as="span" color={hasError ? 'rgba(255, 255, 255, 0.5)' : color}>
-          {' '}
-          jobs{hasError ? ' (cached)' : ''}
-        </Text>
+          {messages.map((msg, index) => (
+            <Text
+              key={`${msg}-${index}`}
+              as="span"
+              color={color}
+              position="absolute"
+              whiteSpace="nowrap"
+              transform={`translateY(${(index - currentMessageIndex) * 100}%)`}
+              transition="transform 0.5s ease-in-out"
+              opacity={index === currentMessageIndex ? 1 : 0}
+              display="block"
+            >
+              {msg}
+            </Text>
+          ))}
+        </Box>
       </Text>
     </Box>
   );
