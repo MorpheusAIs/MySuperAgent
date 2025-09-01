@@ -99,12 +99,23 @@ export const writeOrchestratedMessage = async (
       const { response: agentResponse, current_agent } = response.data;
       
       // Create a proper ChatMessage from the agent response
+      // Ensure metadata is preserved for CrewResponseMessage rendering
       const assistantMessage: ChatMessage = {
         role: "assistant",
         content: agentResponse.content,
         agentName: current_agent,
         error_message: agentResponse.error_message,
-        metadata: agentResponse.metadata,
+        metadata: {
+          ...agentResponse.metadata,
+          // Ensure these fields exist to trigger CrewResponseMessage renderer
+          selectedAgent: agentResponse.metadata?.selectedAgent || current_agent,
+          selectionReasoning: agentResponse.metadata?.selectionReasoning,
+          availableAgents: agentResponse.metadata?.availableAgents,
+          agentType: agentResponse.metadata?.agentType,
+          userSpecificAgents: agentResponse.metadata?.userSpecificAgents,
+          // Add orchestration flag to ensure proper rendering
+          isOrchestration: true,
+        },
         requires_action: agentResponse.requires_action,
         action_type: agentResponse.action_type,
         timestamp: Date.now(),

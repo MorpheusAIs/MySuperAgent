@@ -1081,19 +1081,19 @@ export class UserAvailableToolDB {
 
   static async getUserTools(walletAddress: string): Promise<UserAvailableTool[]> {
     const query = `
-      SELECT t.*, s.server_name 
-      FROM user_available_tools t
-      JOIN user_mcp_servers s ON t.mcp_server_id = s.id
-      WHERE t.wallet_address = $1 AND t.is_available = TRUE
-      ORDER BY s.server_name, t.tool_name;
+      SELECT *, server_name as mcp_server_id
+      FROM user_available_tools
+      WHERE wallet_address = $1 AND (is_available = TRUE OR enabled = TRUE)
+      ORDER BY server_name, tool_name;
     `;
     
     const result = await pool.query(query, [walletAddress]);
     return result.rows.map(row => ({
       ...row,
+      mcp_server_id: row.server_name, // Map server_name to mcp_server_id for interface compatibility
       tool_schema: typeof row.tool_schema === 'string' 
         ? JSON.parse(row.tool_schema) 
-        : row.tool_schema
+        : row.tool_schema || {}
     }));
   }
 

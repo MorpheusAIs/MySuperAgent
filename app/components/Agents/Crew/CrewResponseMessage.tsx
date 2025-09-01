@@ -528,7 +528,7 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
               {/* Selection Reasoning */}
               {(metadata.selectionReasoning || metadata.selection_reasoning) && (
                 <Text fontSize="sm" color="gray.300" lineHeight="tall" fontStyle="italic">
-                  "{metadata.selectionReasoning || metadata.selection_reasoning}"
+                  &ldquo;{metadata.selectionReasoning || metadata.selection_reasoning}&rdquo;
                 </Text>
               )}
             </Box>

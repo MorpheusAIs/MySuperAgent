@@ -1,60 +1,9 @@
 import React from "react";
 import { Text, Box } from "@chakra-ui/react";
 import ReactMarkdown from "react-markdown";
-import {
-  ChatMessage,
-  ImageMessageContent,
-  CryptoDataMessageContent,
-  AssistantMessage,
-} from "@/services/types";
-import {
-  AgentType,
-  BaseAgentActionType,
-  isValidAgentType,
-} from "@/services/types";
+import { ChatMessage } from "@/services/types";
 
-// Action State Detection
-import { detectActionState, messageEndsInActionState } from "@/services/utils/action-state-detection";
-import { ActionStateMessage } from "@/components/ActionStateMessages";
-
-// Agent Message Components
-import { Tweet } from "@/components/Agents/Tweet/CustomMessages/TweetMessage";
-import CryptoChartMessage from "@/components/Agents/CryptoData/CryptoChartMessage";
-import DCAMessage from "@/components/Agents/DCA/DCAMessage";
-
-// Base Agent Components
-import { BaseTransferMessage } from "@/components/Agents/Base/TransferMessage";
-import { BaseSwapMessage } from "@/components/Agents/Base/SwapMessage";
-
-// Swap Components
-import { OneInchSwapMessage } from "@/components/Agents/Swaps/Swap/SwapMessage";
-
-// Token Components
-import { CodexTopTokensMessage } from "@/components/Agents/Codex/TopTokens/CodexTopTokensMessage";
-import { TopTokensMessage } from "@/components/Agents/Dexscreener/TopTokens/TopTokensMessage";
-import { TopTokensMetadata } from "@/components/Agents/Codex/TopTokens/CodexTopTokensMessage.types";
-import { CodexTopHoldersMessage } from "@/components/Agents/Codex/TopHolders/CodexTopHoldersMessage";
-
-// Rugcheck Components
-import { RugcheckReportMessage } from "@/components/Agents/Rugcheck/Report/RugcheckReportMessage";
-import { RugcheckMetadata } from "@/components/Agents/Rugcheck/Report/RugcheckReportMessage.types";
-import { VotedTokensMessage } from "@/components/Agents/Rugcheck/MostVoted/MostVotedTokensMessage";
-import { ViewedTokensMessage } from "@/components/Agents/Rugcheck/MostViewed/MostViewedTokensMessage";
-import { VotedTokensMetadata } from "@/components/Agents/Rugcheck/MostVoted/MostVotedTokensMessage.types";
-import { ViewedTokensMetadata } from "@/components/Agents/Rugcheck/MostViewed/MostViewedTokensMessage.types";
-
-// Elfa Components
-import { ElfaTopMentionsMessage } from "@/components/Agents/Elfa/TopMentions/TopMentionsMessage";
-import { ElfaTrendingTokensMessage } from "@/components/Agents/Elfa/TrendingTokens/TrendingTokensMessage";
-import { ElfaAccountSmartStatsMessage } from "@/components/Agents/Elfa/AccountSmartStats/AccountSmartStatsMessage";
-import { TopMentionsMetadata } from "@/components/Agents/Elfa/TopMentions/TopMentionsMessage.types";
-import { TrendingTokensMetadata } from "@/components/Agents/Elfa/TrendingTokens/TrendingTokensMessage.types";
-import { AccountSmartStatsMetadata } from "@/components/Agents/Elfa/AccountSmartStats/AccountSmartStatsMessage.types";
-import { TopHoldersMetadata } from "@/components/Agents/Codex/TopHolders/CodexTopHoldersMessage.types";
-import { ElfaMentionsMessage } from "@/components/Agents/Elfa/Mentions/MentionsMessage";
-import { MentionsMetadata } from "@/components/Agents/Elfa/Mentions/MentionsMessage.types";
-
-// Crew Components
+// Crew Components - For orchestration responses
 import { CrewResponseMessage } from "@/components/Agents/Crew";
 
 type MessageRenderer = {
@@ -69,260 +18,19 @@ const messageRenderers: MessageRenderer[] = [
     render: (message) => <Text color="red.500">{message.error_message}</Text>,
   },
 
-  // Imagen agent renderer
-  {
-    check: (message) => message.agentName === AgentType.IMAGEN,
-    render: (message) => {
-      const imageContent = (message as AssistantMessage)
-        .content as ImageMessageContent;
-      if (!imageContent.success) {
-        return (
-          <Text color="red.500">
-            {imageContent.error || "Failed to generate image"}
-          </Text>
-        );
-      }
-      return (
-        <ReactMarkdown>{`Successfully generated image with ${imageContent.service}`}</ReactMarkdown>
-      );
-    },
-  },
-
-  // Crypto data agent renderer
-  {
-    check: (message) => message.agentName === AgentType.CRYPTO_DATA,
-    render: (message) => {
-      const assistantMessage = message as AssistantMessage;
-      return (
-        <CryptoChartMessage
-          content={assistantMessage.content as CryptoDataMessageContent}
-          metadata={assistantMessage.metadata}
-        />
-      );
-    },
-  },
-
-  // Base agent renderers
-  {
-    check: (message) =>
-      message.agentName === AgentType.BASE_AGENT &&
-      message.action_type === BaseAgentActionType.TRANSFER,
-    render: (message) => (
-      <BaseTransferMessage
-        content={message.content}
-        metadata={message.metadata}
-      />
-    ),
-  },
-  {
-    check: (message) =>
-      message.agentName === AgentType.BASE_AGENT &&
-      message.action_type === BaseAgentActionType.SWAP,
-    render: (message) => (
-      <BaseSwapMessage content={message.content} metadata={message.metadata} />
-    ),
-  },
-
-  // Token swap agent renderer
-  {
-    check: (message) => message.agentName === AgentType.TOKEN_SWAP,
-    render: (message) => (
-      <OneInchSwapMessage
-        content={message.content}
-        metadata={message.metadata || {}}
-      />
-    ),
-  },
-
-  // Dexscreener agent renderer
-  {
-    check: (message) => message.agentName === AgentType.DEXSCREENER,
-    render: (message) => <TopTokensMessage metadata={message.metadata} />,
-  },
-  // {
-  //   check: (message) =>
-  //     message.agentName === AgentType.DEXSCREENER &&
-  //     message.action_type === "get_latest_boosted_tokens",
-  //   render: (message) => <TopTokensMessage metadata={message.metadata} />,
-  // },
-  // {
-  //   check: (message) =>
-  //     message.agentName === AgentType.DEXSCREENER &&
-  //     message.action_type === "get_top_boosted_tokens",
-  //   render: (message) => <TopTokensMessage metadata={message.metadata} />,
-  // },
-
-  // Elfa agent renderers
-  {
-    check: (message) =>
-      message.agentName === AgentType.ELFA &&
-      message.action_type == "get_top_mentions",
-    render: (message) => (
-      <ElfaTopMentionsMessage
-        metadata={message.metadata as TopMentionsMetadata}
-      />
-    ),
-  },
-  {
-    check: (message) =>
-      message.agentName === AgentType.ELFA &&
-      message.action_type == "search_mentions",
-    render: (message) => (
-      <ElfaMentionsMessage metadata={message.metadata as MentionsMetadata} />
-    ),
-  },
-  {
-    check: (message) =>
-      message.agentName === AgentType.ELFA &&
-      message.action_type == "get_trending_tokens",
-    render: (message) => (
-      <ElfaTrendingTokensMessage
-        metadata={message.metadata as TrendingTokensMetadata}
-      />
-    ),
-  },
-  {
-    check: (message) =>
-      message.agentName === AgentType.ELFA &&
-      message.action_type == "get_account_smart_stats",
-    render: (message) => (
-      <ElfaAccountSmartStatsMessage
-        metadata={message.metadata as AccountSmartStatsMetadata}
-      />
-    ),
-  },
-
-  // DCA agent renderer
-  {
-    check: (message) => message.agentName === AgentType.DCA_AGENT,
-    render: (message) => (
-      <DCAMessage
-        content={message.content}
-        metadata={(message as AssistantMessage).metadata}
-      />
-    ),
-  },
-
-  // Rugcheck agent renderer
-  {
-    check: (message) =>
-      message.agentName === AgentType.RUGCHECK &&
-      message.action_type === "get_token_report",
-    render: (message) => (
-      <RugcheckReportMessage
-        metadata={(message as AssistantMessage).metadata as RugcheckMetadata}
-      />
-    ),
-  },
-  {
-    check: (message) =>
-      message.agentName === AgentType.RUGCHECK &&
-      message.action_type === "get_most_voted",
-    render: (message) => (
-      <VotedTokensMessage
-        metadata={(message as AssistantMessage).metadata as VotedTokensMetadata}
-      />
-    ),
-  },
-  {
-    check: (message) =>
-      message.agentName === AgentType.RUGCHECK &&
-      message.action_type === "get_most_viewed",
-    render: (message) => (
-      <ViewedTokensMessage
-        metadata={
-          (message as AssistantMessage).metadata as ViewedTokensMetadata
-        }
-      />
-    ),
-  },
-
-  // Codex agent renderer
-  {
-    check: (message) =>
-      message.agentName === AgentType.CODEX &&
-      message.action_type === "list_top_tokens",
-    render: (message) => (
-      <CodexTopTokensMessage
-        metadata={(message as AssistantMessage).metadata as TopTokensMetadata}
-      />
-    ),
-  },
-  {
-    check: (message) =>
-      message.agentName === AgentType.CODEX &&
-      message.action_type === "get_top_holders_percent",
-    render: (message) => (
-      <CodexTopHoldersMessage
-        metadata={(message as AssistantMessage).metadata as TopHoldersMetadata}
-      />
-    ),
-  },
-
-  // Tweet sizzler agent renderer
-  {
-    check: (message) =>
-      typeof message.content === "string" &&
-      message.agentName === AgentType.TWEET_SIZZLER,
-    render: (message) => <Tweet initialContent={message.content as string} />,
-  },
-
-  // Crew renderer
-  {
-    check: (message) =>
-      typeof message.content === "string" &&
-      message.agentName === AgentType.BASIC_CREW,
-    render: (message) => (
-      <CrewResponseMessage
-        content={message.content as string}
-        metadata={(message as AssistantMessage).metadata}
-      />
-    ),
-  },
-
-  // Search results renderer with clickable links
-  {
-    check: (message) =>
-      typeof message.content === "string" &&
-      message.content.includes("Title:") &&
-      message.content.includes("URL:"),
-    render: (message) => {
-      const content = message.content as string;
-      return (
-        <div className="search-results">
-          {content.split("\n").map((line, i) => {
-            // Check if this is a URL line
-            if (line.startsWith("URL:")) {
-              const url = line.substring(5).trim();
-              return (
-                <div key={i}>
-                  URL:{" "}
-                  <a href={url} target="_blank" rel="noopener noreferrer">
-                    {url}
-                  </a>
-                </div>
-              );
-            }
-            // For other lines, preserve HTML formatting
-            return <div key={i} dangerouslySetInnerHTML={{ __html: line }} />;
-          })}
-        </div>
-      );
-    },
-  },
-  
-  
-  // Agent metadata renderer - for messages with rich metadata from agent selection
+  // ORCHESTRATION/ASSISTANT RENDERER
+  // All assistant responses now go through the orchestration API
+  // and should use CrewResponseMessage to show the rich metadata
   {
     check: (message) => 
-      typeof message.content === "string" && 
       message.role === "assistant" &&
-      message.metadata && 
-      (message.metadata.selectedAgent || message.metadata.selectionReasoning || message.metadata.availableAgents),
+      typeof message.content === "string",
     render: (message) => {
       const content = message.content as string;
-      const metadata = message.metadata;
+      const metadata = message.metadata || {};
       
+      // Always use CrewResponseMessage for assistant responses
+      // This will show agent selection, reasoning, available agents, etc.
       return (
         <CrewResponseMessage
           content={content}
@@ -331,49 +39,18 @@ const messageRenderers: MessageRenderer[] = [
       );
     },
   },
-  
-  // Action state renderer - check for action states in string content
+
+  // User message renderer (just markdown)
   {
     check: (message) => 
-      typeof message.content === "string" && 
-      message.role === "assistant" &&
-      messageEndsInActionState(message.content as string),
-    render: (message) => {
-      const content = message.content as string;
-      const actionState = detectActionState(content);
-      
-      return (
-        <ActionStateMessage
-          actionState={actionState}
-          originalContent={content}
-          onAction={(action, data) => {
-            // Handle action clicks - this could trigger different behaviors
-            // based on the action type and current context
-            console.log('Action triggered:', action, data);
-            
-            // This could be expanded to:
-            // - Show modals for specific actions
-            // - Trigger API calls
-            // - Update the conversation state
-            // - Navigate to different pages
-            // - Connect wallets
-            // - Open MCP configuration
-            // etc.
-          }}
-        />
-      );
-    },
-  },
-  
-  // Default string content renderer
-  {
-    check: (message) => typeof message.content === "string",
+      message.role === "user" && 
+      typeof message.content === "string",
     render: (message) => (
       <ReactMarkdown>{message.content as string}</ReactMarkdown>
     ),
   },
 
-  // Fallback renderer for non-string content
+  // Fallback renderer for any other content
   {
     check: () => true,
     render: (message) => {
@@ -389,17 +66,16 @@ const messageRenderers: MessageRenderer[] = [
 ];
 
 /**
- * Renders a chat message using the appropriate renderer based on the message type and agent.
+ * Renders a chat message using the appropriate renderer based on the message type.
  *
  * @param message The chat message to render
  * @returns The rendered React node, or null if no renderer is found
  */
 export const renderMessage = (message: ChatMessage): React.ReactNode => {
-  // Validate agent type if present
-  if (message.agentName && !isValidAgentType(message.agentName)) {
-    console.warn(`Invalid agent type: ${message.agentName}`);
+  for (const renderer of messageRenderers) {
+    if (renderer.check(message)) {
+      return renderer.render(message);
+    }
   }
-
-  const renderer = messageRenderers.find((r) => r.check(message));
-  return renderer ? renderer.render(message) : null;
+  return null;
 };

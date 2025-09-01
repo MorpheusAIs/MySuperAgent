@@ -50,11 +50,10 @@ export default async function handler(
 
     // Create carousel messages with similar lengths (WITHOUT "Neo" prefix - that's handled by the frontend)
     const carouselMessages = [
-      `has completed ${stats.totalJobs.toLocaleString()} total jobs so far`,
+      `has completed ${stats.totalJobs.toLocaleString()} total jobs to date`,
       `handles ${stats.recurringJobs} recurring jobs daily`,
       `has saved over ${stats.timeSavedHours} hours of time`,
       `completed ${stats.completedToday} jobs over the past day`,
-      stats.activeScheduledJobs > 0 ? `manages ${stats.activeScheduledJobs} scheduled jobs now` : null,
       stats.efficiencyScore > 50 ? `operates at ${stats.efficiencyScore}% efficiency rate` : null,
       `maintains ${stats.uptime} service uptime`
     ].filter(Boolean); // Remove null messages

@@ -97,9 +97,19 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
           });
         }
 
-        // Set the first job as current if no current conversation
-        if (jobs.length > 0 && !state.currentConversationId) {
-          dispatch({ type: "SET_CURRENT_CONVERSATION_ID", payload: jobs[0].id });
+        // Set current conversation to the first job (most recent) if any exist
+        if (jobs.length > 0) {
+          dispatch({
+            type: "SET_CURRENT_CONVERSATION",
+            payload: jobs[0].id,
+          });
+        } else {
+          // No jobs exist, don't set a current conversation
+          // User will create their first job through the UI
+          dispatch({
+            type: "SET_CURRENT_CONVERSATION",
+            payload: "",
+          });
         }
       } catch (error) {
         console.error("Error loading initial data:", error);
@@ -109,36 +119,31 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
     };
 
     loadInitialData();
-  }, [getAddress]);
+  }, [address, getAddress]);
 
   // Load initial data from localStorage when no wallet is connected
   const loadLocalStorageData = useCallback(async () => {
     try {
+      const { getMessagesHistory } = await import("@/services/chat-management/storage");
       const { getStorageData } = await import("@/services/local-storage/core");
-      const data = getStorageData();
       
-      // Load conversations from localStorage
+      const messages = getMessagesHistory("default");
+      dispatch({
+        type: "SET_MESSAGES",
+        payload: { conversationId: "default", messages },
+      });
+
+      const data = getStorageData();
       Object.entries(data.conversations).forEach(([id, conversation]) => {
-        dispatch({
-          type: "SET_MESSAGES",
-          payload: { conversationId: id, messages: conversation.messages },
-        });
-        
         dispatch({
           type: "SET_CONVERSATION_TITLE",
           payload: { conversationId: id, title: conversation.name },
         });
       });
-
-      // Set current conversation
-      const conversationIds = Object.keys(data.conversations);
-      if (conversationIds.length > 0 && !state.currentConversationId) {
-        dispatch({ type: "SET_CURRENT_CONVERSATION_ID", payload: conversationIds[0] });
-      }
     } catch (error) {
       console.error("Error loading localStorage data:", error);
     }
-  }, [state.currentConversationId]);
+  }, []);
 
   const sendMessage = useCallback(
     async (message: string, file: File | null = null, useResearch: boolean = false, jobId?: string): Promise<void> => {
@@ -202,24 +207,48 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
         
         dispatch({
           type: "SET_LOADING",
-          payload: { conversationId: currentConvId, isLoading: true },
+          payload: true,
         });
 
         try {
-          const messages = await writeOrchestratedMessage(
-            messageToSend,
-            httpClient,
-            chainId,
-            walletAddress,
-            currentConvId,
-            useResearch
-          );
+          // Call orchestration API directly (no localStorage for logged-in users)
+          const response = await httpClient.post("/api/v1/chat/orchestrate", {
+            prompt: {
+              role: "user",
+              content: messageToSend,
+            },
+            chatHistory: state.messages[currentConvId] || [],
+            conversationId: currentConvId,
+            useResearch: true, // Always use orchestration
+            walletAddress: walletAddress,
+          });
 
-          // Find the assistant's response (should be the last message)
-          const assistantResponse = messages.find(m => m.role === 'assistant');
-          if (assistantResponse) {
+          if (response.data) {
+            const { response: agentResponse, current_agent } = response.data;
+            
+            // Create assistant message with proper metadata
+            const assistantMessage: ChatMessage = {
+              role: "assistant",
+              content: agentResponse.content,
+              agentName: current_agent,
+              error_message: agentResponse.error_message,
+              metadata: {
+                ...agentResponse.metadata,
+                // Ensure orchestration metadata is present
+                selectedAgent: agentResponse.metadata?.selectedAgent || current_agent,
+                selectionReasoning: agentResponse.metadata?.selectionReasoning,
+                availableAgents: agentResponse.metadata?.availableAgents,
+                agentType: agentResponse.metadata?.agentType,
+                userSpecificAgents: agentResponse.metadata?.userSpecificAgents,
+                isOrchestration: true,
+              },
+              requires_action: agentResponse.requires_action,
+              action_type: agentResponse.action_type,
+              timestamp: Date.now(),
+            };
+
             // Save assistant response to database
-            await JobsAPI.createMessage(walletAddress, currentConvId, convertChatMessageToMessage(assistantResponse, currentConvId, nextOrderIndex));
+            await JobsAPI.createMessage(walletAddress, currentConvId, convertChatMessageToMessage(assistantMessage, currentConvId, nextOrderIndex));
             
             // Update job status
             await JobsAPI.updateJob(currentConvId, {
@@ -227,9 +256,10 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
               status: 'completed'
             });
 
+            // Add assistant message to state
             dispatch({
               type: "ADD_OPTIMISTIC_MESSAGE",
-              payload: { conversationId: currentConvId, message: assistantResponse },
+              payload: { conversationId: currentConvId, message: assistantMessage },
             });
 
             // Generate title if this is a new conversation
@@ -240,7 +270,7 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
                 pendingTitleGeneration.current.add(currentConvId);
                 
                 try {
-                  const messages = getMessagesHistory(currentConvId);
+                  const messages = state.messages[currentConvId] || [];
                   const generatedTitle = await generateConversationTitle(messages, httpClient, currentConvId);
                   
                   // Update job name in database
@@ -288,7 +318,7 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
         } finally {
           dispatch({
             type: "SET_LOADING",
-            payload: { conversationId: currentConvId, isLoading: false },
+            payload: false,
           });
         }
       } catch (error: any) {
@@ -324,23 +354,24 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
 
         dispatch({
           type: "SET_LOADING",
-          payload: { conversationId: convId, isLoading: true },
+          payload: true,
         });
 
         try {
-          const messages = await writeOrchestratedMessage(
+          // For localStorage users, use writeOrchestratedMessage which handles localStorage
+          const updatedMessages = await writeOrchestratedMessage(
             messageToSend,
             httpClient,
             chainId,
             'temp-address',
             convId,
-            useResearch
+            true  // Always use orchestration (research mode)
           );
 
-          // Update messages in state (writeMessage also handles localStorage)
+          // Update state with messages from localStorage
           dispatch({
             type: "SET_MESSAGES",
-            payload: { conversationId: convId, messages },
+            payload: { conversationId: convId, messages: updatedMessages },
           });
 
           // Generate title for new conversations
@@ -348,7 +379,7 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
             titleGenerationAttempted.current.add(convId);
             
             try {
-              const generatedTitle = await generateConversationTitle(messages, httpClient, convId);
+              const generatedTitle = await generateConversationTitle(updatedMessages, httpClient, convId);
               dispatch({
                 type: "SET_CONVERSATION_TITLE",
                 payload: { conversationId: convId, title: generatedTitle },
@@ -363,7 +394,7 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
         } finally {
           dispatch({
             type: "SET_LOADING",
-            payload: { conversationId: convId, isLoading: false },
+            payload: false,
           });
         }
       } catch (error: any) {
@@ -377,7 +408,7 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
   const setCurrentConversation = useCallback(
     async (conversationId: string): Promise<void> => {
       try {
-        dispatch({ type: "SET_CURRENT_CONVERSATION_ID", payload: conversationId });
+        dispatch({ type: "SET_CURRENT_CONVERSATION", payload: conversationId });
 
         const walletAddress = getAddress();
         if (!walletAddress) {
@@ -404,10 +435,94 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
     [getAddress]
   );
 
+  const refreshMessages = useCallback(async () => {
+    try {
+      const walletAddress = getAddress();
+      if (!walletAddress) {
+        // No wallet connected, skip refresh
+        return;
+      }
+      const jobs = await JobsAPI.getJobs(walletAddress);
+      
+      for (const job of jobs) {
+        const messages = await JobsAPI.getMessages(walletAddress, job.id);
+        const chatMessages = messages.map(convertMessageToChatMessage);
+        
+        dispatch({
+          type: "SET_MESSAGES",
+          payload: { conversationId: job.id, messages: chatMessages },
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing messages:", error);
+    }
+  }, [getAddress]);
+
+  const refreshAllTitles = useCallback(async () => {
+    try {
+      const walletAddress = getAddress();
+      if (!walletAddress) {
+        // No wallet connected, skip refresh
+        return;
+      }
+      const jobs = await JobsAPI.getJobs(walletAddress);
+      
+      jobs.forEach((job: Job) => {
+        dispatch({
+          type: "SET_CONVERSATION_TITLE",
+          payload: { conversationId: job.id, title: job.name },
+        });
+      });
+    } catch (error) {
+      console.error("Error refreshing titles:", error);
+    }
+  }, [getAddress]);
+
+  const deleteChat = useCallback(async (conversationId: string) => {
+    try {
+      const walletAddress = getAddress();
+      if (!walletAddress) {
+        console.error("No wallet connected - cannot delete chat");
+        return;
+      }
+      await JobsAPI.deleteJob(walletAddress, conversationId);
+      
+      // Remove from state
+      dispatch({
+        type: "SET_MESSAGES",
+        payload: { conversationId, messages: [] },
+      });
+      
+      // If this was the current conversation, switch to another one
+      if (state.currentConversationId === conversationId) {
+        const jobs = await JobsAPI.getJobs(walletAddress);
+        if (jobs.length > 0) {
+          setCurrentConversation(jobs[0].id);
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+    }
+  }, [getAddress, state.currentConversationId, setCurrentConversation]);
+
+  const refreshJobs = useCallback(async () => {
+    // This is a placeholder - refreshJobs functionality can be added if needed
+    await refreshMessages();
+  }, [refreshMessages]);
+
+  const setCurrentView = useCallback((view: 'jobs' | 'chat') => {
+    dispatch({ type: "SET_CURRENT_VIEW", payload: view });
+  }, []);
+
   const contextValue = {
     state,
     sendMessage,
     setCurrentConversation,
+    refreshMessages,
+    refreshAllTitles,
+    deleteChat,
+    refreshJobs,
+    setCurrentView,
   };
 
   return (
