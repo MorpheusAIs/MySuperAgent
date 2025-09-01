@@ -1,7 +1,7 @@
-import { ChatMessage } from "@/services/types";
-import { getStorageData, saveStorageData } from "@/services/local-storage/core";
-import { DEFAULT_CONVERSATION_ID } from "@/services/local-storage/config";
-import { createNewConversation } from "@/services/chat-management/conversations";
+import { ChatMessage } from '@/services/types';
+import { getStorageData, saveStorageData } from '@/services/local-storage/core';
+import { DEFAULT_CONVERSATION_ID } from '@/services/local-storage/config';
+import { createNewConversation } from '@/services/chat-management/conversations';
 
 /**
  * Get messages history for a specific conversation
@@ -87,10 +87,10 @@ export const getChatHistoryAsString = (
     .map(
       (msg) =>
         `${msg.role}: ${
-          typeof msg.content === "string"
+          typeof msg.content === 'string'
             ? msg.content
             : JSON.stringify(msg.content)
         }`
     )
-    .join("\n");
+    .join('\n');
 };
