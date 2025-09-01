@@ -35,7 +35,7 @@ export const SettingsMain: React.FC<SettingsMainProps> = ({
           {/* Header */}
           <Box className={styles.header}>
             <Heading size="lg" fontWeight="600" color="white">
-              SuperAgent Configurations
+              Settings
             </Heading>
             <Text fontSize="md" color="rgba(255, 255, 255, 0.7)" mt={2}>
               Customize your SuperAgent experience with these comprehensive

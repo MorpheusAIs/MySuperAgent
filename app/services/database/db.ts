@@ -151,6 +151,25 @@ export interface UserEncryptionKey {
   created_at: Date;
 }
 
+export interface UserRule {
+  id: string;
+  wallet_address: string;
+  title: string;
+  content: string;
+  is_enabled: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface UserMemory {
+  id: string;
+  wallet_address: string;
+  title: string;
+  content: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
 // Database service classes
 export class UserDB {
   static async createOrUpdateUser(walletAddress: string): Promise<User> {
@@ -688,7 +707,9 @@ export class AgentTeamDB {
 
 // Database service classes for credential management
 export class UserCredentialDB {
-  static async storeCredential(credential: Omit<UserCredential, 'id' | 'created_at' | 'updated_at'>): Promise<UserCredential> {
+  static async storeCredential(
+    credential: Omit<UserCredential, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<UserCredential> {
     const query = `
       INSERT INTO user_credentials (
         wallet_address, service_type, service_name, credential_name, 
@@ -701,83 +722,111 @@ export class UserCredentialDB {
         updated_at = CURRENT_TIMESTAMP
       RETURNING *;
     `;
-    
+
     const values = [
       credential.wallet_address,
       credential.service_type,
       credential.service_name,
       credential.credential_name,
       credential.encrypted_value,
-      credential.is_active
+      credential.is_active,
     ];
-    
+
     const result = await pool.query(query, values);
     return result.rows[0];
   }
 
-  static async getCredential(walletAddress: string, serviceName: string, credentialName: string): Promise<UserCredential | null> {
+  static async getCredential(
+    walletAddress: string,
+    serviceName: string,
+    credentialName: string
+  ): Promise<UserCredential | null> {
     const query = `
       SELECT * FROM user_credentials 
       WHERE wallet_address = $1 AND service_name = $2 AND credential_name = $3 AND is_active = TRUE;
     `;
-    
-    const result = await pool.query(query, [walletAddress, serviceName, credentialName]);
+
+    const result = await pool.query(query, [
+      walletAddress,
+      serviceName,
+      credentialName,
+    ]);
     return result.rows[0] || null;
   }
 
-  static async getServiceCredentials(walletAddress: string, serviceName: string): Promise<UserCredential[]> {
+  static async getServiceCredentials(
+    walletAddress: string,
+    serviceName: string
+  ): Promise<UserCredential[]> {
     const query = `
       SELECT * FROM user_credentials 
       WHERE wallet_address = $1 AND service_name = $2 AND is_active = TRUE
       ORDER BY credential_name;
     `;
-    
+
     const result = await pool.query(query, [walletAddress, serviceName]);
     return result.rows;
   }
 
-  static async getAllUserCredentials(walletAddress: string): Promise<UserCredential[]> {
+  static async getAllUserCredentials(
+    walletAddress: string
+  ): Promise<UserCredential[]> {
     const query = `
       SELECT * FROM user_credentials 
       WHERE wallet_address = $1 AND is_active = TRUE
       ORDER BY service_name, credential_name;
     `;
-    
+
     const result = await pool.query(query, [walletAddress]);
     return result.rows;
   }
 
-  static async updateLastUsed(walletAddress: string, serviceName: string, credentialName: string): Promise<void> {
+  static async updateLastUsed(
+    walletAddress: string,
+    serviceName: string,
+    credentialName: string
+  ): Promise<void> {
     const query = `
       UPDATE user_credentials 
       SET last_used_at = CURRENT_TIMESTAMP
       WHERE wallet_address = $1 AND service_name = $2 AND credential_name = $3;
     `;
-    
+
     await pool.query(query, [walletAddress, serviceName, credentialName]);
   }
 
-  static async deleteCredential(walletAddress: string, serviceName: string, credentialName: string): Promise<void> {
+  static async deleteCredential(
+    walletAddress: string,
+    serviceName: string,
+    credentialName: string
+  ): Promise<void> {
     const query = `
       DELETE FROM user_credentials 
       WHERE wallet_address = $1 AND service_name = $2 AND credential_name = $3;
     `;
-    
+
     await pool.query(query, [walletAddress, serviceName, credentialName]);
   }
 
-  static async deleteAllServiceCredentials(walletAddress: string, serviceName: string): Promise<void> {
+  static async deleteAllServiceCredentials(
+    walletAddress: string,
+    serviceName: string
+  ): Promise<void> {
     const query = `
       DELETE FROM user_credentials 
       WHERE wallet_address = $1 AND service_name = $2;
     `;
-    
+
     await pool.query(query, [walletAddress, serviceName]);
   }
 }
 
 export class UserEncryptionKeyDB {
-  static async storeEncryptionKey(walletAddress: string, keyHash: string, salt: string): Promise<UserEncryptionKey> {
+  static async storeEncryptionKey(
+    walletAddress: string,
+    keyHash: string,
+    salt: string
+  ): Promise<UserEncryptionKey> {
     const query = `
       INSERT INTO user_encryption_keys (wallet_address, key_hash, salt)
       VALUES ($1, $2, $3)
@@ -787,13 +836,16 @@ export class UserEncryptionKeyDB {
         salt = EXCLUDED.salt
       RETURNING *;
     `;
-    
+
     const result = await pool.query(query, [walletAddress, keyHash, salt]);
     return result.rows[0];
   }
 
-  static async getEncryptionKey(walletAddress: string): Promise<UserEncryptionKey | null> {
-    const query = 'SELECT * FROM user_encryption_keys WHERE wallet_address = $1;';
+  static async getEncryptionKey(
+    walletAddress: string
+  ): Promise<UserEncryptionKey | null> {
+    const query =
+      'SELECT * FROM user_encryption_keys WHERE wallet_address = $1;';
     const result = await pool.query(query, [walletAddress]);
     return result.rows[0] || null;
   }
@@ -805,7 +857,9 @@ export class UserEncryptionKeyDB {
 }
 
 export class UserMCPServerDB {
-  static async addMCPServer(server: Omit<UserMCPServer, 'id' | 'created_at' | 'updated_at'>): Promise<UserMCPServer> {
+  static async addMCPServer(
+    server: Omit<UserMCPServer, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<UserMCPServer> {
     const query = `
       INSERT INTO user_mcp_servers (
         wallet_address, server_name, server_url, connection_config, 
@@ -819,63 +873,71 @@ export class UserMCPServerDB {
         updated_at = CURRENT_TIMESTAMP
       RETURNING *;
     `;
-    
+
     const values = [
       server.wallet_address,
       server.server_name,
       server.server_url,
       JSON.stringify(server.connection_config),
       server.is_enabled,
-      server.health_status
+      server.health_status,
     ];
-    
+
     const result = await pool.query(query, values);
     const row = result.rows[0];
     return {
       ...row,
-      connection_config: typeof row.connection_config === 'string' 
-        ? JSON.parse(row.connection_config) 
-        : row.connection_config
+      connection_config:
+        typeof row.connection_config === 'string'
+          ? JSON.parse(row.connection_config)
+          : row.connection_config,
     };
   }
 
-  static async getUserMCPServers(walletAddress: string): Promise<UserMCPServer[]> {
+  static async getUserMCPServers(
+    walletAddress: string
+  ): Promise<UserMCPServer[]> {
     const query = `
       SELECT * FROM user_mcp_servers 
       WHERE wallet_address = $1 
       ORDER BY server_name;
     `;
-    
+
     const result = await pool.query(query, [walletAddress]);
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       ...row,
-      connection_config: typeof row.connection_config === 'string' 
-        ? JSON.parse(row.connection_config) 
-        : row.connection_config
+      connection_config:
+        typeof row.connection_config === 'string'
+          ? JSON.parse(row.connection_config)
+          : row.connection_config,
     }));
   }
 
-  static async getMCPServer(walletAddress: string, serverName: string): Promise<UserMCPServer | null> {
+  static async getMCPServer(
+    walletAddress: string,
+    serverName: string
+  ): Promise<UserMCPServer | null> {
     const query = `
       SELECT * FROM user_mcp_servers 
       WHERE wallet_address = $1 AND server_name = $2;
     `;
-    
+
     const result = await pool.query(query, [walletAddress, serverName]);
     if (!result.rows[0]) return null;
-    
+
     const row = result.rows[0];
     return {
       ...row,
-      connection_config: typeof row.connection_config === 'string' 
-        ? JSON.parse(row.connection_config) 
-        : row.connection_config
+      connection_config:
+        typeof row.connection_config === 'string'
+          ? JSON.parse(row.connection_config)
+          : row.connection_config,
     };
   }
 
   static async updateMCPServerHealth(
-    walletAddress: string, 
-    serverName: string, 
+    walletAddress: string,
+    serverName: string,
     healthStatus: UserMCPServer['health_status']
   ): Promise<void> {
     const query = `
@@ -883,32 +945,41 @@ export class UserMCPServerDB {
       SET health_status = $3, last_health_check = CURRENT_TIMESTAMP
       WHERE wallet_address = $1 AND server_name = $2;
     `;
-    
+
     await pool.query(query, [walletAddress, serverName, healthStatus]);
   }
 
-  static async enableMCPServer(walletAddress: string, serverName: string, enabled: boolean): Promise<void> {
+  static async enableMCPServer(
+    walletAddress: string,
+    serverName: string,
+    enabled: boolean
+  ): Promise<void> {
     const query = `
       UPDATE user_mcp_servers 
       SET is_enabled = $3, updated_at = CURRENT_TIMESTAMP
       WHERE wallet_address = $1 AND server_name = $2;
     `;
-    
+
     await pool.query(query, [walletAddress, serverName, enabled]);
   }
 
-  static async deleteMCPServer(walletAddress: string, serverName: string): Promise<void> {
+  static async deleteMCPServer(
+    walletAddress: string,
+    serverName: string
+  ): Promise<void> {
     const query = `
       DELETE FROM user_mcp_servers 
       WHERE wallet_address = $1 AND server_name = $2;
     `;
-    
+
     await pool.query(query, [walletAddress, serverName]);
   }
 }
 
 export class UserA2AAgentDB {
-  static async addA2AAgent(agent: Omit<UserA2AAgent, 'id' | 'created_at' | 'updated_at'>): Promise<UserA2AAgent> {
+  static async addA2AAgent(
+    agent: Omit<UserA2AAgent, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<UserA2AAgent> {
     const query = `
       INSERT INTO user_a2a_agents (
         wallet_address, agent_id, agent_name, agent_description, 
@@ -925,7 +996,7 @@ export class UserA2AAgentDB {
         updated_at = CURRENT_TIMESTAMP
       RETURNING *;
     `;
-    
+
     const values = [
       agent.wallet_address,
       agent.agent_id,
@@ -934,56 +1005,64 @@ export class UserA2AAgentDB {
       agent.endpoint_url,
       JSON.stringify(agent.capabilities),
       agent.is_enabled,
-      agent.connection_status
+      agent.connection_status,
     ];
-    
+
     const result = await pool.query(query, values);
     const row = result.rows[0];
     return {
       ...row,
-      capabilities: typeof row.capabilities === 'string' 
-        ? JSON.parse(row.capabilities) 
-        : row.capabilities
+      capabilities:
+        typeof row.capabilities === 'string'
+          ? JSON.parse(row.capabilities)
+          : row.capabilities,
     };
   }
 
-  static async getUserA2AAgents(walletAddress: string): Promise<UserA2AAgent[]> {
+  static async getUserA2AAgents(
+    walletAddress: string
+  ): Promise<UserA2AAgent[]> {
     const query = `
       SELECT * FROM user_a2a_agents 
       WHERE wallet_address = $1 
       ORDER BY agent_name;
     `;
-    
+
     const result = await pool.query(query, [walletAddress]);
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       ...row,
-      capabilities: typeof row.capabilities === 'string' 
-        ? JSON.parse(row.capabilities) 
-        : row.capabilities
+      capabilities:
+        typeof row.capabilities === 'string'
+          ? JSON.parse(row.capabilities)
+          : row.capabilities,
     }));
   }
 
-  static async getA2AAgent(walletAddress: string, agentId: string): Promise<UserA2AAgent | null> {
+  static async getA2AAgent(
+    walletAddress: string,
+    agentId: string
+  ): Promise<UserA2AAgent | null> {
     const query = `
       SELECT * FROM user_a2a_agents 
       WHERE wallet_address = $1 AND agent_id = $2;
     `;
-    
+
     const result = await pool.query(query, [walletAddress, agentId]);
     if (!result.rows[0]) return null;
-    
+
     const row = result.rows[0];
     return {
       ...row,
-      capabilities: typeof row.capabilities === 'string' 
-        ? JSON.parse(row.capabilities) 
-        : row.capabilities
+      capabilities:
+        typeof row.capabilities === 'string'
+          ? JSON.parse(row.capabilities)
+          : row.capabilities,
     };
   }
 
   static async updateA2AAgentStatus(
-    walletAddress: string, 
-    agentId: string, 
+    walletAddress: string,
+    agentId: string,
     connectionStatus: UserA2AAgent['connection_status']
   ): Promise<void> {
     const query = `
@@ -991,32 +1070,41 @@ export class UserA2AAgentDB {
       SET connection_status = $3, last_ping = CURRENT_TIMESTAMP
       WHERE wallet_address = $1 AND agent_id = $2;
     `;
-    
+
     await pool.query(query, [walletAddress, agentId, connectionStatus]);
   }
 
-  static async enableA2AAgent(walletAddress: string, agentId: string, enabled: boolean): Promise<void> {
+  static async enableA2AAgent(
+    walletAddress: string,
+    agentId: string,
+    enabled: boolean
+  ): Promise<void> {
     const query = `
       UPDATE user_a2a_agents 
       SET is_enabled = $3, updated_at = CURRENT_TIMESTAMP
       WHERE wallet_address = $1 AND agent_id = $2;
     `;
-    
+
     await pool.query(query, [walletAddress, agentId, enabled]);
   }
 
-  static async deleteA2AAgent(walletAddress: string, agentId: string): Promise<void> {
+  static async deleteA2AAgent(
+    walletAddress: string,
+    agentId: string
+  ): Promise<void> {
     const query = `
       DELETE FROM user_a2a_agents 
       WHERE wallet_address = $1 AND agent_id = $2;
     `;
-    
+
     await pool.query(query, [walletAddress, agentId]);
   }
 }
 
 export class UserAvailableToolDB {
-  static async storeTool(tool: Omit<UserAvailableTool, 'id'>): Promise<UserAvailableTool> {
+  static async storeTool(
+    tool: Omit<UserAvailableTool, 'id'>
+  ): Promise<UserAvailableTool> {
     const query = `
       INSERT INTO user_available_tools (
         wallet_address, mcp_server_id, tool_name, tool_description, 
@@ -1030,27 +1118,30 @@ export class UserAvailableToolDB {
         last_checked = CURRENT_TIMESTAMP
       RETURNING *;
     `;
-    
+
     const values = [
       tool.wallet_address,
       tool.mcp_server_id,
       tool.tool_name,
       tool.tool_description,
       JSON.stringify(tool.tool_schema),
-      tool.is_available
+      tool.is_available,
     ];
-    
+
     const result = await pool.query(query, values);
     const row = result.rows[0];
     return {
       ...row,
-      tool_schema: typeof row.tool_schema === 'string' 
-        ? JSON.parse(row.tool_schema) 
-        : row.tool_schema
+      tool_schema:
+        typeof row.tool_schema === 'string'
+          ? JSON.parse(row.tool_schema)
+          : row.tool_schema,
     };
   }
 
-  static async getUserTools(walletAddress: string): Promise<UserAvailableTool[]> {
+  static async getUserTools(
+    walletAddress: string
+  ): Promise<UserAvailableTool[]> {
     const query = `
       SELECT t.*, s.server_name 
       FROM user_available_tools t
@@ -1058,39 +1149,190 @@ export class UserAvailableToolDB {
       WHERE t.wallet_address = $1 AND t.is_available = TRUE
       ORDER BY s.server_name, t.tool_name;
     `;
-    
+
     const result = await pool.query(query, [walletAddress]);
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       ...row,
-      tool_schema: typeof row.tool_schema === 'string' 
-        ? JSON.parse(row.tool_schema) 
-        : row.tool_schema
+      tool_schema:
+        typeof row.tool_schema === 'string'
+          ? JSON.parse(row.tool_schema)
+          : row.tool_schema,
     }));
   }
 
-  static async getServerTools(walletAddress: string, mcpServerId: string): Promise<UserAvailableTool[]> {
+  static async getServerTools(
+    walletAddress: string,
+    mcpServerId: string
+  ): Promise<UserAvailableTool[]> {
     const query = `
       SELECT * FROM user_available_tools 
       WHERE wallet_address = $1 AND mcp_server_id = $2 AND is_available = TRUE
       ORDER BY tool_name;
     `;
-    
+
     const result = await pool.query(query, [walletAddress, mcpServerId]);
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       ...row,
-      tool_schema: typeof row.tool_schema === 'string' 
-        ? JSON.parse(row.tool_schema) 
-        : row.tool_schema
+      tool_schema:
+        typeof row.tool_schema === 'string'
+          ? JSON.parse(row.tool_schema)
+          : row.tool_schema,
     }));
   }
 
-  static async deleteServerTools(walletAddress: string, mcpServerId: string): Promise<void> {
+  static async deleteServerTools(
+    walletAddress: string,
+    mcpServerId: string
+  ): Promise<void> {
     const query = `
       DELETE FROM user_available_tools 
       WHERE wallet_address = $1 AND mcp_server_id = $2;
     `;
-    
+
     await pool.query(query, [walletAddress, mcpServerId]);
+  }
+}
+
+export class UserRulesDB {
+  static async createRule(
+    walletAddress: string,
+    title: string,
+    content: string
+  ): Promise<UserRule> {
+    const query = `
+      INSERT INTO user_rules (wallet_address, title, content, is_enabled, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      RETURNING *;
+    `;
+
+    const result = await pool.query(query, [
+      walletAddress,
+      title,
+      content,
+      true,
+    ]);
+    return result.rows[0];
+  }
+
+  static async getUserRules(walletAddress: string): Promise<UserRule[]> {
+    const query = `
+      SELECT * FROM user_rules 
+      WHERE wallet_address = $1 
+      ORDER BY created_at DESC;
+    `;
+
+    const result = await pool.query(query, [walletAddress]);
+    return result.rows;
+  }
+
+  static async updateRule(
+    id: string,
+    walletAddress: string,
+    updates: Partial<Pick<UserRule, 'title' | 'content' | 'is_enabled'>>
+  ): Promise<UserRule> {
+    const setClause = Object.keys(updates)
+      .map((key, index) => `${key} = $${index + 3}`)
+      .join(', ');
+    const query = `
+      UPDATE user_rules 
+      SET ${setClause}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND wallet_address = $2
+      RETURNING *;
+    `;
+
+    const values = [id, walletAddress, ...Object.values(updates)];
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  }
+
+  static async deleteRule(id: string, walletAddress: string): Promise<void> {
+    const query = `
+      DELETE FROM user_rules 
+      WHERE id = $1 AND wallet_address = $2;
+    `;
+
+    await pool.query(query, [id, walletAddress]);
+  }
+
+  static async toggleRule(
+    id: string,
+    walletAddress: string
+  ): Promise<UserRule> {
+    const query = `
+      UPDATE user_rules 
+      SET is_enabled = NOT is_enabled, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND wallet_address = $2
+      RETURNING *;
+    `;
+
+    const result = await pool.query(query, [id, walletAddress]);
+    return result.rows[0];
+  }
+}
+
+export class UserMemoriesDB {
+  static async createMemory(
+    walletAddress: string,
+    title: string,
+    content: string
+  ): Promise<UserMemory> {
+    const query = `
+      INSERT INTO user_memories (wallet_address, title, content, created_at, updated_at)
+      VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      RETURNING *;
+    `;
+
+    const result = await pool.query(query, [walletAddress, title, content]);
+    return result.rows[0];
+  }
+
+  static async getUserMemories(walletAddress: string): Promise<UserMemory[]> {
+    const query = `
+      SELECT * FROM user_memories 
+      WHERE wallet_address = $1 
+      ORDER BY created_at DESC;
+    `;
+
+    const result = await pool.query(query, [walletAddress]);
+    return result.rows;
+  }
+
+  static async updateMemory(
+    id: string,
+    walletAddress: string,
+    updates: Partial<Pick<UserMemory, 'title' | 'content'>>
+  ): Promise<UserMemory> {
+    const setClause = Object.keys(updates)
+      .map((key, index) => `${key} = $${index + 3}`)
+      .join(', ');
+    const query = `
+      UPDATE user_memories 
+      SET ${setClause}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND wallet_address = $2
+      RETURNING *;
+    `;
+
+    const values = [id, walletAddress, ...Object.values(updates)];
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  }
+
+  static async deleteMemory(id: string, walletAddress: string): Promise<void> {
+    const query = `
+      DELETE FROM user_memories 
+      WHERE id = $1 AND wallet_address = $2;
+    `;
+
+    await pool.query(query, [id, walletAddress]);
+  }
+
+  static async deleteAllMemories(walletAddress: string): Promise<void> {
+    const query = `
+      DELETE FROM user_memories 
+      WHERE wallet_address = $1;
+    `;
+
+    await pool.query(query, [walletAddress]);
   }
 }
 
@@ -1104,5 +1346,7 @@ export default {
   UserEncryptionKeyDB,
   UserMCPServerDB,
   UserA2AAgentDB,
-  UserAvailableToolDB
+  UserAvailableToolDB,
+  UserRulesDB,
+  UserMemoriesDB,
 };
