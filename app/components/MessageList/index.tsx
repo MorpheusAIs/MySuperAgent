@@ -1,7 +1,6 @@
 import PrefilledOptions from "@/components/ChatInput/PrefilledOptions";
 import { LoadingIndicator } from "@/components/LoadingIndicator";
 import { MessageItem } from "@/components/MessageItem";
-import { StreamingProgress } from "@/components/StreamingProgress";
 import { useChatContext } from "@/contexts/chat/useChatContext";
 import { ChatMessage } from "@/services/types";
 import { ArrowBackIcon } from "@chakra-ui/icons";
@@ -35,20 +34,14 @@ export const MessageList: FC<MessageListProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const prevMessagesLength = useRef(0);
-  const { state } = useChatContext();
-  const streamingState = state.streamingState;
 
-  // Effect for scrolling to bottom when new messages arrive or streaming state changes
+  // Effect for scrolling to bottom when new messages arrive
   useEffect(() => {
-    if (
-      (messages.length > prevMessagesLength.current ||
-        streamingState?.status !== "idle") &&
-      messagesEndRef.current
-    ) {
+    if (messages.length > prevMessagesLength.current && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
     prevMessagesLength.current = messages.length;
-  }, [messages, streamingState]);
+  }, [messages]);
 
   // Fix for mobile viewport height
   useEffect(() => {
@@ -123,17 +116,11 @@ export const MessageList: FC<MessageListProps> = ({
               <MessageItem message={message} />
             </div>
           ))}
-          {streamingState && streamingState.status !== "idle" && (
+          {isLoading && (
             <Box width="100%" py={2}>
-              <StreamingProgress streamingState={streamingState} />
+              <LoadingIndicator />
             </Box>
           )}
-          {isLoading &&
-            (!streamingState || streamingState.status === "idle") && (
-              <Box width="100%" py={2}>
-                <LoadingIndicator />
-              </Box>
-            )}
           <div ref={messagesEndRef} /> {/* Scroll target */}
         </VStack>
       </Box>

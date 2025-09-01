@@ -1,5 +1,5 @@
 import React from "react";
-import { Text } from "@chakra-ui/react";
+import { Text, Box } from "@chakra-ui/react";
 import ReactMarkdown from "react-markdown";
 import {
   ChatMessage,
@@ -307,6 +307,27 @@ const messageRenderers: MessageRenderer[] = [
             return <div key={i} dangerouslySetInnerHTML={{ __html: line }} />;
           })}
         </div>
+      );
+    },
+  },
+  
+  
+  // Agent metadata renderer - for messages with rich metadata from agent selection
+  {
+    check: (message) => 
+      typeof message.content === "string" && 
+      message.role === "assistant" &&
+      message.metadata && 
+      (message.metadata.selectedAgent || message.metadata.selectionReasoning || message.metadata.availableAgents),
+    render: (message) => {
+      const content = message.content as string;
+      const metadata = message.metadata;
+      
+      return (
+        <CrewResponseMessage
+          content={content}
+          metadata={metadata}
+        />
       );
     },
   },

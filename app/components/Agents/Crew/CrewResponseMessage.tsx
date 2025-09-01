@@ -244,6 +244,7 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
   // DEBUG: Log all metadata for debugging
   console.log('[CrewResponseMessage DEBUG] Full metadata received:', metadata);
   console.log('[CrewResponseMessage DEBUG] Metadata keys:', metadata ? Object.keys(metadata) : 'No metadata');
+  console.log('[CrewResponseMessage DEBUG] Full metadata object:', JSON.stringify(metadata, null, 2));
   
   // Initialize all tasks as collapsed (empty set)
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
@@ -497,7 +498,7 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
           )}
       </Box>
 
-      {/* Agent Selection Debug Info - ALWAYS SHOW FOR DEBUGGING */}
+      {/* Agent Selection Information - Enhanced Display */}
       <Box
         bg="gray.900"
         borderRadius="lg"
@@ -506,101 +507,100 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
         borderColor="blue.700"
         mt={4}
       >
-        <HStack spacing={2} mb={3}>
-          <Icon as={FaInfoCircle} boxSize={4} color="blue.400" />
-          <Text fontSize="sm" fontWeight="bold" color="blue.200">
-            Agent Selection Debug
+        <HStack spacing={2} mb={4}>
+          <Icon as={FaBrain} boxSize={4} color="blue.400" />
+          <Text fontSize="md" fontWeight="bold" color="blue.200">
+            Agent Intelligence
           </Text>
         </HStack>
         
-        <VStack align="stretch" spacing={2} fontSize="xs">
-          <HStack justify="space-between">
-            <Text color="gray.400">Raw Metadata Keys:</Text>
-            <Text color="gray.300" fontSize="xs">
-              {metadata ? Object.keys(metadata).join(', ') : 'No metadata'}
-            </Text>
-          </HStack>
-          
-          <VStack align="stretch" spacing={2} fontSize="xs">
-            {(metadata.selected_agent || metadata.selectedAgent) && (
-              <HStack justify="space-between">
-                <Text color="gray.400">Selected Agent:</Text>
-                <Badge colorScheme="blue" fontSize="xs">{metadata.selected_agent || metadata.selectedAgent}</Badge>
-              </HStack>
-            )}
-            
-            {(metadata.selection_method || metadata.selectionMethod) && (
-              <HStack justify="space-between">
-                <Text color="gray.400">Selection Method:</Text>
-                <Badge 
-                  colorScheme={(metadata.selection_method || metadata.selectionMethod) === 'user_selected' ? 'green' : 
-                             (metadata.selection_method || metadata.selectionMethod) === 'llm_intelligent' ? 'purple' :
-                             (metadata.selection_method || metadata.selectionMethod) === 'intelligent_fallback' ? 'orange' : 'gray'} 
-                  fontSize="xs"
-                >
-                  {(metadata.selection_method || metadata.selectionMethod)?.replace(/_/g, ' ')}
+        <VStack align="stretch" spacing={4}>
+          {/* Selected Agent - Prominent Display */}
+          {(metadata.selectedAgent || metadata.selected_agent) && (
+            <Box bg="gray.850" borderRadius="md" p={3} border="1px solid" borderColor="blue.600">
+              <HStack justify="space-between" mb={2}>
+                <Text fontSize="sm" fontWeight="semibold" color="blue.300">Selected Agent</Text>
+                <Badge colorScheme="blue" variant="solid" fontSize="sm" px={3} py={1}>
+                  {(metadata.selectedAgent || metadata.selected_agent)?.replace(/_/g, ' ')?.replace(/backend/gi, '')}
                 </Badge>
               </HStack>
+              
+              {/* Selection Reasoning */}
+              {(metadata.selectionReasoning || metadata.selection_reasoning) && (
+                <Text fontSize="sm" color="gray.300" lineHeight="tall" fontStyle="italic">
+                  "{metadata.selectionReasoning || metadata.selection_reasoning}"
+                </Text>
+              )}
+            </Box>
+          )}
+          
+          {/* Agent Type & Method */}
+          <HStack spacing={4} justify="space-between">
+            {(metadata.agentType || metadata.agent_type) && (
+              <VStack align="start" spacing={1}>
+                <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="wider">Agent Type</Text>
+                <Badge 
+                  colorScheme={(metadata.agentType || metadata.agent_type) === 'core' ? 'purple' : 'green'} 
+                  variant="subtle"
+                  fontSize="xs"
+                  px={2}
+                >
+                  {metadata.agentType || metadata.agent_type}
+                </Badge>
+              </VStack>
             )}
             
-            {metadata.user_requested_agents && metadata.user_requested_agents.length > 0 && (
-              <HStack justify="space-between" align="start">
-                <Text color="gray.400">User Requested Agents:</Text>
-                <VStack align="end" spacing={1}>
-                  {metadata.user_requested_agents.map((agent, idx) => (
-                    <Badge key={idx} colorScheme="yellow" fontSize="xs">{agent}</Badge>
-                  ))}
-                </VStack>
+            {metadata.userSpecificAgents !== undefined && (
+              <VStack align="end" spacing={1}>
+                <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="wider">User Context</Text>
+                <Badge 
+                  colorScheme={metadata.userSpecificAgents ? 'green' : 'gray'} 
+                  variant="subtle"
+                  fontSize="xs"
+                  px={2}
+                >
+                  {metadata.userSpecificAgents ? 'Personalized' : 'Default'}
+                </Badge>
+              </VStack>
+            )}
+          </HStack>
+          
+          {/* Available Agents Summary */}
+          {metadata.availableAgents && metadata.availableAgents.length > 0 && (
+            <Box>
+              <HStack justify="space-between" mb={2}>
+                <Text fontSize="sm" fontWeight="semibold" color="gray.300">Agent Pool</Text>
+                <Text fontSize="xs" color="gray.500">{metadata.availableAgents.length} agents available</Text>
               </HStack>
-            )}
-            
-            {metadata.selected_agents && metadata.selected_agents.length > 0 && (
-              <HStack justify="space-between" align="start">
-                <Text color="gray.400">Selected Agents:</Text>
-                <VStack align="end" spacing={1}>
-                  {metadata.selected_agents.map((agent, idx) => (
-                    <Badge key={idx} colorScheme="green" fontSize="xs">{agent}</Badge>
-                  ))}
-                </VStack>
-              </HStack>
-            )}
-            
-            {metadata.contributing_agents && metadata.contributing_agents.length > 0 && (
-              <HStack justify="space-between" align="start">
-                <Text color="gray.400">Contributing Agents:</Text>
-                <VStack align="end" spacing={1}>
-                  {metadata.contributing_agents.map((agent, idx) => (
-                    <Badge key={idx} colorScheme="green" fontSize="xs">{agent}</Badge>
-                  ))}
-                </VStack>
-              </HStack>
-            )}
-            
-            {metadata.available_agents && metadata.available_agents.length > 0 && (
-              <Box>
-                <HStack justify="space-between" mb={1}>
-                  <Text color="gray.400">Available Agents:</Text>
-                  <Text color="gray.500" fontSize="xs">{metadata.available_agents.length} total</Text>
-                </HStack>
-                <Box maxH="100px" overflowY="auto" p={2} bg="gray.800" borderRadius="md">
-                  <Box display="flex" flexWrap="wrap" gap={1}>
-                    {metadata.available_agents.map((agent, idx) => (
-                      <Badge key={idx} colorScheme="gray" fontSize="xs" variant="outline">{agent}</Badge>
-                    ))}
-                  </Box>
+              
+              <Box maxH="120px" overflowY="auto" bg="gray.850" borderRadius="md" p={2}>
+                <Box display="grid" gridTemplateColumns="repeat(auto-fit, minmax(120px, 1fr))" gap={2}>
+                  {metadata.availableAgents.map((agent: any, idx: number) => {
+                    const agentName = typeof agent === 'string' ? agent : agent.name;
+                    const agentType = typeof agent === 'string' ? 'core' : agent.type;
+                    const isSelected = agentName === (metadata.selectedAgent || metadata.selected_agent);
+                    
+                    return (
+                      <Badge 
+                        key={idx} 
+                        colorScheme={isSelected ? 'blue' : agentType === 'core' ? 'gray' : 'green'} 
+                        variant={isSelected ? 'solid' : 'outline'}
+                        fontSize="2xs"
+                        px={2}
+                        py={1}
+                        borderRadius="full"
+                        textAlign="center"
+                        fontWeight={isSelected ? 'bold' : 'normal'}
+                      >
+                        {agentName?.replace(/_/g, ' ')?.replace(/backend/gi, '')}
+                      </Badge>
+                    );
+                  })}
                 </Box>
               </Box>
-            )}
-            
-            {metadata.token_usage && (
-              <HStack justify="space-between">
-                <Text color="gray.400">Token Usage:</Text>
-                <Text color="gray.300" fontSize="xs">
-                  {metadata.token_usage.total_tokens} total ({metadata.token_usage.prompt_tokens} prompt + {metadata.token_usage.completion_tokens} completion)
-                </Text>
-              </HStack>
-            )}
-          </VStack>
+            </Box>
+          )}
+          
         </VStack>
       </Box>
 
