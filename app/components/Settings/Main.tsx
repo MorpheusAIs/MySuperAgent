@@ -12,6 +12,7 @@ import {
 } from '@chakra-ui/react';
 import React, { useState } from 'react';
 import { A2AManagement } from './A2AManagement';
+import { AccountSettings } from './AccountSettings';
 import { AgentSelection } from './AgentSelection';
 import { GeneralSettings } from './GeneralSettings';
 import styles from './Main.module.css';
@@ -60,6 +61,11 @@ export const SettingsMain: React.FC<SettingsMainProps> = ({
               >
                 <Tab className={styles.tab}>
                   <Text fontSize="sm" fontWeight="500">
+                    Account
+                  </Text>
+                </Tab>
+                <Tab className={styles.tab}>
+                  <Text fontSize="sm" fontWeight="500">
                     General
                   </Text>
                 </Tab>
@@ -91,6 +97,11 @@ export const SettingsMain: React.FC<SettingsMainProps> = ({
               </TabList>
 
               <TabPanels h="full" className={styles.tabPanels}>
+                <TabPanel p={0} h="full">
+                  <Box className={styles.tabContent}>
+                    <AccountSettings onSave={() => {}} />
+                  </Box>
+                </TabPanel>
                 <TabPanel p={0} h="full">
                   <Box className={styles.tabContent}>
                     <GeneralSettings onSave={() => {}} />

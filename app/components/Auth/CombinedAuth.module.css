@@ -1,0 +1,29 @@
+.googleButton {
+  background: white !important;
+  border: 1px solid white !important;
+  color: black !important;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.googleButton:hover {
+  background: #22c55e !important;
+  border-color: #22c55e !important;
+  color: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.googleSignOutButton {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.googleSignOutButton:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+}

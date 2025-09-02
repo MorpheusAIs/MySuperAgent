@@ -27,6 +27,7 @@ export interface User {
   created_at: Date;
   updated_at: Date;
   last_active: Date;
+  deleted_at?: Date | null;
 }
 
 export interface UserPreferences {
@@ -186,9 +187,24 @@ export class UserDB {
   }
 
   static async getUser(walletAddress: string): Promise<User | null> {
-    const query = 'SELECT * FROM users WHERE wallet_address = $1;';
+    const query =
+      'SELECT * FROM users WHERE wallet_address = $1 AND deleted_at IS NULL;';
     const result = await pool.query(query, [walletAddress]);
     return result.rows[0] || null;
+  }
+
+  static async softDeleteUser(walletAddress: string): Promise<boolean> {
+    const query =
+      'UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE wallet_address = $1 AND deleted_at IS NULL;';
+    const result = await pool.query(query, [walletAddress]);
+    return (result.rowCount || 0) > 0;
+  }
+
+  static async restoreUser(walletAddress: string): Promise<boolean> {
+    const query =
+      'UPDATE users SET deleted_at = NULL WHERE wallet_address = $1;';
+    const result = await pool.query(query, [walletAddress]);
+    return (result.rowCount || 0) > 0;
   }
 }
 
@@ -656,6 +672,29 @@ export class MessageDB {
   static async getTotalMessageCount(): Promise<number> {
     const query = 'SELECT COUNT(*) as total FROM messages;';
     const result = await pool.query(query);
+    return parseInt(result.rows[0].total, 10);
+  }
+
+  static async getMessageCountForUserToday(
+    walletAddress: string,
+    startOfDay: Date,
+    endOfDay: Date
+  ): Promise<number> {
+    const query = `
+      SELECT COUNT(m.*) as total 
+      FROM messages m
+      INNER JOIN jobs j ON m.job_id = j.id
+      WHERE j.wallet_address = $1 
+      AND m.role = 'user'
+      AND m.created_at >= $2 
+      AND m.created_at < $3;
+    `;
+
+    const result = await pool.query(query, [
+      walletAddress,
+      startOfDay,
+      endOfDay,
+    ]);
     return parseInt(result.rows[0].total, 10);
   }
 }

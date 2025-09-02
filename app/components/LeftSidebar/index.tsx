@@ -1,4 +1,5 @@
 import { AgentsButton } from '@/components/Agents/Button';
+import { CombinedAuth } from '@/components/Auth/CombinedAuth';
 import { CdpWalletsButton } from '@/components/CdpWallets/Button';
 import { StyledTooltip } from '@/components/Common/StyledTooltip';
 import { ApiCredentialsButton } from '@/components/Credentials/Button';
@@ -203,44 +204,9 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
           </ConnectButton.Custom>
 
           <div className={styles.footer}>
-            <ConnectButton.Custom>
-              {({
-                account,
-                chain,
-                openAccountModal,
-                openChainModal,
-                openConnectModal,
-                mounted,
-              }) => {
-                const ready = mounted;
-                const connected = ready && account && chain;
-
-                return (
-                  <div
-                    {...(!ready && {
-                      'aria-hidden': true,
-                      style: {
-                        opacity: 0,
-                        pointerEvents: 'none',
-                        userSelect: 'none',
-                      },
-                    })}
-                    className={styles.connectButtonWrapper}
-                  >
-                    <div
-                      className={styles.profileContainer}
-                      onClick={connected ? openAccountModal : openConnectModal}
-                    >
-                      <div className={styles.accountInfo}>
-                        {connected
-                          ? 'Active session logged in as ' + account.displayName
-                          : 'Connect Wallet to Enable Full Functionality'}
-                      </div>
-                    </div>
-                  </div>
-                );
-              }}
-            </ConnectButton.Custom>
+            <Box p={4}>
+              <CombinedAuth variant="full" size="sm" showLabels={true} />
+            </Box>
           </div>
         </div>
       </div>
