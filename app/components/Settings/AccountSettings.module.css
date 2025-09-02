@@ -1,0 +1,148 @@
+.accountContainer {
+  padding: 24px;
+  background: #0A0A0A;
+  min-height: 100vh;
+}
+
+.planCard {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s ease;
+}
+
+.planCard:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.upgradeCard {
+  background: linear-gradient(135deg, rgba(89, 248, 134, 0.1) 0%, rgba(89, 248, 134, 0.05) 100%);
+  border: 1px solid rgba(89, 248, 134, 0.3);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s ease;
+}
+
+.upgradeCard:hover {
+  border-color: rgba(89, 248, 134, 0.5);
+  background: linear-gradient(135deg, rgba(89, 248, 134, 0.15) 0%, rgba(89, 248, 134, 0.08) 100%);
+}
+
+.dangerCard {
+  background: rgba(255, 0, 0, 0.05);
+  border: 1px solid rgba(255, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s ease;
+}
+
+.dangerCard:hover {
+  background: rgba(255, 0, 0, 0.08);
+  border-color: rgba(255, 0, 0, 0.3);
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.proIcon {
+  background: #59F886;
+  color: #000;
+}
+
+.freeIcon {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dangerIcon {
+  background: #EF4444;
+  color: white;
+}
+
+.upgradeButton {
+  background: #59F886 !important;
+  color: #000 !important;
+  font-weight: 600;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.upgradeButton:hover {
+  background: #4AE066 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(89, 248, 134, 0.3);
+}
+
+.deleteButton {
+  border: 1px solid #EF4444;
+  color: #EF4444;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.deleteButton:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #F87171;
+}
+
+.badge {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.proBadge {
+  background: #59F886;
+  color: #000;
+}
+
+.freeBadge {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.progressBar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #59F886 0%, #4AE066 100%);
+  transition: width 0.3s ease;
+}
+
+.featureList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+}
+
+.featureIcon {
+  color: #59F886;
+  flex-shrink: 0;
+}

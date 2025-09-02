@@ -1,27 +1,29 @@
-import "../styles/globals.css";
-import "@rainbow-me/rainbowkit/styles.css";
-import type { AppProps } from "next/app";
-import { Analytics } from "@vercel/analytics/react";
 import {
   ChakraProvider,
   defineStyleConfig,
   extendTheme,
-} from "@chakra-ui/react";
+} from '@chakra-ui/react';
+import '@rainbow-me/rainbowkit/styles.css';
+import { Analytics } from '@vercel/analytics/react';
+import type { AppProps } from 'next/app';
+import '../styles/globals.css';
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiProvider } from "wagmi";
-import { arbitrum, base, mainnet, optimism, polygon, bsc } from "wagmi/chains";
+import { AuthProvider } from '@/contexts/auth/AuthProvider';
 import {
+  AvatarComponent,
+  darkTheme,
   getDefaultConfig,
   RainbowKitProvider,
-  darkTheme,
-  AvatarComponent,
-} from "@rainbow-me/rainbowkit";
-import "./../styles/globals.css";
+} from '@rainbow-me/rainbowkit';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SessionProvider } from 'next-auth/react';
+import { WagmiProvider } from 'wagmi';
+import { arbitrum, base, bsc, mainnet, optimism, polygon } from 'wagmi/chains';
+import './../styles/globals.css';
 
 const config = getDefaultConfig({
-  appName: "RainbowKit App",
-  projectId: "YOUR_PROJECT_ID",
+  appName: 'RainbowKit App',
+  projectId: 'YOUR_PROJECT_ID',
   chains: [
     mainnet,
     polygon,
@@ -37,44 +39,44 @@ const config = getDefaultConfig({
 const ButtonStyles = defineStyleConfig({
   variants: {
     greenCustom: {
-      fontFamily: "Inter",
-      fontSize: "16px",
-      background: "#59F886",
-      borderRadius: "24px",
-      color: "#000",
-      "&:hover": {
-        background: "#59F886",
-        color: "#000",
-        transform: "scale(1.05)",
-        boxShadow: "0px 4px 4px rgba(0, 0, 0, 0.25)",
-        border: "1px solid #59F886",
+      fontFamily: 'Inter',
+      fontSize: '16px',
+      background: '#59F886',
+      borderRadius: '24px',
+      color: '#000',
+      '&:hover': {
+        background: '#59F886',
+        color: '#000',
+        transform: 'scale(1.05)',
+        boxShadow: '0px 4px 4px rgba(0, 0, 0, 0.25)',
+        border: '1px solid #59F886',
       },
     },
   },
 });
 
 const theme = extendTheme({
-  initialColorMode: "dark",
+  initialColorMode: 'dark',
   useSystemColorMode: false,
   colors: {
-    header: "#000",
-    "pop-up-bg": "#1C201D",
+    header: '#000',
+    'pop-up-bg': '#1C201D',
   },
   components: {
     Button: ButtonStyles,
   },
   Text: {
     baseStyle: {
-      fontFamily: "Inter",
-      fontSize: "16px",
-      color: "var(--dark-text-90, rgba(255, 255, 255, 0.90))",
+      fontFamily: 'Inter',
+      fontSize: '16px',
+      color: 'var(--dark-text-90, rgba(255, 255, 255, 0.90))',
     },
   },
 });
 
 // Function to generate a color from an address
 const generateColorFromAddress = (address: string): string => {
-  if (!address) return "#000000";
+  if (!address) return '#000000';
 
   // Take the last 6 characters of the address for the color
   const colorCode = address.slice(-6);
@@ -87,21 +89,21 @@ function setVhProperty() {
   // Get the viewport height and multiply it by 1% to get a value for a vh unit
   const vh = window.innerHeight * 0.01;
   // Set the value in the --vh custom property to the root of the document
-  document.documentElement.style.setProperty("--vh", `${vh}px`);
+  document.documentElement.style.setProperty('--vh', `${vh}px`);
 }
 
 // Call the function when the page loads
-if (typeof window !== "undefined") {
+if (typeof window !== 'undefined') {
   // Set the initial value on page load
   setVhProperty();
 
   // Update the value on resize
-  window.addEventListener("resize", () => {
+  window.addEventListener('resize', () => {
     setVhProperty();
   });
 
   // Update on orientation change specifically for mobile
-  window.addEventListener("orientationchange", () => {
+  window.addEventListener('orientationchange', () => {
     setVhProperty();
   });
 }
@@ -122,7 +124,7 @@ const CustomAvatar: AvatarComponent = ({ address, ensImage, size }) => {
   }
 
   // If no ENS image, show the first 2 characters of the address
-  const displayText = address ? address.slice(2, 4).toUpperCase() : "";
+  const displayText = address ? address.slice(2, 4).toUpperCase() : '';
 
   return (
     <div
@@ -131,13 +133,13 @@ const CustomAvatar: AvatarComponent = ({ address, ensImage, size }) => {
         borderRadius: 999,
         height: size,
         width: size,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#fff",
-        fontSize: size > 30 ? "14px" : "10px",
-        fontFamily: "monospace",
-        fontWeight: "bold",
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontSize: size > 30 ? '14px' : '10px',
+        fontFamily: 'monospace',
+        fontWeight: 'bold',
       }}
     >
       {displayText}
@@ -147,27 +149,31 @@ const CustomAvatar: AvatarComponent = ({ address, ensImage, size }) => {
 
 const client = new QueryClient();
 
-function MyApp({ Component, pageProps }: AppProps) {
+function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={client}>
-        <RainbowKitProvider
-          avatar={CustomAvatar}
-          theme={darkTheme({
-            accentColor: "#111613",
-            accentColorForeground: "white",
-            borderRadius: "small",
-            fontStack: "system",
-            overlayBlur: "small",
-          })}
-        >
-          <ChakraProvider theme={theme}>
-            <Component {...pageProps} />
-            <Analytics />
-          </ChakraProvider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <SessionProvider session={session}>
+      <WagmiProvider config={config}>
+        <QueryClientProvider client={client}>
+          <RainbowKitProvider
+            avatar={CustomAvatar}
+            theme={darkTheme({
+              accentColor: '#111613',
+              accentColorForeground: 'white',
+              borderRadius: 'small',
+              fontStack: 'system',
+              overlayBlur: 'small',
+            })}
+          >
+            <AuthProvider>
+              <ChakraProvider theme={theme}>
+                <Component {...pageProps} />
+                <Analytics />
+              </ChakraProvider>
+            </AuthProvider>
+          </RainbowKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </SessionProvider>
   );
 }
 

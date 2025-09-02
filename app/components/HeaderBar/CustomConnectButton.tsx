@@ -1,24 +1,25 @@
-import React, { FC } from "react";
-import { ConnectButton as RainbowConnectButton } from "@rainbow-me/rainbowkit";
+import { CombinedAuth } from '@/components/Auth/CombinedAuth';
+import { ChevronDownIcon, CopyIcon, ExternalLinkIcon } from '@chakra-ui/icons';
 import {
+  Avatar,
+  Box,
   Button,
   HStack,
-  Text,
-  Box,
-  Avatar,
   Menu,
   MenuButton,
-  MenuList,
-  MenuItem,
   MenuDivider,
+  MenuItem,
+  MenuList,
+  Text,
   useMediaQuery,
   useToast,
-} from "@chakra-ui/react";
-import { ChevronDownIcon, CopyIcon, ExternalLinkIcon } from "@chakra-ui/icons";
-import styles from "./CustomConnectButton.module.css";
+} from '@chakra-ui/react';
+import { ConnectButton as RainbowConnectButton } from '@rainbow-me/rainbowkit';
+import { FC } from 'react';
+import styles from './CustomConnectButton.module.css';
 
 export const CustomConnectButton: FC = () => {
-  const [isMobile] = useMediaQuery("(max-width: 768px)");
+  const [isMobile] = useMediaQuery('(max-width: 768px)');
   const toast = useToast();
 
   // Helper function to copy text to clipboard
@@ -26,21 +27,21 @@ export const CustomConnectButton: FC = () => {
     navigator.clipboard.writeText(text).then(
       () => {
         toast({
-          title: "Address copied",
-          status: "success",
+          title: 'Address copied',
+          status: 'success',
           duration: 2000,
           isClosable: true,
-          position: "bottom",
+          position: 'bottom',
         });
       },
       (err) => {
         toast({
-          title: "Failed to copy",
+          title: 'Failed to copy',
           description: err.toString(),
-          status: "error",
+          status: 'error',
           duration: 2000,
           isClosable: true,
-          position: "bottom",
+          position: 'bottom',
         });
       }
     );
@@ -48,7 +49,7 @@ export const CustomConnectButton: FC = () => {
 
   // Helper function to open explorer
   const openExplorer = (address: string, chainId: number) => {
-    let explorerUrl = "";
+    let explorerUrl = '';
 
     // Map chainId to explorer URL (add more chains as needed)
     switch (chainId) {
@@ -72,10 +73,21 @@ export const CustomConnectButton: FC = () => {
         explorerUrl = `https://etherscan.io/address/${address}`;
     }
 
-    window.open(explorerUrl, "_blank");
+    window.open(explorerUrl, '_blank');
   };
 
   return (
+    <div>
+      <CombinedAuth
+        variant="compact"
+        size={isMobile ? 'sm' : 'md'}
+        showLabels={false}
+      />
+    </div>
+  );
+
+  // Keep the original implementation as backup
+  const originalImplementation = (
     <RainbowConnectButton.Custom>
       {({
         account,
@@ -86,17 +98,17 @@ export const CustomConnectButton: FC = () => {
         authenticationStatus,
         mounted,
       }) => {
-        const ready = mounted && authenticationStatus !== "loading";
+        const ready = mounted && authenticationStatus !== 'loading';
         const connected =
           ready &&
           account &&
           chain &&
-          (!authenticationStatus || authenticationStatus === "authenticated");
+          (!authenticationStatus || authenticationStatus === 'authenticated');
 
         return (
           <div
             {...(!ready && {
-              "aria-hidden": true,
+              'aria-hidden': true,
               className: styles.connectButtonHidden,
             })}
           >
@@ -106,7 +118,7 @@ export const CustomConnectButton: FC = () => {
                   <Button
                     onClick={openConnectModal}
                     className={styles.connectButton}
-                    size={isMobile ? "sm" : "md"}
+                    size={isMobile ? 'sm' : 'md'}
                   >
                     Connect Wallet
                   </Button>
@@ -118,7 +130,7 @@ export const CustomConnectButton: FC = () => {
                   <Button
                     onClick={openChainModal}
                     className={styles.networkButton}
-                    size={isMobile ? "sm" : "md"}
+                    size={isMobile ? 'sm' : 'md'}
                     rightIcon={<ChevronDownIcon />}
                   >
                     {chain.hasIcon ? (
@@ -142,7 +154,7 @@ export const CustomConnectButton: FC = () => {
                     <MenuButton
                       as={Button}
                       className={styles.accountButton}
-                      size={isMobile ? "sm" : "md"}
+                      size={isMobile ? 'sm' : 'md'}
                       rightIcon={<ChevronDownIcon />}
                     >
                       <Text className={styles.accountText}>
