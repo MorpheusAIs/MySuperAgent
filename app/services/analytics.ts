@@ -27,6 +27,18 @@ export type AnalyticsEvent =
   | 'job.filter_changed'
   | 'job.tab_changed'
   | 'job.pagination'
+  | 'job.share_modal_opened'
+  
+  // Shared job events
+  | 'shared_job.created'
+  | 'shared_job.link_copied'
+  | 'shared_job.deleted'
+  | 'shared_job.access_failed'
+  | 'shared_job.accessed'
+  | 'shared_job.api_error'
+  | 'shared_job.page_viewed'
+  | 'shared_job.load_error'
+  | 'shared_job.cta_clicked'
   
   // Wallet operation events
   | 'wallet.created'
@@ -95,8 +107,25 @@ export interface EventProperties {
   selectedAgents?: string[];
   researchMode?: boolean;
   progressPercentage?: number;
-  fromAction?: number;
+  
+  // Shared job properties
+  shareId?: string;
+  shareTitle?: string;
+  shareToken?: string;
+  viewCount?: number;
+  messageCount?: number;
+  hasCustomTitle?: boolean;
+  hasCustomDescription?: boolean;
+  isPublic?: boolean;
+  token?: string;
   action?: string;
+  reason?: string;
+  userAgent?: string;
+  hasExpiration?: boolean;
+  ip?: string;
+  referrer?: string;
+  expiresIn?: number;
+  fromAction?: number;
   totalSelected?: number;
   network?: string;
   walletName?: string;

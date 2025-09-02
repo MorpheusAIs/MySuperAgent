@@ -9,6 +9,7 @@ import {
   CheckCircleIcon,
   DeleteIcon,
   EditIcon,
+  ExternalLinkIcon,
   RepeatIcon,
   SearchIcon,
   SettingsIcon,
@@ -38,6 +39,7 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import ShareJobModal from '@/components/ShareJobModal';
 import styles from './index.module.css';
 
 interface JobsListProps {
@@ -435,7 +437,8 @@ const JobItem: FC<{
   messageCount?: number;
   onDelete?: (jobId: string) => void;
   onEdit?: (jobId: string) => void;
-}> = ({ job, onClick, messageCount = 0, onDelete, onEdit }) => {
+  onShare?: (jobId: string) => void;
+}> = ({ job, onClick, messageCount = 0, onDelete, onEdit, onShare }) => {
   const status = getJobStatus(job);
 
   // Get title and description from job
@@ -586,6 +589,30 @@ const JobItem: FC<{
             Quick Actions
           </Text>
           <HStack spacing={1}>
+            {/* Share button - only show for completed jobs */}
+            {job.status === 'completed' && onShare && (
+              <Tooltip label="Share job" placement="top">
+                <IconButton
+                  aria-label="Share job"
+                  icon={<ExternalLinkIcon w={3} h={3} />}
+                  size="xs"
+                  variant="ghost"
+                  colorScheme="green"
+                  _hover={{
+                    bg: 'rgba(34, 197, 94, 0.1)',
+                    transform: 'scale(1.1)',
+                  }}
+                  _active={{
+                    bg: 'rgba(34, 197, 94, 0.2)',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShare(job.id);
+                  }}
+                />
+              </Tooltip>
+            )}
+
             {onEdit && (
               <Tooltip label="Edit job name" placement="top">
                 <IconButton
@@ -657,6 +684,8 @@ export const JobsList: FC<JobsListProps> = ({
   const [previousPage, setPreviousPage] = useState(1);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [jobToEdit, setJobToEdit] = useState<Job | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [jobToShare, setJobToShare] = useState<Job | null>(null);
   const { getAddress } = useWalletAddress();
   const toast = useToast();
 
@@ -1105,6 +1134,60 @@ export const JobsList: FC<JobsListProps> = ({
     [jobs, getAddress, loadAllData, toast]
   );
 
+  const handleShareJob = useCallback(
+    async (jobId: string) => {
+      // Find the job to share
+      const job = jobs.find((j) => j.id === jobId);
+      if (!job) {
+        toast({
+          title: 'Job not found',
+          description: 'Could not find the job to share',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      // Check if user is logged in
+      const walletAddress = getAddress();
+      if (!walletAddress) {
+        toast({
+          title: 'Wallet not connected',
+          description: 'Please connect your wallet to share jobs',
+          status: 'warning',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      // Check if job is completed
+      if (job.status !== 'completed') {
+        toast({
+          title: 'Job not completed',
+          description: 'Only completed jobs can be shared',
+          status: 'warning',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      // Open share modal
+      setJobToShare(job);
+      setIsShareModalOpen(true);
+
+      // Track analytics
+      trackEvent('job.share_modal_opened', {
+        jobId,
+        jobName: job.name,
+        jobStatus: job.status,
+      });
+    },
+    [jobs, getAddress, toast]
+  );
+
   if (
     jobs.length === 0 &&
     activeScheduledJobs.length === 0 &&
@@ -1332,6 +1415,7 @@ export const JobsList: FC<JobsListProps> = ({
                         onClick={onJobClick}
                         onDelete={handleDeleteJob}
                         onEdit={handleEditJob}
+                        onShare={handleShareJob}
                       />
                     ))}
                   </VStack>
@@ -1373,6 +1457,7 @@ export const JobsList: FC<JobsListProps> = ({
                         onClick={onJobClick}
                         onDelete={handleDeleteJob}
                         onEdit={handleEditJob}
+                        onShare={handleShareJob}
                       />
                     ))}
                   </VStack>
@@ -1409,6 +1494,19 @@ export const JobsList: FC<JobsListProps> = ({
           loadAllData(); // Reload jobs after update
         }}
       />
+
+      {/* Share Job Modal */}
+      {jobToShare && (
+        <ShareJobModal
+          isOpen={isShareModalOpen}
+          onClose={() => {
+            setIsShareModalOpen(false);
+            setJobToShare(null);
+          }}
+          job={jobToShare}
+          walletAddress={getAddress() || ''}
+        />
+      )}
     </Box>
   );
 };
