@@ -93,7 +93,7 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
           <ConnectButton.Custom>
             {({ account }) => (
               <div className={styles.mainContent}>
-                <MenuSection title="Basic">
+                <MenuSection title="Preferences">
                   <Tooltip
                     isDisabled={!!account}
                     label="Connect your wallet to access personalized settings and configurations. These settings are unique to each wallet address and help customize your experience."

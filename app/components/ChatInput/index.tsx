@@ -27,6 +27,7 @@ type ChatInputProps = {
   onToggleHelp: () => void;
   showPrefilledOptions: boolean;
   placeholder?: string;
+  onJobCreated?: () => void;
 };
 
 export const ChatInput: FC<ChatInputProps> = ({
@@ -36,6 +37,7 @@ export const ChatInput: FC<ChatInputProps> = ({
   onToggleHelp,
   showPrefilledOptions,
   placeholder = 'Ask anything',
+  onJobCreated,
 }) => {
   const [message, setMessage] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
@@ -225,6 +227,14 @@ export const ChatInput: FC<ChatInputProps> = ({
   const handleScheduleJobCreated = (jobId: string) => {
     setShowSchedule(false);
     setMessage('');
+    // Trigger immediate refresh in parent component
+    if (onJobCreated) {
+      onJobCreated();
+      // Also trigger a delayed refresh to catch any API synchronization issues
+      setTimeout(() => {
+        onJobCreated();
+      }, 1000);
+    }
   };
 
   const handleScheduleReadyChange = (ready: boolean) => {
@@ -244,7 +254,9 @@ export const ChatInput: FC<ChatInputProps> = ({
 
       <div className={styles.flexContainer}>
         <div
-          className={`${styles.inputWrapper} ${isDragOver ? styles.dragOver : ''}`}
+          className={`${styles.inputWrapper} ${
+            isDragOver ? styles.dragOver : ''
+          }`}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDragOver={handleDragOver}
@@ -271,7 +283,9 @@ export const ChatInput: FC<ChatInputProps> = ({
               onChange={(e) => setMessage(e.target.value)}
               placeholder={
                 attachedFiles.length > 0
-                  ? `${attachedFiles.length} file${attachedFiles.length > 1 ? 's' : ''} attached - ${placeholder}`
+                  ? `${attachedFiles.length} file${
+                      attachedFiles.length > 1 ? 's' : ''
+                    } attached - ${placeholder}`
                   : placeholder
               }
               minH="36px"

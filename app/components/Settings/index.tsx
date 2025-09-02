@@ -1,14 +1,14 @@
-import { Flex, Text } from "@chakra-ui/react";
-import { Settings } from "lucide-react";
-import { useRouter } from "next/router";
-import React from "react";
-import styles from "./index.module.css";
+import { Flex, Text } from '@chakra-ui/react';
+import { Settings } from 'lucide-react';
+import { useRouter } from 'next/router';
+import React from 'react';
+import styles from './index.module.css';
 
 export const SettingsButton: React.FC = () => {
   const router = useRouter();
 
   const handleClick = () => {
-    router.push("/settings");
+    router.push('/settings');
   };
 
   return (
@@ -29,4 +29,4 @@ export const SettingsButton: React.FC = () => {
 };
 
 // Export the main Settings component
-export { SettingsMain } from "./Main";
+export { SettingsMain } from './Main';

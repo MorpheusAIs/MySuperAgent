@@ -38,8 +38,9 @@ export const Chat: FC<{
       }
 
       try {
-        const preferences =
-          await UserPreferencesAPI.getUserPreferences(walletAddress);
+        const preferences = await UserPreferencesAPI.getUserPreferences(
+          walletAddress
+        );
         setUserPreferences(preferences);
       } catch (error) {
         console.error('Error loading user preferences:', error);
@@ -311,6 +312,7 @@ export const Chat: FC<{
                 }}
                 showPrefilledOptions={showPrefilledOptions}
                 placeholder="Describe a job"
+                onJobCreated={refreshJobsList}
               />
             </Box>
 
@@ -371,6 +373,7 @@ export const Chat: FC<{
             });
           }}
           showPrefilledOptions={showPrefilledOptions}
+          onJobCreated={refreshJobsList}
         />
       </Box>
     </Box>
