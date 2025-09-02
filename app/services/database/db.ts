@@ -1169,6 +1169,205 @@ export class UserA2AAgentDB {
   }
 }
 
+export interface SharedJob {
+  id: string;
+  job_id: string;
+  wallet_address: string;
+  share_token: string;
+  title: string | null;
+  description: string | null;
+  is_public: boolean;
+  view_count: number;
+  expires_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface CreateShareParams {
+  job_id: string;
+  wallet_address: string;
+  title?: string;
+  description?: string;
+  is_public?: boolean;
+  expires_at?: Date;
+}
+
+export interface SharedJobWithDetails extends SharedJob {
+  job: Job;
+  messages: Message[];
+}
+
+export class SharedJobDB {
+  static async createShare(params: CreateShareParams): Promise<SharedJob> {
+    // Generate cryptographically secure token
+    const crypto = await import('crypto');
+    const share_token = crypto.randomBytes(32).toString('hex');
+    
+    const query = `
+      INSERT INTO shared_jobs (
+        job_id, wallet_address, share_token, title, description, 
+        is_public, expires_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (job_id, wallet_address)
+      DO UPDATE SET 
+        share_token = EXCLUDED.share_token,
+        title = EXCLUDED.title,
+        description = EXCLUDED.description,
+        is_public = EXCLUDED.is_public,
+        expires_at = EXCLUDED.expires_at,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *;
+    `;
+
+    const values = [
+      params.job_id,
+      params.wallet_address,
+      share_token,
+      params.title || null,
+      params.description || null,
+      params.is_public ?? true,
+      params.expires_at || null,
+    ];
+
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  }
+
+  static async getByToken(token: string): Promise<SharedJobWithDetails | null> {
+    // Check if share exists and is not expired
+    const shareQuery = `
+      SELECT sj.*, j.name as job_name, j.description as job_description,
+             j.initial_message, j.status, j.created_at as job_created_at,
+             j.completed_at
+      FROM shared_jobs sj
+      JOIN jobs j ON sj.job_id = j.id
+      WHERE sj.share_token = $1 
+        AND sj.is_public = true
+        AND (sj.expires_at IS NULL OR sj.expires_at > CURRENT_TIMESTAMP);
+    `;
+
+    const shareResult = await pool.query(shareQuery, [token]);
+    if (!shareResult.rows[0]) return null;
+
+    const sharedJob = shareResult.rows[0];
+
+    // Get job messages
+    const messages = await MessageDB.getMessagesByJob(sharedJob.job_id);
+
+    // Increment view count
+    await this.incrementViewCount(token);
+
+    return {
+      id: sharedJob.id,
+      job_id: sharedJob.job_id,
+      wallet_address: sharedJob.wallet_address,
+      share_token: sharedJob.share_token,
+      title: sharedJob.title,
+      description: sharedJob.description,
+      is_public: sharedJob.is_public,
+      view_count: sharedJob.view_count,
+      expires_at: sharedJob.expires_at,
+      created_at: sharedJob.created_at,
+      updated_at: sharedJob.updated_at,
+      job: {
+        id: sharedJob.job_id,
+        wallet_address: sharedJob.wallet_address,
+        name: sharedJob.job_name,
+        description: sharedJob.job_description,
+        initial_message: sharedJob.initial_message,
+        status: sharedJob.status,
+        created_at: sharedJob.job_created_at,
+        updated_at: sharedJob.updated_at,
+        completed_at: sharedJob.completed_at,
+        has_uploaded_file: false,
+      } as Job,
+      messages,
+    };
+  }
+
+  static async getUserShares(walletAddress: string): Promise<SharedJob[]> {
+    const query = `
+      SELECT sj.*, j.name as job_name
+      FROM shared_jobs sj
+      JOIN jobs j ON sj.job_id = j.id
+      WHERE sj.wallet_address = $1
+      ORDER BY sj.created_at DESC;
+    `;
+
+    const result = await pool.query(query, [walletAddress]);
+    return result.rows;
+  }
+
+  static async updateShare(
+    job_id: string,
+    wallet_address: string,
+    updates: Partial<Pick<SharedJob, 'title' | 'description' | 'is_public' | 'expires_at'>>
+  ): Promise<SharedJob> {
+    const fields = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (updates.title !== undefined) {
+      fields.push(`title = $${paramIndex++}`);
+      values.push(updates.title);
+    }
+    if (updates.description !== undefined) {
+      fields.push(`description = $${paramIndex++}`);
+      values.push(updates.description);
+    }
+    if (updates.is_public !== undefined) {
+      fields.push(`is_public = $${paramIndex++}`);
+      values.push(updates.is_public);
+    }
+    if (updates.expires_at !== undefined) {
+      fields.push(`expires_at = $${paramIndex++}`);
+      values.push(updates.expires_at);
+    }
+
+    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(job_id, wallet_address);
+
+    const query = `
+      UPDATE shared_jobs 
+      SET ${fields.join(', ')}
+      WHERE job_id = $${paramIndex++} AND wallet_address = $${paramIndex++}
+      RETURNING *;
+    `;
+
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  }
+
+  static async deleteShare(job_id: string, wallet_address: string): Promise<void> {
+    const query = `
+      DELETE FROM shared_jobs 
+      WHERE job_id = $1 AND wallet_address = $2;
+    `;
+
+    await pool.query(query, [job_id, wallet_address]);
+  }
+
+  static async incrementViewCount(token: string): Promise<void> {
+    const query = `
+      UPDATE shared_jobs 
+      SET view_count = view_count + 1
+      WHERE share_token = $1;
+    `;
+
+    await pool.query(query, [token]);
+  }
+
+  static async getShareByJobId(job_id: string, wallet_address: string): Promise<SharedJob | null> {
+    const query = `
+      SELECT * FROM shared_jobs 
+      WHERE job_id = $1 AND wallet_address = $2;
+    `;
+
+    const result = await pool.query(query, [job_id, wallet_address]);
+    return result.rows[0] || null;
+  }
+}
+
 export class UserAvailableToolDB {
   static async storeTool(
     tool: Omit<UserAvailableTool, 'id'>
