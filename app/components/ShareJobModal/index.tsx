@@ -142,7 +142,7 @@ export default function ShareJobModal({
         hasCustomDescription: !!description,
         isPublic,
         hasExpiration: expiresIn !== 'never',
-        expiresIn: expiresIn !== 'never' ? parseInt(expiresIn) : null,
+        expiresIn: expiresIn !== 'never' ? parseInt(expiresIn) : undefined,
       });
 
       toast({

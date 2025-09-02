@@ -26,7 +26,7 @@ export default async function handler(
         token: token.substring(0, 8) + '...', // Log partial token for debugging
         reason: 'not_found_or_expired',
         userAgent: req.headers['user-agent'],
-        ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
+        ip: (req.headers['x-forwarded-for'] as string) || req.connection.remoteAddress,
       });
 
       return res.status(404).json({ 
@@ -44,7 +44,7 @@ export default async function handler(
       messageCount: sharedJobData.messages.length,
       jobStatus: sharedJobData.job.status,
       userAgent: req.headers['user-agent'],
-      referrer: req.headers.referer,
+      referrer: req.headers.referer as string,
     });
 
     // Return job data with messages

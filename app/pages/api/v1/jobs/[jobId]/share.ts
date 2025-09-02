@@ -112,7 +112,7 @@ async function handleUpdateShare(
 ) {
   const body: UpdateShareRequest = req.body;
 
-  const updates: Partial<Pick<typeof body, 'title' | 'description' | 'isPublic'>> & { expires_at?: Date } = {};
+  const updates: Partial<{ title: string; description: string; is_public: boolean; expires_at: Date }> = {};
   
   if (body.title !== undefined) updates.title = body.title;
   if (body.description !== undefined) updates.description = body.description;

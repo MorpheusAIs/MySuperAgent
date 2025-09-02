@@ -53,7 +53,7 @@ const getStatusColor = (status: Job['status']) => {
 const convertMessageToChatMessage = (msg: Message): ChatMessage => {
   return {
     id: msg.id,
-    role: msg.role,
+    role: msg.role as 'user' | 'assistant',
     content: msg.content,
     metadata: msg.metadata,
     error_message: msg.error_message,
@@ -92,7 +92,7 @@ export default function SharedJobPage() {
         // Track page view
         trackEvent('shared_job.page_viewed', {
           jobId: data.job.id,
-          shareTitle: data.share.title,
+          shareTitle: data.share.title || undefined,
           messageCount: data.messages.length,
           viewCount: data.share.viewCount,
         });
