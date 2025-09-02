@@ -24,38 +24,6 @@ export interface MCPServerDefinition {
 }
 
 export const MCP_SERVER_REGISTRY: MCPServerDefinition[] = [
-  // Essential - No API keys needed
-  {
-    name: 'filesystem',
-    displayName: 'File System',
-    description: 'Local file operations - read, write, and manage files',
-    category: 'system',
-    serverUrl: 'builtin://filesystem',
-    requiredCredentials: [],
-    capabilities: ['file_read', 'file_write', 'directory_list', 'file_search'],
-    isPopular: true,
-    setupInstructions: 'No setup required - works with local file system'
-  },
-  {
-    name: 'sqlite',
-    displayName: 'SQLite Database',
-    description: 'Query and manage SQLite databases',
-    category: 'data',
-    serverUrl: 'builtin://sqlite',
-    requiredCredentials: [
-      {
-        name: 'database_path',
-        displayName: 'Database File Path',
-        type: 'url',
-        description: 'Path to your SQLite database file',
-        required: true,
-        placeholder: '/path/to/database.db'
-      }
-    ],
-    capabilities: ['database_query', 'data_analysis', 'schema_inspection'],
-    isPopular: true,
-    setupInstructions: 'Provide the path to your SQLite database file'
-  },
 
   // High Value - API keys required
   {
@@ -256,17 +224,6 @@ export const MCP_SERVER_REGISTRY: MCPServerDefinition[] = [
   },
 
   // Development Tools
-  {
-    name: 'docker',
-    displayName: 'Docker',
-    description: 'Container management and Docker operations',
-    category: 'development',
-    serverUrl: 'builtin://docker',
-    requiredCredentials: [],
-    capabilities: ['container_management', 'image_operations', 'service_deployment'],
-    isPopular: false,
-    setupInstructions: 'Requires Docker to be installed and running locally'
-  },
 
   // Cloud Services
   {

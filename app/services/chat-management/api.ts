@@ -49,7 +49,127 @@ export interface StreamingCallbacks {
 }
 
 /**
- * Send a message to the backend API and handle the response
+ * Send a message using orchestration (non-streaming) and handle the response
+ */
+export const writeOrchestratedMessage = async (
+  message: string,
+  backendClient: any,
+  chainId: number,
+  address: string,
+  conversationId: string = DEFAULT_CONVERSATION_ID,
+  useResearch: boolean = false
+): Promise<ChatMessage[]> => {
+  const convId = getOrCreateConversation(conversationId);
+  const currentHistory = getMessagesHistory(convId);
+
+  const newMessage: UserMessage = {
+    role: "user",
+    content: message,
+    timestamp: Date.now(),
+  };
+
+  // Add user message to local storage
+  addMessageToHistory(newMessage, convId);
+
+  // Track message sent event
+  trackEvent('agent.message_sent', {
+    conversationId,
+    researchMode: useResearch,
+    messageLength: message.length,
+  });
+
+  const startTime = Date.now();
+
+  try {
+    // Send message along with conversation history to orchestration endpoint
+    const response = await backendClient.post("/api/v1/chat/orchestrate", {
+      prompt: {
+        role: "user",
+        content: message,
+      },
+      chatHistory: currentHistory,
+      conversationId: convId,
+      useResearch: useResearch,
+      walletAddress: address,
+    });
+
+    // Process response
+    if (response.data) {
+      // Extract the assistant response from the API response
+      const { response: agentResponse, current_agent } = response.data;
+      
+      // Create a proper ChatMessage from the agent response
+      // Ensure metadata is preserved for CrewResponseMessage rendering
+      const assistantMessage: ChatMessage = {
+        role: "assistant",
+        content: agentResponse.content,
+        agentName: current_agent,
+        error_message: agentResponse.error_message,
+        metadata: {
+          ...agentResponse.metadata,
+          // Ensure these fields exist to trigger CrewResponseMessage renderer
+          selectedAgent: agentResponse.metadata?.selectedAgent || current_agent,
+          selectionReasoning: agentResponse.metadata?.selectionReasoning,
+          availableAgents: agentResponse.metadata?.availableAgents,
+          agentType: agentResponse.metadata?.agentType,
+          userSpecificAgents: agentResponse.metadata?.userSpecificAgents,
+          // Add orchestration flag to ensure proper rendering
+          isOrchestration: true,
+        },
+        requires_action: agentResponse.requires_action,
+        action_type: agentResponse.action_type,
+        timestamp: Date.now(),
+      };
+      
+      // Add assistant's response to local storage
+      addMessageToHistory(assistantMessage, convId);
+      
+      // Track response received event
+      trackEvent('agent.response_received', {
+        conversationId,
+        agentName: current_agent,
+        hasError: !!agentResponse.error_message,
+        requiresAction: !!agentResponse.requires_action,
+        actionType: agentResponse.action_type,
+      });
+      
+      // Track response timing
+      trackTiming('agent.response_received', startTime, {
+        agentName: current_agent,
+        researchMode: useResearch,
+      });
+    }
+
+    // Return the updated messages after API response is processed
+    return getMessagesHistory(convId);
+  } catch (error) {
+    console.error("Failed to send orchestrated message:", error);
+    
+    // Track error event
+    trackError('chat.api.writeOrchestratedMessage', error as Error, {
+      conversationId,
+      researchMode: useResearch,
+    });
+
+    // Create error message
+    const errorMessage: ChatMessage = {
+      role: "assistant",
+      content: "I encountered an error while processing your request. Please try again.",
+      agentName: "system",
+      error_message: error instanceof Error ? error.message : "Unknown error occurred",
+      timestamp: Date.now(),
+    };
+
+    // Add error message to history
+    addMessageToHistory(errorMessage, convId);
+
+    // Return the updated messages including the error
+    return getMessagesHistory(convId);
+  }
+};
+
+/**
+ * Send a message to the backend API and handle the response (legacy)
  */
 export const writeMessage = async (
   message: string,

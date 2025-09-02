@@ -454,6 +454,35 @@ export class JobDB {
     const result = await pool.query(query);
     return parseInt(result.rows[0].total, 10);
   }
+
+  static async getRecurringJobsCount(): Promise<number> {
+    const query = `SELECT COUNT(*) as total FROM jobs WHERE is_scheduled = true AND schedule_type IS NOT NULL;`;
+    const result = await pool.query(query);
+    return parseInt(result.rows[0].total, 10);
+  }
+
+  static async getActiveScheduledJobsCount(): Promise<number> {
+    const query = `SELECT COUNT(*) as total FROM jobs WHERE is_scheduled = true AND is_active = true;`;
+    const result = await pool.query(query);
+    return parseInt(result.rows[0].total, 10);
+  }
+
+  static async getCompletedJobsToday(): Promise<number> {
+    const query = `
+      SELECT COUNT(*) as total FROM jobs 
+      WHERE status = 'completed' 
+      AND DATE(completed_at) = CURRENT_DATE;
+    `;
+    const result = await pool.query(query);
+    return parseInt(result.rows[0].total, 10);
+  }
+
+  static async calculateTimeSaved(): Promise<number> {
+    // Estimate time saved based on completed jobs
+    // Assuming each job saves on average 30 minutes
+    const totalCompleted = await this.getTotalCompletedJobsCount();
+    return Math.round((totalCompleted * 0.5) * 100) / 100; // 0.5 hours per job, rounded to 2 decimals
+  }
 }
 
 export class MessageDB {
@@ -1143,20 +1172,19 @@ export class UserAvailableToolDB {
     walletAddress: string
   ): Promise<UserAvailableTool[]> {
     const query = `
-      SELECT t.*, s.server_name 
-      FROM user_available_tools t
-      JOIN user_mcp_servers s ON t.mcp_server_id = s.id
-      WHERE t.wallet_address = $1 AND t.is_available = TRUE
-      ORDER BY s.server_name, t.tool_name;
+      SELECT *, server_name as mcp_server_id
+      FROM user_available_tools
+      WHERE wallet_address = $1 AND (is_available = TRUE OR enabled = TRUE)
+      ORDER BY server_name, tool_name;
     `;
 
     const result = await pool.query(query, [walletAddress]);
     return result.rows.map((row) => ({
       ...row,
-      tool_schema:
-        typeof row.tool_schema === 'string'
-          ? JSON.parse(row.tool_schema)
-          : row.tool_schema,
+      mcp_server_id: row.server_name, // Map server_name to mcp_server_id for interface compatibility
+      tool_schema: typeof row.tool_schema === 'string' 
+        ? JSON.parse(row.tool_schema) 
+        : row.tool_schema || {}
     }));
   }
 

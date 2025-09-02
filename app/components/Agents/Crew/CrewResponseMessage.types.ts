@@ -88,10 +88,19 @@ export interface CrewResponseMetadata {
    * Agent selection debugging information
    */
   selected_agent?: string;
+  selectedAgent?: string; // New format
   selection_method?: 'user_selected' | 'intelligent' | 'intelligent_fallback' | 'unknown';
   user_requested_agents?: string[];
   selected_agents?: string[];
   available_agents?: string[];
+  availableAgents?: Array<{name: string, type: string} | string>; // New format
+  
+  /**
+   * Agent selection metadata
+   */
+  agentType?: string;
+  selectionReasoning?: string;
+  userSpecificAgents?: boolean;
 
   /**
    * Any additional metadata fields

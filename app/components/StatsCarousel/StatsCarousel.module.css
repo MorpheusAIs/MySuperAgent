@@ -1,0 +1,32 @@
+@keyframes slideUp {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  50.01% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.carouselContainer {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  height: 1.5em;
+  vertical-align: middle;
+}
+
+.carouselText {
+  display: block;
+  white-space: nowrap;
+  animation: slideUp 4s ease-in-out infinite;
+}

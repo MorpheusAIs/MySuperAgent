@@ -154,6 +154,8 @@ class AgentRegistryClass {
       return tools;
     } catch (error) {
       console.error(`Failed to get MCP tools for user ${walletAddress}:`, error);
+      // Cache empty result to avoid repeated failures
+      this.userMCPTools.set(walletAddress, []);
       return [];
     }
   }
@@ -174,6 +176,8 @@ class AgentRegistryClass {
       return agents;
     } catch (error) {
       console.error(`Failed to get A2A agents for user ${walletAddress}:`, error);
+      // Cache empty result to avoid repeated failures
+      this.userA2AAgents.set(walletAddress, []);
       return [];
     }
   }

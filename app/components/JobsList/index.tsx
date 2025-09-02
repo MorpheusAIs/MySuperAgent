@@ -1,6 +1,7 @@
 import { ScheduledJobEditModal } from '@/components/ScheduledJobEditModal';
 import JobsAPI from '@/services/api-clients/jobs';
 import { Job } from '@/services/database/db';
+import { trackEvent } from '@/services/analytics';
 import { useWalletAddress } from '@/services/wallet/utils';
 import {
   CalendarIcon,
@@ -475,12 +476,27 @@ const JobItem: FC<{
         cursor="pointer"
         p={4}
         pb={3}
-        onClick={() => onClick(job.id)}
+        onClick={() => {
+          trackEvent('job.clicked', {
+            jobId: job.id,
+            jobName: job.name,
+            jobStatus: job.status,
+            isScheduled: !!job.schedule_type
+          });
+          onClick(job.id);
+        }}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
+            trackEvent('job.clicked', {
+              jobId: job.id,
+              jobName: job.name,
+              jobStatus: job.status,
+              isScheduled: !!job.schedule_type,
+              inputMethod: 'keyboard'
+            });
             onClick(job.id);
           }
         }}
@@ -838,6 +854,17 @@ export const JobsList: FC<JobsListProps> = ({
 
         const job = scheduledJobs.find((j) => j.id === jobId);
         if (job) {
+          const action = job.is_active ? 'deactivate' : 'activate';
+          
+          // Track analytics before the action
+          trackEvent('job.scheduled_toggle', {
+            jobId,
+            action,
+            jobName: job.name,
+            scheduleType: job.schedule_type || undefined,
+            wallet: walletAddress
+          });
+
           await JobsAPI.updateJob(jobId, {
             wallet_address: walletAddress,
             is_active: !job.is_active,
@@ -879,6 +906,16 @@ export const JobsList: FC<JobsListProps> = ({
           });
           return;
         }
+
+        const job = scheduledJobs.find((j) => j.id === jobId);
+        
+        // Track analytics before running the job
+        trackEvent('job.scheduled_run', {
+          jobId,
+          jobName: job?.name,
+          scheduleType: job?.schedule_type || undefined,
+          wallet: walletAddress
+        });
 
         const { newJob, scheduledJob } = await JobsAPI.runJob(
           walletAddress,
@@ -939,12 +976,21 @@ export const JobsList: FC<JobsListProps> = ({
 
   const handleDeleteJob = useCallback(
     async (jobId: string) => {
+      // Find the job to get details for analytics
+      const job = jobs.find((j) => j.id === jobId) || scheduledJobs.find((j) => j.id === jobId);
+      
       // Show confirmation dialog
       const confirmed = window.confirm(
         'Are you sure you want to delete this job? This action cannot be undone and will permanently remove the job and all its messages.'
       );
 
       if (!confirmed) {
+        // Track cancellation
+        trackEvent('job.delete_cancelled', {
+          jobId,
+          jobName: job?.name,
+          jobStatus: job?.status
+        });
         return;
       }
 
@@ -960,6 +1006,15 @@ export const JobsList: FC<JobsListProps> = ({
           });
           return;
         }
+
+        // Track deletion attempt
+        trackEvent('job.deleted', {
+          jobId,
+          jobName: job?.name,
+          jobStatus: job?.status,
+          isScheduled: !!job?.schedule_type,
+          wallet: walletAddress
+        });
 
         await JobsAPI.deleteJob(walletAddress, jobId);
 
@@ -985,7 +1040,7 @@ export const JobsList: FC<JobsListProps> = ({
         });
       }
     },
-    [getAddress, loadAllData, toast]
+    [getAddress, loadAllData, toast, jobs, scheduledJobs]
   );
 
   const handleEditJob = useCallback(
@@ -1078,11 +1133,20 @@ export const JobsList: FC<JobsListProps> = ({
             placeholder="Search jobs..."
             value={searchQuery}
             onChange={(e) => {
-              setSearchQuery(e.target.value);
+              const query = e.target.value;
+              setSearchQuery(query);
               // Reset pages when searching
               setCurrentPage(1);
               setScheduledPage(1);
               setPreviousPage(1);
+              
+              // Track search analytics
+              if (query.length > 0) {
+                trackEvent('job.search', {
+                  searchQuery: query,
+                  searchLength: query.length
+                });
+              }
             }}
             className={styles.searchInput}
           />
@@ -1091,11 +1155,19 @@ export const JobsList: FC<JobsListProps> = ({
           size="sm"
           value={statusFilter}
           onChange={(e) => {
-            setStatusFilter(e.target.value);
+            const newFilter = e.target.value;
+            setStatusFilter(newFilter);
             // Reset pages when filtering
             setCurrentPage(1);
             setScheduledPage(1);
             setPreviousPage(1);
+            
+            // Track filter analytics
+            trackEvent('job.filter_changed', {
+              filterType: 'status',
+              filterValue: newFilter,
+              previousValue: statusFilter
+            });
           }}
           width="120px"
           className={styles.statusFilter}
@@ -1110,11 +1182,19 @@ export const JobsList: FC<JobsListProps> = ({
           size="sm"
           value={timeFilter}
           onChange={(e) => {
-            setTimeFilter(e.target.value);
+            const newFilter = e.target.value;
+            setTimeFilter(newFilter);
             // Reset pages when filtering
             setCurrentPage(1);
             setScheduledPage(1);
             setPreviousPage(1);
+            
+            // Track filter analytics
+            trackEvent('job.filter_changed', {
+              filterType: 'time',
+              filterValue: newFilter,
+              previousValue: timeFilter
+            });
           }}
           width="120px"
           className={styles.timeFilter}
@@ -1130,7 +1210,15 @@ export const JobsList: FC<JobsListProps> = ({
 
       <Tabs
         index={activeTab}
-        onChange={setActiveTab}
+        onChange={(index) => {
+          const tabNames = ['scheduled', 'current', 'previous'];
+          trackEvent('job.tab_changed', {
+            fromTab: tabNames[activeTab],
+            toTab: tabNames[index],
+            tabIndex: index
+          });
+          setActiveTab(index);
+        }}
         variant="soft-rounded"
         colorScheme="gray"
         size="sm"
@@ -1209,7 +1297,14 @@ export const JobsList: FC<JobsListProps> = ({
                   <PaginationControls
                     currentPage={scheduledPage}
                     totalPages={scheduledTotalPages}
-                    onPageChange={setScheduledPage}
+                    onPageChange={(page) => {
+                      trackEvent('job.pagination', {
+                        fromPage: scheduledPage,
+                        toPage: page,
+                        section: 'scheduled'
+                      });
+                      setScheduledPage(page);
+                    }}
                   />
                 </>
               )}
@@ -1243,7 +1338,14 @@ export const JobsList: FC<JobsListProps> = ({
                   <PaginationControls
                     currentPage={currentPage}
                     totalPages={currentTotalPages}
-                    onPageChange={setCurrentPage}
+                    onPageChange={(page) => {
+                      trackEvent('job.pagination', {
+                        fromPage: currentPage,
+                        toPage: page,
+                        section: 'current'
+                      });
+                      setCurrentPage(page);
+                    }}
                   />
                 </>
               )}
@@ -1277,7 +1379,14 @@ export const JobsList: FC<JobsListProps> = ({
                   <PaginationControls
                     currentPage={previousPage}
                     totalPages={previousTotalPages}
-                    onPageChange={setPreviousPage}
+                    onPageChange={(page) => {
+                      trackEvent('job.pagination', {
+                        fromPage: previousPage,
+                        toPage: page,
+                        section: 'previous'
+                      });
+                      setPreviousPage(page);
+                    }}
                   />
                 </>
               )}

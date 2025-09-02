@@ -10,10 +10,9 @@ import { ChatMessage } from "@/services/types";
 import { getHttpClient } from "@/services/config/constants";
 import {
   writeMessage,
+  writeOrchestratedMessage,
   uploadFile,
   generateConversationTitle,
-  writeMessageStream,
-  StreamingEvent,
 } from "@/services/chat-management/api";
 import { getMessagesHistory } from "@/services/chat-management/storage";
 import { addMessageToHistory } from "@/services/chat-management/messages";
@@ -115,35 +114,326 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
       } catch (error) {
         console.error("Error loading initial data:", error);
         // Fallback to localStorage if database fails
-        const { getMessagesHistory } = await import("@/services/chat-management/storage");
-        const { getStorageData } = await import("@/services/local-storage/core");
-        
-        const messages = getMessagesHistory("default");
-        dispatch({
-          type: "SET_MESSAGES",
-          payload: { conversationId: "default", messages },
-        });
-
-        const data = getStorageData();
-        Object.entries(data.conversations).forEach(([id, conversation]) => {
-          dispatch({
-            type: "SET_CONVERSATION_TITLE",
-            payload: { conversationId: id, title: conversation.name },
-          });
-        });
+        await loadLocalStorageData();
       }
     };
 
-    // Load data regardless of wallet connection
     loadInitialData();
   }, [address, getAddress]);
 
-  const setCurrentConversation = useCallback((conversationId: string) => {
-    dispatch({
-      type: "SET_CURRENT_CONVERSATION",
-      payload: conversationId,
-    });
+  // Load initial data from localStorage when no wallet is connected
+  const loadLocalStorageData = useCallback(async () => {
+    try {
+      const { getMessagesHistory } = await import("@/services/chat-management/storage");
+      const { getStorageData } = await import("@/services/local-storage/core");
+      
+      const messages = getMessagesHistory("default");
+      dispatch({
+        type: "SET_MESSAGES",
+        payload: { conversationId: "default", messages },
+      });
+
+      const data = getStorageData();
+      Object.entries(data.conversations).forEach(([id, conversation]) => {
+        dispatch({
+          type: "SET_CONVERSATION_TITLE",
+          payload: { conversationId: id, title: conversation.name },
+        });
+      });
+    } catch (error) {
+      console.error("Error loading localStorage data:", error);
+    }
   }, []);
+
+  const sendMessage = useCallback(
+    async (message: string, file: File | null = null, useResearch: boolean = false, jobId?: string): Promise<void> => {
+      try {
+        const walletAddress = getAddress();
+        if (!walletAddress) {
+          // No wallet connected, use localStorage-based messaging
+          return await sendLocalStorageMessage(message, file, useResearch, jobId);
+        }
+
+        const currentConvId = jobId || state.currentConversationId;
+        if (!currentConvId) {
+          throw new Error("No conversation selected");
+        }
+
+        // Get next order index for messages
+        const existingMessages = await JobsAPI.getMessages(walletAddress, currentConvId);
+        let nextOrderIndex = existingMessages.length;
+
+        // Add optimistic user message
+        const optimisticUserMessage: ChatMessage = {
+          role: "user",
+          content: message,
+          timestamp: Date.now(),
+        };
+
+        dispatch({
+          type: "ADD_OPTIMISTIC_MESSAGE",
+          payload: { conversationId: currentConvId, message: optimisticUserMessage },
+        });
+
+        // Save user message to database
+        await JobsAPI.createMessage(walletAddress, currentConvId, {
+          role: 'user',
+          content: message,
+          order_index: nextOrderIndex
+        });
+        nextOrderIndex++;
+
+        // Update job status to running
+        await JobsAPI.updateJob(currentConvId, {
+          wallet_address: walletAddress,
+          status: 'running'
+        });
+
+        // Handle file upload if present
+        if (file) {
+          try {
+            const httpClient = getHttpClient();
+            await uploadFile(file, httpClient);
+          } catch (uploadError) {
+            console.error("File upload error:", uploadError);
+          }
+        }
+
+        // Prepare message for API
+        const messageToSend = file ? `${message}\n\nFile: ${file.name}` : message;
+
+        // Use direct chat endpoint (no streaming)
+        const httpClient = getHttpClient();
+        
+        dispatch({
+          type: "SET_LOADING",
+          payload: true,
+        });
+
+        try {
+          // Call orchestration API directly (no localStorage for logged-in users)
+          const response = await httpClient.post("/api/v1/chat/orchestrate", {
+            prompt: {
+              role: "user",
+              content: messageToSend,
+            },
+            chatHistory: state.messages[currentConvId] || [],
+            conversationId: currentConvId,
+            useResearch: true, // Always use orchestration
+            walletAddress: walletAddress,
+          });
+
+          if (response.data) {
+            const { response: agentResponse, current_agent } = response.data;
+            
+            // Create assistant message with proper metadata
+            const assistantMessage: ChatMessage = {
+              role: "assistant",
+              content: agentResponse.content,
+              agentName: current_agent,
+              error_message: agentResponse.error_message,
+              metadata: {
+                ...agentResponse.metadata,
+                // Ensure orchestration metadata is present
+                selectedAgent: agentResponse.metadata?.selectedAgent || current_agent,
+                selectionReasoning: agentResponse.metadata?.selectionReasoning,
+                availableAgents: agentResponse.metadata?.availableAgents,
+                agentType: agentResponse.metadata?.agentType,
+                userSpecificAgents: agentResponse.metadata?.userSpecificAgents,
+                isOrchestration: true,
+              },
+              requires_action: agentResponse.requires_action,
+              action_type: agentResponse.action_type,
+              timestamp: Date.now(),
+            };
+
+            // Save assistant response to database
+            await JobsAPI.createMessage(walletAddress, currentConvId, convertChatMessageToMessage(assistantMessage, currentConvId, nextOrderIndex));
+            
+            // Update job status
+            await JobsAPI.updateJob(currentConvId, {
+              wallet_address: walletAddress,
+              status: 'completed'
+            });
+
+            // Add assistant message to state
+            dispatch({
+              type: "ADD_OPTIMISTIC_MESSAGE",
+              payload: { conversationId: currentConvId, message: assistantMessage },
+            });
+
+            // Generate title if this is a new conversation
+            if (!titleGenerationAttempted.current.has(currentConvId)) {
+              titleGenerationAttempted.current.add(currentConvId);
+              
+              if (!pendingTitleGeneration.current.has(currentConvId)) {
+                pendingTitleGeneration.current.add(currentConvId);
+                
+                try {
+                  const messages = state.messages[currentConvId] || [];
+                  const generatedTitle = await generateConversationTitle(messages, httpClient, currentConvId);
+                  
+                  // Update job name in database
+                  await JobsAPI.updateJob(currentConvId, {
+                    wallet_address: walletAddress,
+                    name: generatedTitle
+                  });
+                  
+                  dispatch({
+                    type: "SET_CONVERSATION_TITLE",
+                    payload: { conversationId: currentConvId, title: generatedTitle },
+                  });
+                } catch (titleError) {
+                  console.error("Failed to generate title:", titleError);
+                } finally {
+                  pendingTitleGeneration.current.delete(currentConvId);
+                }
+              }
+            }
+          }
+
+        } catch (error: any) {
+          console.error("Chat error:", error);
+          
+          // Save error message to database
+          const errorMessage: ChatMessage = {
+            role: "assistant",
+            content: "I encountered an error while processing your request. Please try again.",
+            error_message: error.message || "Unknown error occurred",
+            timestamp: Date.now(),
+          };
+          
+          await JobsAPI.createMessage(walletAddress, currentConvId, convertChatMessageToMessage(errorMessage, currentConvId, nextOrderIndex));
+          
+          // Update job status
+          await JobsAPI.updateJob(currentConvId, {
+            wallet_address: walletAddress,
+            status: 'failed'
+          });
+
+          dispatch({
+            type: "ADD_OPTIMISTIC_MESSAGE",
+            payload: { conversationId: currentConvId, message: errorMessage },
+          });
+        } finally {
+          dispatch({
+            type: "SET_LOADING",
+            payload: false,
+          });
+        }
+      } catch (error: any) {
+        console.error("Send message error:", error);
+        dispatch({ type: "SET_ERROR", payload: error.message || "Failed to send message" });
+      }
+    },
+    [state.currentConversationId, state.messages, getAddress, chainId]
+  );
+
+  // Send message using localStorage (no wallet)
+  const sendLocalStorageMessage = useCallback(
+    async (message: string, file: File | null = null, useResearch: boolean = false, conversationId?: string): Promise<void> => {
+      try {
+        const httpClient = getHttpClient();
+        const convId = conversationId || state.currentConversationId;
+
+        if (!convId) {
+          throw new Error("No conversation selected");
+        }
+
+        // Handle file upload if present
+        if (file) {
+          try {
+            await uploadFile(file, httpClient);
+          } catch (uploadError) {
+            console.error("File upload error:", uploadError);
+          }
+        }
+
+        // Prepare message for API
+        const messageToSend = file ? `${message}\n\nFile: ${file.name}` : message;
+
+        dispatch({
+          type: "SET_LOADING",
+          payload: true,
+        });
+
+        try {
+          // For localStorage users, use writeOrchestratedMessage which handles localStorage
+          const updatedMessages = await writeOrchestratedMessage(
+            messageToSend,
+            httpClient,
+            chainId,
+            'temp-address',
+            convId,
+            true  // Always use orchestration (research mode)
+          );
+
+          // Update state with messages from localStorage
+          dispatch({
+            type: "SET_MESSAGES",
+            payload: { conversationId: convId, messages: updatedMessages },
+          });
+
+          // Generate title for new conversations
+          if (!titleGenerationAttempted.current.has(convId)) {
+            titleGenerationAttempted.current.add(convId);
+            
+            try {
+              const generatedTitle = await generateConversationTitle(updatedMessages, httpClient, convId);
+              dispatch({
+                type: "SET_CONVERSATION_TITLE",
+                payload: { conversationId: convId, title: generatedTitle },
+              });
+            } catch (titleError) {
+              console.error("Failed to generate title:", titleError);
+            }
+          }
+        } catch (error: any) {
+          console.error("Chat error:", error);
+          throw error;
+        } finally {
+          dispatch({
+            type: "SET_LOADING",
+            payload: false,
+          });
+        }
+      } catch (error: any) {
+        console.error("Send localStorage message error:", error);
+        dispatch({ type: "SET_ERROR", payload: error.message || "Failed to send message" });
+      }
+    },
+    [state.currentConversationId, chainId]
+  );
+
+  const setCurrentConversation = useCallback(
+    async (conversationId: string): Promise<void> => {
+      try {
+        dispatch({ type: "SET_CURRENT_CONVERSATION", payload: conversationId });
+
+        const walletAddress = getAddress();
+        if (!walletAddress) {
+          // No wallet, load from localStorage
+          const messages = getMessagesHistory(conversationId);
+          dispatch({
+            type: "SET_MESSAGES",
+            payload: { conversationId, messages },
+          });
+        } else {
+          // Load messages from database
+          const messages = await JobsAPI.getMessages(walletAddress, conversationId);
+          const chatMessages = messages.map(convertMessageToChatMessage);
+          
+          dispatch({
+            type: "SET_MESSAGES",
+            payload: { conversationId, messages: chatMessages },
+          });
+        }
+      } catch (error) {
+        console.error("Error setting current conversation:", error);
+      }
+    },
+    [getAddress]
+  );
 
   const refreshMessages = useCallback(async () => {
     try {
@@ -215,453 +505,23 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
     }
   }, [getAddress, state.currentConversationId, setCurrentConversation]);
 
-  const sendMessage = useCallback(
-    async (
-      message: string,
-      file: File | null,
-      useResearch: boolean = true,
-      conversationId?: string
-    ) => {
-      const walletAddress = getAddress();
-      const currentConvId = conversationId || state.currentConversationId;
-      
-      if (!currentConvId) {
-        throw new Error("No active conversation");
-      }
-
-      // If no wallet is connected, fall back to localStorage-based messaging
-      if (!walletAddress) {
-        return await sendMessageWithLocalStorage(message, file, useResearch, currentConvId);
-      }
-
-      try {
-        dispatch({ type: "SET_LOADING", payload: true });
-        dispatch({ type: "SET_ERROR", payload: null });
-
-        // Get current messages to determine order
-        const currentMessages = state.messages[currentConvId] || [];
-        let nextOrderIndex = currentMessages.length;
-
-        // Add optimistic user message
-        const optimisticUserMessage: ChatMessage = {
-          role: "user",
-          content: message,
-          timestamp: Date.now(),
-        };
-
-        dispatch({
-          type: "ADD_OPTIMISTIC_MESSAGE",
-          payload: { conversationId: currentConvId, message: optimisticUserMessage },
-        });
-
-        // Save user message to database
-        await JobsAPI.createMessage(walletAddress, currentConvId, {
-          role: 'user',
-          content: message,
-          order_index: nextOrderIndex
-        });
-        nextOrderIndex++;
-
-        // Handle file upload if present
-        if (file) {
-          await uploadFile(file, getHttpClient(), conversationId);
-          
-          // Update job to indicate file was uploaded
-          await JobsAPI.updateJob(currentConvId, {
-            wallet_address: walletAddress,
-            has_uploaded_file: true
-          });
-        }
-
-        // Prepare message for API
-        const messageToSend = file ? `${message}\n\nFile: ${file.name}` : message;
-
-        // Stream the response
-        const httpClient = getHttpClient();
-        await writeMessageStream(
-          httpClient,
-          currentConvId,
-          messageToSend,
-          useResearch,
-          {
-            onStart: () => {
-              dispatch({
-                type: "SET_STREAMING_STATE",
-                payload: {
-                  status: "dispatching",
-                  progress: 0,
-                  subtask: "Initializing request...",
-                  agents: [],
-                  output: "",
-                  isStreaming: true,
-                  streamingContent: "",
-                },
-              });
-            },
-            onProgress: (event: StreamingEvent) => {
-              dispatch({
-                type: "UPDATE_STREAMING_PROGRESS",
-                payload: {
-                  status: event.status,
-                  progress: event.progress || 0,
-                  subtask: event.subtask,
-                  agents: event.agents,
-                  output: event.output,
-                  currentAgentIndex: event.currentAgentIndex,
-                  totalAgents: event.totalAgents,
-                  telemetry: event.telemetry,
-                },
-              });
-            },
-            onStreamContent: (content: string) => {
-              dispatch({
-                type: "SET_STREAMING_CONTENT",
-                payload: { content, isStreaming: true },
-              });
-            },
-            onComplete: async (finalResponse: ChatMessage) => {
-              // Save assistant response to database
-              await JobsAPI.createMessage(walletAddress, currentConvId, convertChatMessageToMessage(finalResponse, currentConvId, nextOrderIndex));
-              
-              // Update job status
-              await JobsAPI.updateJob(currentConvId, {
-                wallet_address: walletAddress,
-                status: 'completed'
-              });
-
-              dispatch({
-                type: "ADD_OPTIMISTIC_MESSAGE",
-                payload: { conversationId: currentConvId, message: finalResponse },
-              });
-
-              dispatch({
-                type: "SET_STREAMING_CONTENT",
-                payload: { content: "", isStreaming: false },
-              });
-
-              dispatch({
-                type: "SET_STREAMING_STATE",
-                payload: {
-                  status: "idle",
-                  progress: 100,
-                  subtask: "",
-                  agents: [],
-                  output: "",
-                  isStreaming: false,
-                  streamingContent: "",
-                },
-              });
-
-              // Generate title if this is a new conversation
-              if (!titleGenerationAttempted.current.has(currentConvId)) {
-                titleGenerationAttempted.current.add(currentConvId);
-                
-                if (!pendingTitleGeneration.current.has(currentConvId)) {
-                  pendingTitleGeneration.current.add(currentConvId);
-                  
-                  try {
-                    const messages = getMessagesHistory(currentConvId);
-                    const generatedTitle = await generateConversationTitle(messages, httpClient, currentConvId);
-                    
-                    // Update job name in database
-                    await JobsAPI.updateJob(currentConvId, {
-                      wallet_address: walletAddress,
-                      name: generatedTitle
-                    });
-                    
-                    dispatch({
-                      type: "SET_CONVERSATION_TITLE",
-                      payload: { conversationId: currentConvId, title: generatedTitle },
-                    });
-                  } catch (titleError) {
-                    console.error("Failed to generate title:", titleError);
-                  } finally {
-                    pendingTitleGeneration.current.delete(currentConvId);
-                  }
-                }
-              }
-            },
-            onError: async (error: any) => {
-              console.error("Streaming error:", error);
-              
-              // Save error message to database
-              const errorMessage: ChatMessage = {
-                role: "assistant",
-                content: "I encountered an error while processing your request. Please try again.",
-                error_message: error.message || "Unknown error occurred",
-                timestamp: Date.now(),
-              };
-              
-              await JobsAPI.createMessage(walletAddress, currentConvId, convertChatMessageToMessage(errorMessage, currentConvId, nextOrderIndex));
-              
-              // Update job status
-              await JobsAPI.updateJob(currentConvId, {
-                wallet_address: walletAddress,
-                status: 'failed'
-              });
-
-              dispatch({
-                type: "ADD_OPTIMISTIC_MESSAGE",
-                payload: { conversationId: currentConvId, message: errorMessage },
-              });
-
-              dispatch({
-                type: "SET_STREAMING_STATE",
-                payload: {
-                  status: "idle",
-                  progress: 0,
-                  subtask: "",
-                  agents: [],
-                  output: "",
-                  isStreaming: false,
-                  streamingContent: "",
-                },
-              });
-
-              dispatch({ type: "SET_ERROR", payload: error.message || "Unknown error occurred" });
-            },
-          }
-        );
-      } catch (error: any) {
-        console.error("Send message error:", error);
-        dispatch({ type: "SET_ERROR", payload: error.message || "Failed to send message" });
-      } finally {
-        dispatch({ type: "SET_LOADING", payload: false });
-      }
-    },
-    [state.currentConversationId, state.messages, getAddress]
-  );
-
-  // Load initial data from localStorage when no wallet is connected
-  const loadLocalStorageData = useCallback(async () => {
-    try {
-      const { getStorageData } = await import("@/services/local-storage/core");
-      
-      const data = getStorageData();
-      
-      // Load messages for each conversation
-      Object.entries(data.conversations).forEach(([convId, conversation]) => {
-        const messages = getMessagesHistory(convId);
-        
-        dispatch({
-          type: "SET_MESSAGES",
-          payload: { conversationId: convId, messages },
-        });
-
-        dispatch({
-          type: "SET_CONVERSATION_TITLE",
-          payload: { conversationId: convId, title: conversation.name },
-        });
-      });
-
-      // Set current conversation to the default or first available
-      const conversationIds = Object.keys(data.conversations);
-      if (conversationIds.length > 0) {
-        const currentConv = conversationIds.includes("default") ? "default" : conversationIds[0];
-        dispatch({
-          type: "SET_CURRENT_CONVERSATION",
-          payload: currentConv,
-        });
-      }
-    } catch (error) {
-      console.error("Error loading localStorage data:", error);
-    }
-  }, []);
-
-  // Fallback function for sending messages when no wallet is connected
-  const sendMessageWithLocalStorage = useCallback(
-    async (
-      message: string,
-      file: File | null,
-      useResearch: boolean = true,
-      conversationId: string
-    ) => {
-      try {
-        dispatch({ type: "SET_LOADING", payload: true });
-        dispatch({ type: "SET_ERROR", payload: null });
-
-        // Add optimistic user message
-        const optimisticUserMessage: ChatMessage = {
-          role: "user",
-          content: message,
-          timestamp: Date.now(),
-        };
-
-        dispatch({
-          type: "ADD_OPTIMISTIC_MESSAGE",
-          payload: { conversationId, message: optimisticUserMessage },
-        });
-
-        // Save user message to localStorage
-        addMessageToHistory(optimisticUserMessage, conversationId);
-
-        // Handle file upload if present
-        if (file) {
-          await uploadFile(file, getHttpClient(), conversationId);
-        }
-
-        // Prepare message for API
-        const messageToSend = file ? `${message}\n\nFile: ${file.name}` : message;
-
-        // Stream the response
-        const httpClient = getHttpClient();
-        await writeMessageStream(
-          httpClient,
-          conversationId,
-          messageToSend,
-          useResearch,
-          {
-            onStart: () => {
-              dispatch({
-                type: "SET_STREAMING_STATE",
-                payload: {
-                  status: "dispatching",
-                  progress: 0,
-                  subtask: "Initializing request...",
-                  agents: [],
-                  output: "",
-                  isStreaming: true,
-                  streamingContent: "",
-                },
-              });
-            },
-            onProgress: (event: StreamingEvent) => {
-              dispatch({
-                type: "UPDATE_STREAMING_PROGRESS",
-                payload: {
-                  status: event.status,
-                  progress: event.progress || 0,
-                  subtask: event.subtask,
-                  agents: event.agents,
-                  output: event.output,
-                  currentAgentIndex: event.currentAgentIndex,
-                  totalAgents: event.totalAgents,
-                  telemetry: event.telemetry,
-                },
-              });
-            },
-            onStreamContent: (content: string) => {
-              dispatch({
-                type: "SET_STREAMING_CONTENT",
-                payload: { content, isStreaming: true },
-              });
-            },
-            onComplete: async (finalResponse: ChatMessage) => {
-              // Save assistant response to localStorage
-              addMessageToHistory(finalResponse, conversationId);
-
-              dispatch({
-                type: "ADD_OPTIMISTIC_MESSAGE",
-                payload: { conversationId, message: finalResponse },
-              });
-
-              dispatch({
-                type: "SET_STREAMING_CONTENT",
-                payload: { content: "", isStreaming: false },
-              });
-
-              dispatch({
-                type: "SET_STREAMING_STATE",
-                payload: {
-                  status: "idle",
-                  progress: 100,
-                  subtask: "",
-                  agents: [],
-                  output: "",
-                  isStreaming: false,
-                  streamingContent: "",
-                },
-              });
-
-              // Generate title if this is a new conversation
-              if (!titleGenerationAttempted.current.has(conversationId)) {
-                titleGenerationAttempted.current.add(conversationId);
-                
-                if (!pendingTitleGeneration.current.has(conversationId)) {
-                  pendingTitleGeneration.current.add(conversationId);
-                  
-                  try {
-                    const messages = getMessagesHistory(conversationId);
-                    const generatedTitle = await generateConversationTitle(messages, httpClient, conversationId);
-                    
-                    dispatch({
-                      type: "SET_CONVERSATION_TITLE",
-                      payload: { conversationId, title: generatedTitle },
-                    });
-                  } catch (titleError) {
-                    console.error("Failed to generate title:", titleError);
-                  } finally {
-                    pendingTitleGeneration.current.delete(conversationId);
-                  }
-                }
-              }
-            },
-            onError: async (error: any) => {
-              console.error("Streaming error:", error);
-              
-              // Save error message to localStorage
-              const errorMessage: ChatMessage = {
-                role: "assistant",
-                content: "I encountered an error while processing your request. Please try again.",
-                error_message: error.message || "Unknown error occurred",
-                timestamp: Date.now(),
-              };
-              
-              addMessageToHistory(errorMessage, conversationId);
-
-              dispatch({
-                type: "ADD_OPTIMISTIC_MESSAGE",
-                payload: { conversationId, message: errorMessage },
-              });
-
-              dispatch({
-                type: "SET_STREAMING_STATE",
-                payload: {
-                  status: "idle",
-                  progress: 0,
-                  subtask: "",
-                  agents: [],
-                  output: "",
-                  isStreaming: false,
-                  streamingContent: "",
-                },
-              });
-
-              dispatch({ type: "SET_ERROR", payload: error.message || "Unknown error occurred" });
-            },
-          }
-        );
-      } catch (error: any) {
-        console.error("Send message error:", error);
-        dispatch({ type: "SET_ERROR", payload: error.message || "Failed to send message" });
-      } finally {
-        dispatch({ type: "SET_LOADING", payload: false });
-      }
-    },
-    [getAddress]
-  );
+  const refreshJobs = useCallback(async () => {
+    // This is a placeholder - refreshJobs functionality can be added if needed
+    await refreshMessages();
+  }, [refreshMessages]);
 
   const setCurrentView = useCallback((view: 'jobs' | 'chat') => {
-    dispatch({
-      type: "SET_CURRENT_VIEW",
-      payload: view,
-    });
-  }, []);
-
-  const refreshJobs = useCallback(async () => {
-    // Placeholder for job refresh functionality
-    // This can be implemented when jobs management is needed
-    console.log("refreshJobs called");
+    dispatch({ type: "SET_CURRENT_VIEW", payload: view });
   }, []);
 
   const contextValue = {
     state,
-    setCurrentConversation,
     sendMessage,
+    setCurrentConversation,
     refreshMessages,
     refreshAllTitles,
-    refreshJobs,
     deleteChat,
+    refreshJobs,
     setCurrentView,
   };
 
