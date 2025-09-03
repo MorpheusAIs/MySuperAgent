@@ -2,6 +2,7 @@ import { Chat } from '@/components/Chat';
 import { HeaderBar } from '@/components/HeaderBar';
 import { LeftSidebar } from '@/components/LeftSidebar';
 import { ChatProviderDB } from '@/contexts/chat/ChatProviderDB';
+import { useGlobalUI } from '@/contexts/GlobalSearchProvider';
 import { Box, Flex, useBreakpointValue } from '@chakra-ui/react';
 import type { NextPage } from 'next';
 import { useEffect, useRef, useState } from 'react';
@@ -17,7 +18,7 @@ const HomeWithProvider: NextPage = () => {
 };
 
 const Home = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { isSidebarOpen, setSidebarOpen } = useGlobalUI();
   const [currentView, setCurrentView] = useState<'chat' | 'jobs'>('jobs');
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const isMobile = useBreakpointValue({ base: true, md: false });
@@ -69,7 +70,7 @@ const Home = () => {
         >
           <LeftSidebar
             isSidebarOpen={isSidebarOpen}
-            onToggleSidebar={setIsSidebarOpen}
+            onToggleSidebar={setSidebarOpen}
             isHeaderVisible={isHeaderVisible}
           />
         </Box>

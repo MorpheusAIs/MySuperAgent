@@ -1,0 +1,47 @@
+.searchContainer {
+  background: #1a1a1a;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.jobResult {
+  transition: all 0.15s ease;
+  background: transparent;
+  border-radius: 0;
+}
+
+.jobResult:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.jobResult.selected {
+  background: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid #3b82f6;
+}
+
+.jobResult.selected:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+/* Custom scrollbar for results */
+.searchContainer > div:nth-child(2) {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.searchContainer > div:nth-child(2)::-webkit-scrollbar {
+  width: 6px;
+}
+
+.searchContainer > div:nth-child(2)::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.searchContainer > div:nth-child(2)::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.searchContainer > div:nth-child(2)::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

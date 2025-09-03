@@ -52,19 +52,24 @@ export const CombinedAuth: React.FC<CombinedAuthProps> = ({
 
             return (
               <Button
-                onClick={() => router.push('/settings')}
-                leftIcon={<Wallet size={16} />}
-                size={size}
+                onClick={() => router.push('/settings?tab=0')}
+                leftIcon={<Crown size={14} />}
+                size="sm"
                 variant="solid"
                 bg="#59F886"
                 color="#000"
+                fontSize="12px"
+                fontWeight="600"
+                px={3}
+                py={1}
+                h="28px"
                 _hover={{
                   bg: '#4AE066',
                   transform: 'translateY(-1px)',
                   boxShadow: '0 4px 12px rgba(89, 248, 134, 0.3)',
                 }}
               >
-                {account.displayName}
+                Pro plan
               </Button>
             );
           }}
@@ -79,8 +84,13 @@ export const CombinedAuth: React.FC<CombinedAuthProps> = ({
         {session && (
           <Button
             onClick={handleGoogleSignOut}
-            leftIcon={<Mail size={16} />}
-            size={size}
+            leftIcon={<Mail size={14} />}
+            size="sm"
+            fontSize="12px"
+            fontWeight="600"
+            px={3}
+            py={1}
+            h="28px"
             className={styles.googleButton}
           >
             {session.user?.email?.split('@')[0]}
@@ -95,10 +105,15 @@ export const CombinedAuth: React.FC<CombinedAuthProps> = ({
             return (
               <Button
                 onClick={openConnectModal}
-                leftIcon={<Wallet size={16} />}
-                size={size}
+                leftIcon={<Wallet size={14} />}
+                size="sm"
                 bg="#59F886"
                 color="#000"
+                fontSize="12px"
+                fontWeight="600"
+                px={3}
+                py={1}
+                h="28px"
                 _hover={{
                   bg: '#4AE066',
                   transform: 'translateY(-1px)',
@@ -115,8 +130,13 @@ export const CombinedAuth: React.FC<CombinedAuthProps> = ({
         {!session && (
           <Button
             onClick={handleGoogleSignIn}
-            leftIcon={<Mail size={16} />}
-            size={size}
+            leftIcon={<Mail size={14} />}
+            size="sm"
+            fontSize="12px"
+            fontWeight="600"
+            px={3}
+            py={1}
+            h="28px"
             className={styles.googleButton}
           >
             Google
@@ -152,7 +172,7 @@ export const CombinedAuth: React.FC<CombinedAuthProps> = ({
                     </Text>
                   </HStack>
                   <Button
-                    onClick={() => router.push('/settings')}
+                    onClick={() => router.push('/settings?tab=0')}
                     size="xs"
                     variant="ghost"
                     colorScheme="green"

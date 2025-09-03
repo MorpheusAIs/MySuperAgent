@@ -94,6 +94,25 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
           <ConnectButton.Custom>
             {({ account }) => (
               <div className={styles.mainContent}>
+                <MenuSection title="General">
+                  <Tooltip
+                    isDisabled={!!account}
+                    label="A wallet connection is required to access dashboard features."
+                    placement="right"
+                  >
+                    <div className={styles.menuItem}>
+                      <Box
+                        pointerEvents={account ? 'auto' : 'none'}
+                        opacity={account ? 1 : 0.5}
+                      >
+                        <DashboardButton />
+                      </Box>
+                    </div>
+                  </Tooltip>
+                </MenuSection>
+
+                <Divider my={0.5} borderColor="whiteAlpha.200" />
+
                 <MenuSection title="Preferences">
                   <Tooltip
                     isDisabled={!!account}
@@ -139,9 +158,6 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                         opacity={account ? 1 : 0.5}
                         pl={1}
                       >
-                        <div className={styles.menuItem}>
-                          <DashboardButton />
-                        </div>
                         <div className={styles.menuItem}>
                           <ToolsButton />
                         </div>

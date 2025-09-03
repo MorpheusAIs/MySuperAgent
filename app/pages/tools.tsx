@@ -1,13 +1,13 @@
-import React, { useState } from "react";
-import { HeaderBar } from "@/components/HeaderBar";
-import { LeftSidebar } from "@/components/LeftSidebar";
-import { ToolsMain } from "@/components/Tools/Main";
-import { Box, Flex } from "@chakra-ui/react";
-import type { NextPage } from "next";
-import styles from "./index.module.css";
+import { HeaderBar } from '@/components/HeaderBar';
+import { LeftSidebar } from '@/components/LeftSidebar';
+import { ToolsMain } from '@/components/Tools/Main';
+import { useGlobalUI } from '@/contexts/GlobalSearchProvider';
+import { Box, Flex } from '@chakra-ui/react';
+import type { NextPage } from 'next';
+import styles from './index.module.css';
 
 const ToolsPage: NextPage = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Expanded by default
+  const { isSidebarOpen, setSidebarOpen } = useGlobalUI();
 
   return (
     <Box className={styles.container}>
@@ -16,14 +16,14 @@ const ToolsPage: NextPage = () => {
         <Box className={styles.sidebarWrapper} zIndex="1337">
           <LeftSidebar
             isSidebarOpen={isSidebarOpen}
-            onToggleSidebar={setIsSidebarOpen}
+            onToggleSidebar={setSidebarOpen}
           />
         </Box>
 
         <Box
           className={styles.chatWrapper}
           style={{
-            marginLeft: isSidebarOpen ? "360px" : 0,
+            marginLeft: isSidebarOpen ? '360px' : 0,
           }}
         >
           <ToolsMain isSidebarOpen={isSidebarOpen} />
