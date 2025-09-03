@@ -1,4 +1,4 @@
-import { Job } from '@/services/types';
+import { Job } from '@/services/database/db';
 import {
   Badge,
   Box,
