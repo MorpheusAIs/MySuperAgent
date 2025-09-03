@@ -1,4 +1,13 @@
-import { Box, HStack, Select, Spacer, Text } from '@chakra-ui/react';
+import {
+  Box,
+  HStack,
+  IconButton,
+  Select,
+  Spacer,
+  Text,
+  Tooltip,
+} from '@chakra-ui/react';
+import { Settings } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { FC, useState } from 'react';
@@ -67,9 +76,30 @@ export const HeaderBar: FC<HeaderBarProps> = ({ onBackToJobs }) => {
               ))}
             </Select>
           </HStack>
-          <Box className={styles.connectButtonWrapper}>
-            <CustomConnectButton />
-          </Box>
+          <HStack spacing={2}>
+            <Tooltip label="Settings" placement="bottom">
+              <IconButton
+                aria-label="Settings"
+                icon={<Settings size={20} />}
+                size="md"
+                variant="ghost"
+                color="white"
+                bg="rgba(255, 255, 255, 0.1)"
+                _hover={{
+                  bg: 'rgba(255, 255, 255, 0.2)',
+                  transform: 'translateY(-1px)',
+                }}
+                _active={{
+                  bg: 'rgba(255, 255, 255, 0.15)',
+                }}
+                borderRadius="8px"
+                onClick={() => router.push('/settings?tab=1')}
+              />
+            </Tooltip>
+            <Box className={styles.connectButtonWrapper}>
+              <CustomConnectButton />
+            </Box>
+          </HStack>
         </HStack>
       </HStack>
     </Box>

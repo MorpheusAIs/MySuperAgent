@@ -10,7 +10,8 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import React, { useState } from 'react';
+import { useRouter } from 'next/router';
+import React, { useEffect, useState } from 'react';
 import { A2AManagement } from './A2AManagement';
 import { AccountSettings } from './AccountSettings';
 import { AgentSelection } from './AgentSelection';
@@ -27,7 +28,19 @@ interface SettingsMainProps {
 export const SettingsMain: React.FC<SettingsMainProps> = ({
   isSidebarOpen = true,
 }) => {
+  const router = useRouter();
   const [tabIndex, setTabIndex] = useState(0);
+
+  // Update tab index based on URL parameter
+  useEffect(() => {
+    const tab = router.query.tab;
+    if (tab && typeof tab === 'string') {
+      const index = parseInt(tab, 10);
+      if (!isNaN(index) && index >= 0 && index <= 5) {
+        setTabIndex(index);
+      }
+    }
+  }, [router.query.tab]);
 
   return (
     <Container maxW="full" minH="100vh" bg="#0A0A0A" color="white" p={0}>

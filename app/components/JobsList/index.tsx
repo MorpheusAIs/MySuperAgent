@@ -1,7 +1,9 @@
 import { ScheduledJobEditModal } from '@/components/ScheduledJobEditModal';
+import ShareJobModal from '@/components/ShareJobModal';
+import { useGlobalSearch } from '@/contexts/GlobalSearchProvider';
+import { trackEvent } from '@/services/analytics';
 import JobsAPI from '@/services/api-clients/jobs';
 import { Job } from '@/services/database/db';
-import { trackEvent } from '@/services/analytics';
 import { useWalletAddress } from '@/services/wallet/utils';
 import {
   CalendarIcon,
@@ -39,7 +41,6 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
-import ShareJobModal from '@/components/ShareJobModal';
 import styles from './index.module.css';
 
 interface JobsListProps {
@@ -446,9 +447,9 @@ const JobItem: FC<{
     job.name !== 'New Job'
       ? job.name
       : job.initial_message
-        ? job.initial_message.substring(0, 50) +
-          (job.initial_message.length > 50 ? '...' : '')
-        : 'Untitled Job';
+      ? job.initial_message.substring(0, 50) +
+        (job.initial_message.length > 50 ? '...' : '')
+      : 'Untitled Job';
   const description =
     job.description || job.initial_message || 'No description';
 
@@ -484,7 +485,7 @@ const JobItem: FC<{
             jobId: job.id,
             jobName: job.name,
             jobStatus: job.status,
-            isScheduled: !!job.schedule_type
+            isScheduled: !!job.schedule_type,
           });
           onClick(job.id);
         }}
@@ -498,7 +499,7 @@ const JobItem: FC<{
               jobName: job.name,
               jobStatus: job.status,
               isScheduled: !!job.schedule_type,
-              inputMethod: 'keyboard'
+              inputMethod: 'keyboard',
             });
             onClick(job.id);
           }
@@ -687,6 +688,7 @@ export const JobsList: FC<JobsListProps> = ({
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [jobToShare, setJobToShare] = useState<Job | null>(null);
   const { getAddress } = useWalletAddress();
+  const { openSearch } = useGlobalSearch();
   const toast = useToast();
 
   const ITEMS_PER_PAGE = 10;
@@ -831,17 +833,29 @@ export const JobsList: FC<JobsListProps> = ({
     [searchQuery, statusFilter, timeFilter]
   );
 
-  // Apply filters and pagination
+  // Apply filters and pagination with sorting by created_at DESC (newest first)
   const allCurrentJobs = useMemo(
-    () => filterJobs(jobs.filter(isCurrentJob)),
+    () =>
+      filterJobs(jobs.filter(isCurrentJob)).sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ),
     [jobs, filterJobs]
   );
   const allPreviousJobs = useMemo(
-    () => filterJobs(jobs.filter(isPreviousJob)),
+    () =>
+      filterJobs(jobs.filter(isPreviousJob)).sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ),
     [jobs, filterJobs]
   );
   const allActiveScheduledJobs = useMemo(
-    () => filterJobs(scheduledJobs.filter((job) => job.is_active)),
+    () =>
+      filterJobs(scheduledJobs.filter((job) => job.is_active)).sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ),
     [scheduledJobs, filterJobs]
   );
 
@@ -884,14 +898,14 @@ export const JobsList: FC<JobsListProps> = ({
         const job = scheduledJobs.find((j) => j.id === jobId);
         if (job) {
           const action = job.is_active ? 'deactivate' : 'activate';
-          
+
           // Track analytics before the action
           trackEvent('job.scheduled_toggle', {
             jobId,
             action,
             jobName: job.name,
             scheduleType: job.schedule_type || undefined,
-            wallet: walletAddress
+            wallet: walletAddress,
           });
 
           await JobsAPI.updateJob(jobId, {
@@ -937,13 +951,13 @@ export const JobsList: FC<JobsListProps> = ({
         }
 
         const job = scheduledJobs.find((j) => j.id === jobId);
-        
+
         // Track analytics before running the job
         trackEvent('job.scheduled_run', {
           jobId,
           jobName: job?.name,
           scheduleType: job?.schedule_type || undefined,
-          wallet: walletAddress
+          wallet: walletAddress,
         });
 
         const { newJob, scheduledJob } = await JobsAPI.runJob(
@@ -978,7 +992,7 @@ export const JobsList: FC<JobsListProps> = ({
         });
       }
     },
-    [getAddress, loadAllData, onRunScheduledJob, toast]
+    [getAddress, loadAllData, onRunScheduledJob, toast, scheduledJobs]
   );
 
   const handleEditSchedule = useCallback(
@@ -1006,8 +1020,10 @@ export const JobsList: FC<JobsListProps> = ({
   const handleDeleteJob = useCallback(
     async (jobId: string) => {
       // Find the job to get details for analytics
-      const job = jobs.find((j) => j.id === jobId) || scheduledJobs.find((j) => j.id === jobId);
-      
+      const job =
+        jobs.find((j) => j.id === jobId) ||
+        scheduledJobs.find((j) => j.id === jobId);
+
       // Show confirmation dialog
       const confirmed = window.confirm(
         'Are you sure you want to delete this job? This action cannot be undone and will permanently remove the job and all its messages.'
@@ -1018,7 +1034,7 @@ export const JobsList: FC<JobsListProps> = ({
         trackEvent('job.delete_cancelled', {
           jobId,
           jobName: job?.name,
-          jobStatus: job?.status
+          jobStatus: job?.status,
         });
         return;
       }
@@ -1042,7 +1058,7 @@ export const JobsList: FC<JobsListProps> = ({
           jobName: job?.name,
           jobStatus: job?.status,
           isScheduled: !!job?.schedule_type,
-          wallet: walletAddress
+          wallet: walletAddress,
         });
 
         await JobsAPI.deleteJob(walletAddress, jobId);
@@ -1213,24 +1229,11 @@ export const JobsList: FC<JobsListProps> = ({
             <SearchIcon color="gray.500" />
           </InputLeftElement>
           <Input
-            placeholder="Search jobs..."
-            value={searchQuery}
-            onChange={(e) => {
-              const query = e.target.value;
-              setSearchQuery(query);
-              // Reset pages when searching
-              setCurrentPage(1);
-              setScheduledPage(1);
-              setPreviousPage(1);
-              
-              // Track search analytics
-              if (query.length > 0) {
-                trackEvent('job.search', {
-                  searchQuery: query,
-                  searchLength: query.length
-                });
-              }
-            }}
+            placeholder="Search jobs... (Try out ⌘K)"
+            value=""
+            onClick={openSearch}
+            readOnly
+            cursor="pointer"
             className={styles.searchInput}
           />
         </InputGroup>
@@ -1244,12 +1247,12 @@ export const JobsList: FC<JobsListProps> = ({
             setCurrentPage(1);
             setScheduledPage(1);
             setPreviousPage(1);
-            
+
             // Track filter analytics
             trackEvent('job.filter_changed', {
               filterType: 'status',
               filterValue: newFilter,
-              previousValue: statusFilter
+              previousValue: statusFilter,
             });
           }}
           width="120px"
@@ -1271,12 +1274,12 @@ export const JobsList: FC<JobsListProps> = ({
             setCurrentPage(1);
             setScheduledPage(1);
             setPreviousPage(1);
-            
+
             // Track filter analytics
             trackEvent('job.filter_changed', {
               filterType: 'time',
               filterValue: newFilter,
-              previousValue: timeFilter
+              previousValue: timeFilter,
             });
           }}
           width="120px"
@@ -1298,7 +1301,7 @@ export const JobsList: FC<JobsListProps> = ({
           trackEvent('job.tab_changed', {
             fromTab: tabNames[activeTab],
             toTab: tabNames[index],
-            tabIndex: index
+            tabIndex: index,
           });
           setActiveTab(index);
         }}
@@ -1384,7 +1387,7 @@ export const JobsList: FC<JobsListProps> = ({
                       trackEvent('job.pagination', {
                         fromPage: scheduledPage,
                         toPage: page,
-                        section: 'scheduled'
+                        section: 'scheduled',
                       });
                       setScheduledPage(page);
                     }}
@@ -1426,7 +1429,7 @@ export const JobsList: FC<JobsListProps> = ({
                       trackEvent('job.pagination', {
                         fromPage: currentPage,
                         toPage: page,
-                        section: 'current'
+                        section: 'current',
                       });
                       setCurrentPage(page);
                     }}
@@ -1468,7 +1471,7 @@ export const JobsList: FC<JobsListProps> = ({
                       trackEvent('job.pagination', {
                         fromPage: previousPage,
                         toPage: page,
-                        section: 'previous'
+                        section: 'previous',
                       });
                       setPreviousPage(page);
                     }}

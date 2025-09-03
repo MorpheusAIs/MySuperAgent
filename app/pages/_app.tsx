@@ -9,6 +9,7 @@ import type { AppProps } from 'next/app';
 import '../styles/globals.css';
 
 import { AuthProvider } from '@/contexts/auth/AuthProvider';
+import { GlobalSearchProvider } from '@/contexts/GlobalSearchProvider';
 import {
   AvatarComponent,
   darkTheme,
@@ -166,8 +167,10 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
           >
             <AuthProvider>
               <ChakraProvider theme={theme}>
-                <Component {...pageProps} />
-                <Analytics />
+                <GlobalSearchProvider>
+                  <Component {...pageProps} />
+                  <Analytics />
+                </GlobalSearchProvider>
               </ChakraProvider>
             </AuthProvider>
           </RainbowKitProvider>

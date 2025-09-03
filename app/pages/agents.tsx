@@ -1,13 +1,13 @@
-import React, { useState } from "react";
-import { HeaderBar } from "@/components/HeaderBar";
-import { LeftSidebar } from "@/components/LeftSidebar";
-import { AgentsMain } from "@/components/Agents/Main";
-import { Box, Flex } from "@chakra-ui/react";
-import type { NextPage } from "next";
-import styles from "./index.module.css";
+import { AgentsMain } from '@/components/Agents/Main';
+import { HeaderBar } from '@/components/HeaderBar';
+import { LeftSidebar } from '@/components/LeftSidebar';
+import { useGlobalUI } from '@/contexts/GlobalSearchProvider';
+import { Box, Flex } from '@chakra-ui/react';
+import type { NextPage } from 'next';
+import styles from './index.module.css';
 
 const AgentsPage: NextPage = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Expanded by default
+  const { isSidebarOpen, setSidebarOpen } = useGlobalUI();
 
   return (
     <Box className={styles.container}>
@@ -16,7 +16,7 @@ const AgentsPage: NextPage = () => {
         <Box className={styles.sidebarWrapper} zIndex="1337">
           <LeftSidebar
             isSidebarOpen={isSidebarOpen}
-            onToggleSidebar={setIsSidebarOpen}
+            onToggleSidebar={setSidebarOpen}
           />
         </Box>
 

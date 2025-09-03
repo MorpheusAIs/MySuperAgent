@@ -55,7 +55,7 @@ export const MessageCounter: FC<MessageCounterProps> = ({
       'has completed 0 jobs',
       'is ready to assist you',
       'handles automated tasks',
-      'saves you time'
+      'saves you time',
     ];
 
     if (messages.length <= 1) return;
@@ -69,16 +69,16 @@ export const MessageCounter: FC<MessageCounterProps> = ({
 
   const messages = stats?.carouselMessages || [
     'has completed 0 jobs',
-    'is ready to assist you', 
+    'is ready to assist you',
     'handles automated tasks',
-    'saves you time'
+    'saves you time',
   ];
 
   return (
-    <Box 
-      textAlign={textAlign} 
-      position="relative" 
-      height="40px" 
+    <Box
+      textAlign={textAlign}
+      position="relative"
+      height="40px"
       overflow="hidden"
     >
       <style jsx global>{`
@@ -100,14 +100,19 @@ export const MessageCounter: FC<MessageCounterProps> = ({
             opacity: 0;
           }
         }
-        
+
         .carousel-text {
           animation: slideUp 4s ease-in-out infinite;
         }
       `}</style>
-      
-      <Text fontSize={fontSize} fontWeight="500" display="inline-flex" alignItems="baseline">
-        {/* Neo is ALWAYS visible and fixed */}
+
+      <Text
+        fontSize={fontSize}
+        fontWeight="500"
+        display="inline-flex"
+        alignItems="baseline"
+      >
+        {/* FreeAI is ALWAYS visible and fixed */}
         <Text
           as="span"
           background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
@@ -115,13 +120,13 @@ export const MessageCounter: FC<MessageCounterProps> = ({
           color="transparent"
           fontWeight="600"
         >
-          Neo
+          FreeAI
         </Text>
-        
+
         <Text as="span" color={color} mx={1}>
           {' '}
         </Text>
-        
+
         {/* Carousel container - inline-block to stay on same line */}
         <Box
           as="span"

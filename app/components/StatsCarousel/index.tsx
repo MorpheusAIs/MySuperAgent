@@ -1,5 +1,5 @@
 import { Box, Text } from '@chakra-ui/react';
-import { FC, useEffect, useState, useRef } from 'react';
+import { FC, useEffect, useRef, useState } from 'react';
 
 interface StatsCarouselProps {
   fontSize?: string;
@@ -15,7 +15,7 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
   const [messages, setMessages] = useState<string[]>([
     'is ready to assist you',
     'handles automated tasks',
-    'saves you time'
+    'saves you time',
   ]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout>();
@@ -39,25 +39,25 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
     fetchStats();
     // Poll every 30 seconds for updates
     const pollInterval = setInterval(fetchStats, 30000);
-    
+
     return () => clearInterval(pollInterval);
   }, []);
 
   // Rotate messages
   useEffect(() => {
     if (messages.length <= 1) return;
-    
+
     intervalRef.current = setInterval(() => {
-      setCurrentIndex(prev => (prev + 1) % messages.length);
+      setCurrentIndex((prev) => (prev + 1) % messages.length);
     }, 3000); // Change every 3 seconds
-    
+
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [messages]);
 
   return (
-    <Box 
+    <Box
       display="flex"
       alignItems="center"
       justifyContent={textAlign}
@@ -65,26 +65,26 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
       fontWeight="500"
       pl={20}
     >
-      {/* Neo is ALWAYS visible */}
+      {/* FreeAI is ALWAYS visible */}
       <Text
         background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
         backgroundClip="text"
         sx={{
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent"
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
         }}
         fontWeight="700"
         fontSize="3xl"
         display="inline"
       >
-        Neo
+        FreeAI
       </Text>
-      
+
       {/* Space */}
       <Text as="span" color={color} mx={1}>
         {' '}
       </Text>
-      
+
       {/* Animated message */}
       <Box
         position="relative"
