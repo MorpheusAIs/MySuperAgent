@@ -2,5 +2,19 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/v1/jobs/scheduler-run",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/v1/jobs/processor-run",
+      "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/v1/jobs/cron-cleanup",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }
