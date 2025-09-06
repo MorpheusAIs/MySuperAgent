@@ -1,0 +1,239 @@
+/**
+ * Job Processor Service
+ * Processes pending jobs by triggering orchestration
+ */
+
+export interface JobProcessingResult {
+  success: boolean;
+  timestamp: string;
+  processedJobs: number;
+  completedJobs: number;
+  failedJobs: number;
+  errors: string[];
+}
+
+export class JobProcessorService {
+  private static instance: JobProcessorService;
+  private isProcessing = false;
+  private processorInterval: NodeJS.Timeout | null = null;
+  private lastProcessing: Date | null = null;
+  
+  // Configuration
+  private readonly PROCESSOR_INTERVAL_MS = 30 * 1000; // Process every 30 seconds
+  private readonly MIN_INTERVAL_BETWEEN_PROCESSING_MS = 10 * 1000; // At least 10 seconds between runs
+  private readonly MAX_JOBS_PER_RUN = 5; // Process max 5 jobs per run
+
+  private constructor() {}
+
+  static getInstance(): JobProcessorService {
+    if (!JobProcessorService.instance) {
+      JobProcessorService.instance = new JobProcessorService();
+    }
+    return JobProcessorService.instance;
+  }
+
+  /**
+   * Start the automatic job processor
+   */
+  startProcessor(): void {
+    if (this.processorInterval) {
+      console.log('[JOB PROCESSOR] Processor already running');
+      return;
+    }
+
+    console.log('[JOB PROCESSOR] Starting automatic job processor');
+    
+    // Run initial processing after a short delay
+    setTimeout(() => this.processPendingJobs(), 10000); // 10 seconds
+    
+    // Set up recurring processing
+    this.processorInterval = setInterval(() => {
+      this.processPendingJobs();
+    }, this.PROCESSOR_INTERVAL_MS);
+  }
+
+  /**
+   * Stop the automatic processor
+   */
+  stopProcessor(): void {
+    if (this.processorInterval) {
+      clearInterval(this.processorInterval);
+      this.processorInterval = null;
+      console.log('[JOB PROCESSOR] Processor stopped');
+    }
+  }
+
+  /**
+   * Process pending jobs
+   */
+  async processPendingJobs(): Promise<JobProcessingResult | null> {
+    if (this.isProcessing) {
+      return null;
+    }
+
+    // Check minimum interval
+    if (this.lastProcessing) {
+      const timeSinceLastProcessing = Date.now() - this.lastProcessing.getTime();
+      if (timeSinceLastProcessing < this.MIN_INTERVAL_BETWEEN_PROCESSING_MS) {
+        return null;
+      }
+    }
+
+    this.isProcessing = true;
+    const startTime = Date.now();
+    
+    const result: JobProcessingResult = {
+      success: false,
+      timestamp: new Date().toISOString(),
+      processedJobs: 0,
+      completedJobs: 0,
+      failedJobs: 0,
+      errors: []
+    };
+
+    try {
+      // Get pending jobs
+      const { JobDB, MessageDB } = await import('@/services/database/db');
+      
+      const pendingJobsQuery = `
+        SELECT * FROM jobs 
+        WHERE status = 'pending' 
+          AND is_scheduled = false 
+          AND created_at > NOW() - INTERVAL '1 hour'
+        ORDER BY created_at ASC
+        LIMIT ${this.MAX_JOBS_PER_RUN};
+      `;
+      
+      const { pool } = await import('@/services/database/db');
+      const pendingJobsResult = await pool.query(pendingJobsQuery);
+      const pendingJobs = pendingJobsResult.rows;
+      
+      result.processedJobs = pendingJobs.length;
+      
+      if (pendingJobs.length === 0) {
+        result.success = true;
+        this.lastProcessing = new Date();
+        return result;
+      }
+
+      console.log(`[JOB PROCESSOR] Found ${pendingJobs.length} pending jobs to process`);
+
+      // Process jobs sequentially to avoid overwhelming the orchestration system
+      for (const job of pendingJobs) {
+        try {
+          console.log(`[JOB PROCESSOR] Processing job ${job.id} (${job.name})`);
+          
+          // Create user message
+          await MessageDB.createMessage({
+            job_id: job.id,
+            role: 'user',
+            content: job.initial_message,
+            order_index: 0,
+            metadata: {},
+            requires_action: false,
+            is_streaming: false
+          });
+          
+          // Update job status to running
+          await JobDB.updateJob(job.id, {
+            status: 'running'
+          });
+          
+          // Call orchestration via HTTP (internal request)
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || `http://localhost:${process.env.PORT || 3000}`;
+          const response = await fetch(`${baseUrl}/api/v1/chat/orchestrate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              prompt: {
+                role: 'user',
+                content: job.initial_message,
+              },
+              chatHistory: [],
+              conversationId: job.id,
+              useResearch: true,
+              walletAddress: job.wallet_address,
+            })
+          });
+          
+          if (response.ok) {
+            const responseData = await response.json();
+            const { response: agentResponse, current_agent } = responseData;
+            
+            // Create assistant response
+            await MessageDB.createMessage({
+              job_id: job.id,
+              role: 'assistant',
+              content: typeof agentResponse.content === 'string' ? agentResponse.content : JSON.stringify(agentResponse.content),
+              agent_name: current_agent,
+              metadata: agentResponse.metadata || {},
+              order_index: 1,
+              requires_action: false,
+              is_streaming: false
+            });
+            
+            // Update job status to completed
+            await JobDB.updateJob(job.id, {
+              status: 'completed',
+              completed_at: new Date()
+            });
+            
+            result.completedJobs++;
+            console.log(`[JOB PROCESSOR] Job ${job.id} completed successfully`);
+            
+          } else {
+            throw new Error(`Orchestration API returned ${response.status}: ${response.statusText}`);
+          }
+          
+        } catch (jobError) {
+          console.error(`[JOB PROCESSOR] Failed to process job ${job.id}:`, jobError);
+          result.failedJobs++;
+          result.errors.push(`Job ${job.id}: ${jobError instanceof Error ? jobError.message : String(jobError)}`);
+          
+          // Mark job as failed
+          try {
+            await JobDB.updateJob(job.id, {
+              status: 'failed',
+              completed_at: new Date()
+            });
+          } catch (updateError) {
+            console.error(`[JOB PROCESSOR] Failed to update job ${job.id} status to failed:`, updateError);
+          }
+        }
+      }
+
+      result.success = result.errors.length === 0;
+      this.lastProcessing = new Date();
+      
+      const processingTime = Date.now() - startTime;
+      console.log(`[JOB PROCESSOR] Completed in ${processingTime}ms: ${result.completedJobs} completed, ${result.failedJobs} failed`);
+      
+      return result;
+      
+    } catch (error) {
+      console.error('[JOB PROCESSOR] Failed to process pending jobs:', error);
+      result.errors.push(error instanceof Error ? error.message : 'Unknown processor error');
+      return result;
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  /**
+   * Get processor status
+   */
+  getStatus() {
+    return {
+      isProcessing: this.isProcessing,
+      lastProcessing: this.lastProcessing,
+      processorActive: this.processorInterval !== null,
+      intervalMs: this.PROCESSOR_INTERVAL_MS,
+      maxJobsPerRun: this.MAX_JOBS_PER_RUN
+    };
+  }
+}
+
+// Export singleton instance
+export const jobProcessor = JobProcessorService.getInstance();

@@ -9,67 +9,159 @@ import { EventEmitter } from 'events';
 export class Orchestrator {
   private eventEmitter: EventEmitter;
   private requestId: string;
+  private startTime: number;
 
   constructor(requestId?: string) {
     this.eventEmitter = new EventEmitter();
     this.requestId = requestId || `orchestrator-${Date.now()}-${Math.random()}`;
+    this.startTime = Date.now();
   }
 
   async runOrchestration(request: ChatRequest, walletAddress?: string): Promise<[string, AgentResponse]> {
-    try {
-      console.log(`[Orchestrator ${this.requestId}] Starting runOrchestration`);
+    return this.runOrchestrationWithRetry(request, walletAddress, 1);
+  }
 
-      // Determine which agent(s) to use
-      let selectedAgent;
-      let agentType: 'core' | 'mcp' | 'a2a' = 'core';
-      let selectionReasoning = '';
-      
+  async runOrchestrationWithRetry(request: ChatRequest, walletAddress?: string, maxRetries: number = 3): Promise<[string, AgentResponse]> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[Orchestrator ${this.requestId}] Starting orchestration attempt ${attempt}/${maxRetries}`);
+        
+        const result = await this.executeOrchestration(request, walletAddress);
+        
+        if (attempt > 1) {
+          console.log(`[Orchestrator ${this.requestId}] Succeeded on retry attempt ${attempt}`);
+        }
+        
+        return result;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.error(`[Orchestrator ${this.requestId}] Attempt ${attempt} failed:`, lastError.message);
+        
+        if (attempt === maxRetries) {
+          console.error(`[Orchestrator ${this.requestId}] All ${maxRetries} attempts failed`);
+          break;
+        }
+        
+        // Wait before retry (exponential backoff)
+        const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+        console.log(`[Orchestrator ${this.requestId}] Waiting ${waitTime}ms before retry`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+    
+    // All attempts failed, return error response
+    const response: AgentResponse = {
+      responseType: ResponseType.ERROR,
+      errorMessage: lastError ? lastError.message : 'All orchestration attempts failed',
+      metadata: {
+        attemptCount: maxRetries,
+        finalError: lastError?.message,
+      }
+    };
+    
+    return ['orchestrator-error', response];
+  }
+
+  private async executeOrchestration(request: ChatRequest, walletAddress?: string): Promise<[string, AgentResponse]> {
+    console.log(`[Orchestrator ${this.requestId}] Executing orchestration`);
+
+    // Agent selection with fallback strategy
+    let selectedAgent;
+    let agentType: 'core' | 'mcp' | 'a2a' = 'core';
+    let selectionReasoning = '';
+    let selectionMethod = 'unknown';
+    
+    try {
       if (request.selectedAgents && request.selectedAgents.length > 0) {
-        // Try to find the first available agent from the selected list
+        // Try user-selected agents first
+        console.log(`[Orchestrator ${this.requestId}] Trying user-selected agents:`, request.selectedAgents);
+        
         for (const agentName of request.selectedAgents) {
-          selectedAgent = await AgentRegistry.getForRequest(
-            agentName,
-            this.requestId
-          );
+          selectedAgent = await AgentRegistry.getForRequest(agentName, this.requestId);
           if (selectedAgent) {
             selectionReasoning = `User-selected agent: ${agentName}`;
+            selectionMethod = 'user_selected';
             break;
           }
         }
 
-        // If no selected agent is available, fall back to LLM-based intelligent selection
+        // If no selected agent is available, fall back to LLM selection
         if (!selectedAgent) {
+          console.log(`[Orchestrator ${this.requestId}] User-selected agents unavailable, falling back to LLM`);
+          try {
+            const selectionResult = await AgentRegistry.selectBestAgentWithLLM(request.prompt.content, walletAddress);
+            selectedAgent = selectionResult.agent;
+            agentType = selectionResult.agentType || 'core';
+            selectionReasoning = `Fallback to LLM selection: ${selectionResult.reasoning}`;
+            selectionMethod = 'llm_fallback';
+          } catch (llmError) {
+            console.error(`[Orchestrator ${this.requestId}] LLM selection failed:`, llmError);
+            // Continue to default fallback below
+          }
+        }
+      } else {
+        // Use LLM-based intelligent agent selection
+        console.log(`[Orchestrator ${this.requestId}] Using LLM-based agent selection`);
+        try {
           const selectionResult = await AgentRegistry.selectBestAgentWithLLM(request.prompt.content, walletAddress);
           selectedAgent = selectionResult.agent;
           agentType = selectionResult.agentType || 'core';
-          selectionReasoning = `Fallback to LLM selection: ${selectionResult.reasoning}`;
+          selectionReasoning = selectionResult.reasoning;
+          selectionMethod = 'llm_primary';
+        } catch (llmError) {
+          console.error(`[Orchestrator ${this.requestId}] LLM selection failed:`, llmError);
+          // Continue to default fallback below
         }
-      } else {
-        // Use LLM-based intelligent agent selection with user context
-        const selectionResult = await AgentRegistry.selectBestAgentWithLLM(request.prompt.content, walletAddress);
-        selectedAgent = selectionResult.agent;
-        agentType = selectionResult.agentType || 'core';
-        selectionReasoning = selectionResult.reasoning;
+      }
+
+      // Final fallback: use default agent
+      if (!selectedAgent) {
+        console.log(`[Orchestrator ${this.requestId}] Using default agent fallback`);
+        selectedAgent = await AgentRegistry.getForRequest('default', this.requestId);
+        if (!selectedAgent) {
+          // Try to get any available agent
+          const availableAgents = AgentRegistry.getAvailableAgents();
+          if (availableAgents.length > 0) {
+            selectedAgent = await AgentRegistry.getForRequest(availableAgents[0].name, this.requestId);
+          }
+        }
+        selectionReasoning = 'Default agent fallback due to selection failures';
+        selectionMethod = 'default_fallback';
       }
 
       if (!selectedAgent) {
-        throw new Error('No suitable agent found');
+        throw new Error('No agents available - registry may be empty or all agents failed to load');
       }
 
-      const response = await selectedAgent.chat({
-        prompt: request.prompt,
-        conversationId: request.conversationId || 'default',
-      });
-
       const agentName = selectedAgent.getDefinition().name;
+      console.log(`[Orchestrator ${this.requestId}] Selected agent: ${agentName} via ${selectionMethod}`);
 
-      // Get available agents for this user
-      let availableAgents: Array<{ name: string; type?: string }>;
-      if (walletAddress) {
-        const userAgents = await AgentRegistry.getUserAvailableAgents(walletAddress);
-        availableAgents = userAgents.map(a => ({ name: a.name, type: a.type }));
-      } else {
-        availableAgents = AgentRegistry.getAvailableAgents().map(a => ({ name: a.name, type: 'core' }));
+      // Execute agent chat with error handling
+      let response;
+      try {
+        response = await selectedAgent.chat({
+          prompt: request.prompt,
+          conversationId: request.conversationId || 'default',
+        });
+      } catch (chatError) {
+        console.error(`[Orchestrator ${this.requestId}] Agent chat failed:`, chatError);
+        throw new Error(`Agent execution failed: ${chatError instanceof Error ? chatError.message : String(chatError)}`);
+      }
+
+      // Get available agents for user (with error handling)
+      let availableAgents: Array<{ name: string; type?: string }> = [];
+      try {
+        if (walletAddress) {
+          const userAgents = await AgentRegistry.getUserAvailableAgents(walletAddress);
+          availableAgents = userAgents.map(a => ({ name: a.name, type: a.type }));
+        } else {
+          availableAgents = AgentRegistry.getAvailableAgents().map(a => ({ name: a.name, type: 'core' }));
+        }
+      } catch (agentListError) {
+        console.error(`[Orchestrator ${this.requestId}] Failed to get available agents:`, agentListError);
+        // Continue with empty array
       }
 
       const agentResponse: AgentResponse = {
@@ -80,20 +172,19 @@ export class Orchestrator {
           selectedAgent: agentName,
           agentType,
           selectionReasoning,
+          selectionMethod,
           availableAgents,
           userSpecificAgents: walletAddress ? true : false,
+          orchestrationId: this.requestId,
         },
       };
 
+      console.log(`[Orchestrator ${this.requestId}] Orchestration completed successfully`);
       return [agentName, agentResponse];
+      
     } catch (error) {
-      const response: AgentResponse = {
-        responseType: ResponseType.ERROR,
-        errorMessage:
-          error instanceof Error ? error.message : 'Unknown error occurred',
-      };
-
-      return ['orchestrator', response];
+      console.error(`[Orchestrator ${this.requestId}] Orchestration execution failed:`, error);
+      throw error;
     }
   }
 

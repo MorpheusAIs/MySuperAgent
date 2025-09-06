@@ -1,3 +1,5 @@
+"use client";
+
 import React, {
   useReducer,
   useCallback,
@@ -211,17 +213,22 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
         });
 
         try {
-          // Call orchestration API directly (no localStorage for logged-in users)
-          const response = await httpClient.post("/api/v1/chat/orchestrate", {
-            prompt: {
-              role: "user",
-              content: messageToSend,
-            },
-            chatHistory: state.messages[currentConvId] || [],
-            conversationId: currentConvId,
-            useResearch: true, // Always use orchestration
-            walletAddress: walletAddress,
-          });
+          // Call orchestration API with timeout and retries
+          const response = await Promise.race([
+            httpClient.post("/api/v1/chat/orchestrate", {
+              prompt: {
+                role: "user",
+                content: messageToSend,
+              },
+              chatHistory: state.messages[currentConvId] || [],
+              conversationId: currentConvId,
+              useResearch: true, // Always use orchestration
+              walletAddress: walletAddress,
+            }),
+            new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('Orchestration request timeout after 6 minutes')), 6 * 60 * 1000)
+            )
+          ]);
 
           if (response.data) {
             const { response: agentResponse, current_agent } = response.data;
@@ -295,21 +302,43 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
         } catch (error: any) {
           console.error("Chat error:", error);
           
-          // Save error message to database
+          // Determine error message based on error type
+          let errorContent = "I encountered an error while processing your request. Please try again.";
+          let errorDetails = error.message || "Unknown error occurred";
+          
+          if (error.message?.includes('timeout')) {
+            errorContent = "Your request took too long to process and was cancelled. Please try again with a simpler request.";
+            errorDetails = `Request timeout: ${error.message}`;
+          } else if (error.message?.includes('Agent')) {
+            errorContent = "There was an issue with the AI agent system. Please try again in a moment.";
+            errorDetails = `Agent error: ${error.message}`;
+          }
+          
+          // Save error message to database with retry logic
           const errorMessage: ChatMessage = {
             role: "assistant",
-            content: "I encountered an error while processing your request. Please try again.",
-            error_message: error.message || "Unknown error occurred",
+            content: errorContent,
+            error_message: errorDetails,
             timestamp: Date.now(),
           };
           
-          await JobsAPI.createMessage(walletAddress, currentConvId, convertChatMessageToMessage(errorMessage, currentConvId, nextOrderIndex));
+          try {
+            await JobsAPI.createMessage(walletAddress, currentConvId, convertChatMessageToMessage(errorMessage, currentConvId, nextOrderIndex));
+          } catch (dbError) {
+            console.error("Failed to save error message to database:", dbError);
+            // Continue with UI update even if DB save fails
+          }
           
-          // Update job status
-          await JobsAPI.updateJob(currentConvId, {
-            wallet_address: walletAddress,
-            status: 'failed'
-          });
+          // Update job status with retry logic
+          try {
+            await JobsAPI.updateJob(currentConvId, {
+              wallet_address: walletAddress,
+              status: 'failed'
+            });
+          } catch (dbError) {
+            console.error("Failed to update job status to failed:", dbError);
+            // Continue with UI update even if DB save fails
+          }
 
           dispatch({
             type: "ADD_OPTIMISTIC_MESSAGE",

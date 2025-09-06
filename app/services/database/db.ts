@@ -1602,6 +1602,18 @@ export class UserMemoriesDB {
   }
 }
 
+// Export pool for direct database access
+export { pool };
+
+// Export Database class with common methods
+export class Database {
+  static query = pool.query.bind(pool);
+  static JobDB = JobDB;
+  static MessageDB = MessageDB;
+  static UserDB = UserDB;
+  static SharedJobDB = SharedJobDB;
+}
+
 export default {
   UserDB,
   UserPreferencesDB,
@@ -1615,4 +1627,5 @@ export default {
   UserAvailableToolDB,
   UserRulesDB,
   UserMemoriesDB,
+  SharedJobDB,
 };
