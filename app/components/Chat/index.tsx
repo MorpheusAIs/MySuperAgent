@@ -270,13 +270,17 @@ export const Chat: FC<{
     return (
       <Box
         className={styles.chatContainer}
+        paddingLeft={isMobile ? '2%' : isSidebarOpen ? '30%' : '20%'}
+        paddingRight={isMobile ? '2%' : '20%'}
         overflow="auto"
         height="auto"
         minHeight="100vh"
       >
         {/* Header */}
         <VStack spacing={6} pt={20} pb={4}>
-          <StatsCarousel />
+          <Box maxWidth="600px" width="100%">
+            <StatsCarousel />
+          </Box>
           <Text
             fontSize="2xl"
             fontWeight="bold"

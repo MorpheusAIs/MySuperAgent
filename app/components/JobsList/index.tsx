@@ -86,9 +86,9 @@ const isPreviousJob = (job: Job) => {
   }
 
   if (status === 'completed') {
-    const oneDayAgo = new Date();
-    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-    return new Date(job.created_at) <= oneDayAgo;
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+    return new Date(job.created_at) <= twentyFourHoursAgo;
   }
 
   return false;
@@ -853,8 +853,10 @@ export const JobsList: FC<JobsListProps> = ({
   const allActiveScheduledJobs = useMemo(
     () =>
       filterJobs(scheduledJobs.filter((job) => job.is_active)).sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        (a, b) => {
+          // Sort by created_at to show most recently created scheduled jobs first
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
       ),
     [scheduledJobs, filterJobs]
   );

@@ -37,25 +37,25 @@ export default async function handler(
     ]);
 
     // Calculate additional metrics
+    const humanEquivalentHours = Math.round(avgTimesSaved || 0);
+    const totalIncomeEarned = Math.round(humanEquivalentHours * 15); // $15/hour multiplier
+    
     const stats = {
       totalJobs,
       recurringJobs,
       activeScheduledJobs,
       completedToday,
-      timeSavedHours: Math.round(avgTimesSaved || 0),
-      // Add some derived metrics
-      efficiencyScore: totalJobs > 0 ? Math.min(100, Math.round((totalJobs / 100) * 95 + 5)) : 0,
-      uptime: '99.9%', // Static for now - could be calculated from server uptime
+      humanEquivalentHours,
+      totalIncomeEarned,
     };
 
     // Create carousel messages with similar lengths (WITHOUT "Neo" prefix - that's handled by the frontend)
     const carouselMessages = [
       `has completed ${stats.totalJobs.toLocaleString()} total jobs to date`,
-      `handles ${stats.recurringJobs} recurring jobs daily`,
-      `has saved over ${stats.timeSavedHours} hours of time`,
+      `handles ${stats.recurringJobs} recurring jobs actively`,
+      `has worked ${stats.humanEquivalentHours} human equivalent hours`,
       `completed ${stats.completedToday} jobs over the past day`,
-      stats.efficiencyScore > 50 ? `operates at ${stats.efficiencyScore}% efficiency rate` : null,
-      `maintains ${stats.uptime} service uptime`
+      stats.totalIncomeEarned > 0 ? `has earned $${stats.totalIncomeEarned.toLocaleString()} for humans so far` : null,
     ].filter(Boolean); // Remove null messages
 
     return res.status(200).json({

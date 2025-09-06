@@ -63,7 +63,7 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
       justifyContent={textAlign}
       fontSize={fontSize}
       fontWeight="500"
-      pl={20}
+      pl={56}
     >
       {/* FreeAI is ALWAYS visible */}
       <Text
@@ -91,7 +91,7 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
         display="inline-block"
         height="1.5em"
         overflow="hidden"
-        minWidth="400px"
+        minWidth="600px"
       >
         {messages.map((msg, index) => (
           <Text

@@ -1,16 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { UserRulesDB } from '@/services/database/db';
 
-// TODO: Re-enable when database module issues are resolved
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  return res.status(503).json({
-    error: 'Rules API temporarily disabled - using localStorage fallback',
-  });
-}
-
-/* Disabled until database issues resolved
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -22,27 +12,10 @@ export default async function handler(
   }
 
   try {
-    let DB;
-    try {
-      const dbModule = await import('@/services/database/db');
-      DB = dbModule.default;
-      
-      // Check if the required DB classes are available
-      if (!DB || !DB.UserRulesDB) {
-        throw new Error('UserRulesDB not available in database module');
-      }
-    } catch (importError) {
-      console.error('Database module not available:', importError);
-      return res.status(503).json({
-        error:
-          'Database service unavailable. Please install dependencies and initialize the database.',
-      });
-    }
-
     switch (req.method) {
       case 'GET':
         // Get user rules
-        const rules = await DB.UserRulesDB.getUserRules(walletAddress);
+        const rules = await UserRulesDB.getUserRules(walletAddress);
         return res.status(200).json(rules);
 
       case 'POST':
@@ -55,7 +28,7 @@ export default async function handler(
             .json({ error: 'Title and content are required' });
         }
 
-        const newRule = await DB.UserRulesDB.createRule(
+        const newRule = await UserRulesDB.createRule(
           walletAddress,
           title,
           content
@@ -70,7 +43,7 @@ export default async function handler(
           return res.status(400).json({ error: 'Rule ID is required' });
         }
 
-        const updatedRule = await DB.UserRulesDB.updateRule(
+        const updatedRule = await UserRulesDB.updateRule(
           id,
           walletAddress,
           updates
@@ -88,7 +61,7 @@ export default async function handler(
           return res.status(400).json({ error: 'Rule ID is required' });
         }
 
-        await DB.UserRulesDB.deleteRule(ruleId, walletAddress);
+        await UserRulesDB.deleteRule(ruleId, walletAddress);
         return res.status(204).end();
 
       case 'PATCH':
@@ -99,7 +72,7 @@ export default async function handler(
           return res.status(400).json({ error: 'Rule ID is required' });
         }
 
-        const toggledRule = await DB.UserRulesDB.toggleRule(
+        const toggledRule = await UserRulesDB.toggleRule(
           toggleRuleId,
           walletAddress
         );
@@ -121,4 +94,4 @@ export default async function handler(
       details: error.message,
     });
   }
-} */
+}

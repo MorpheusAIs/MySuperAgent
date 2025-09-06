@@ -14,7 +14,6 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react';
 import { A2AManagement } from './A2AManagement';
 import { AccountSettings } from './AccountSettings';
-import { AgentSelection } from './AgentSelection';
 import { GeneralSettings } from './GeneralSettings';
 import styles from './Main.module.css';
 import { MCPConfiguration } from './MCPConfiguration';
@@ -138,11 +137,6 @@ export const SettingsMain: React.FC<SettingsMainProps> = ({
                 <TabPanel p={0} h="full">
                   <Box className={styles.tabContent}>
                     <A2AManagement onSave={() => {}} />
-                  </Box>
-                </TabPanel>
-                <TabPanel p={0} h="full">
-                  <Box className={styles.tabContent}>
-                    <AgentSelection onSave={() => {}} />
                   </Box>
                 </TabPanel>
               </TabPanels>
