@@ -4,8 +4,12 @@ import {
   FormLabel,
   Textarea,
   VStack,
+  useToast,
+  Spinner,
+  Text,
 } from "@chakra-ui/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useWalletAddress } from "@/services/wallet/utils";
 import styles from "./GeneralSettings.module.css";
 
 interface GeneralSettingsProps {
@@ -17,11 +21,112 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSave }) => {
     aiPersonality: "",
     bio: "",
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const { getAddress } = useWalletAddress();
+  const toast = useToast();
 
-  const handleSave = () => {
-    console.log("Saving general settings:", settings);
-    onSave();
+  // Load existing settings on component mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      const walletAddress = getAddress();
+      if (!walletAddress) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/v1/user-settings', {
+          headers: {
+            'x-wallet-address': walletAddress,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setSettings({
+            aiPersonality: data.aiPersonality || "",
+            bio: data.bio || "",
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load your settings",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, [getAddress, toast]);
+
+  const handleSave = async () => {
+    const walletAddress = getAddress();
+    if (!walletAddress) {
+      toast({
+        title: "Wallet Required",
+        description: "Please connect your wallet to save settings",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/v1/user-settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress,
+        },
+        body: JSON.stringify(settings),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          toast({
+            title: "Settings Saved",
+            description: "Your settings have been successfully saved",
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+          });
+          onSave();
+        }
+      } else {
+        throw new Error('Failed to save settings');
+      }
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save your settings. Please try again.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <VStack spacing={6} align="center" py={8}>
+        <Spinner size="lg" color="blue.400" />
+        <Text color="white">Loading settings...</Text>
+      </VStack>
+    );
+  }
 
   return (
     <VStack spacing={6} align="stretch">
@@ -37,6 +142,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSave }) => {
           placeholder="Describe how you want your AI assistant to behave"
           rows={4}
           className={styles.textarea}
+          disabled={isSaving}
         />
       </FormControl>
 
@@ -50,10 +156,17 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSave }) => {
           placeholder="Share a bit about yourself"
           rows={4}
           className={styles.textarea}
+          disabled={isSaving}
         />
       </FormControl>
 
-      <Button onClick={handleSave} className={styles.saveButton}>
+      <Button 
+        onClick={handleSave} 
+        className={styles.saveButton}
+        isLoading={isSaving}
+        loadingText="Saving..."
+        disabled={isSaving}
+      >
         Save Settings
       </Button>
     </VStack>

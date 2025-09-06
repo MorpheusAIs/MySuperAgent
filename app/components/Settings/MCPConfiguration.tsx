@@ -5,25 +5,19 @@ import {
   Box,
   Text,
   Button,
-  Grid,
   Switch,
   useToast,
   Spinner,
-  IconButton,
-  Collapse,
-  Divider,
   Badge,
   Flex,
   Alert,
   AlertIcon,
   AlertTitle,
   AlertDescription,
-  Progress,
   Tooltip,
 } from '@chakra-ui/react';
-import { ChevronDown, ChevronRight, RefreshCw, Settings, CheckCircle, XCircle, AlertCircle, Zap } from 'lucide-react';
-import { useAccount, useSignMessage } from 'wagmi';
-import Image from 'next/image';
+import { CheckCircle, XCircle, AlertCircle, Settings, RefreshCw } from 'lucide-react';
+import { useAccount } from 'wagmi';
 
 interface MCPConfigurationProps {
   onSave?: () => void;
@@ -33,19 +27,15 @@ interface MCPServer {
   name: string;
   displayName: string;
   description: string;
-  category: string;
   requiredCredentials: string[];
   isPopular: boolean;
-  capabilities: string[];
 }
 
 interface MCPServerStatus {
   serverName: string;
   isEnabled: boolean;
   connectionStatus: 'connected' | 'disconnected' | 'error' | 'unknown';
-  lastHealthCheck: string | null;
   availableTools: number;
-  endpoint?: string;
 }
 
 interface UserCredentials {
@@ -56,13 +46,10 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({ onSave }) =>
   const [availableServers, setAvailableServers] = useState<MCPServer[]>([]);
   const [enabledServers, setEnabledServers] = useState<MCPServerStatus[]>([]);
   const [userCredentials, setUserCredentials] = useState<UserCredentials>({});
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [globalLoading, setGlobalLoading] = useState(false);
-  const [lastHealthCheck, setLastHealthCheck] = useState<Date | null>(null);
   
   const { address } = useAccount();
-  const { signMessageAsync } = useSignMessage();
   const toast = useToast();
 
   // Load data on mount
@@ -82,13 +69,6 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({ onSave }) =>
       ]);
     } catch (error) {
       console.error('Failed to load MCP data:', error);
-      toast({
-        title: 'Failed to Load Data',
-        description: 'Could not load MCP server information',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
     } finally {
       setGlobalLoading(false);
     }
@@ -162,7 +142,7 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({ onSave }) =>
     if (enable && missingCredentials.length > 0) {
       toast({
         title: 'Missing Credentials',
-        description: `Please configure credentials for: ${missingCredentials.join(', ')}`,
+        description: `Please configure credentials in the Credentials tab for: ${missingCredentials.join(', ')}`,
         status: 'warning',
         duration: 5000,
         isClosable: true,
@@ -173,58 +153,31 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({ onSave }) =>
     setLoading(prev => ({ ...prev, [serverName]: true }));
 
     try {
-      if (enable) {
-        // Sign message for credential access
-        const message = `Enable MCP server ${serverName} - ${Date.now()}`;
-        const signature = await signMessageAsync({ message });
+      const endpoint = enable ? '/api/mcp/servers/enable' : '/api/mcp/servers/disable';
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: address,
+          serverName
+        })
+      });
 
-        const response = await fetch('/api/mcp/servers/enable', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            walletAddress: address,
-            serverName,
-            masterKey: signature
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to enable MCP server');
-        }
-
-        toast({
-          title: 'Server Enabled',
-          description: `${server.displayName} has been enabled and is connecting...`,
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-      } else {
-        const response = await fetch('/api/mcp/servers/disable', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            walletAddress: address,
-            serverName
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to disable MCP server');
-        }
-
-        toast({
-          title: 'Server Disabled',
-          description: `${server.displayName} has been disabled`,
-          status: 'info',
-          duration: 3000,
-          isClosable: true,
-        });
+      if (!response.ok) {
+        throw new Error(`Failed to ${enable ? 'enable' : 'disable'} MCP server`);
       }
+
+      toast({
+        title: enable ? 'Server Enabled' : 'Server Disabled',
+        description: `${server.displayName} has been ${enable ? 'enabled' : 'disabled'}`,
+        status: enable ? 'success' : 'info',
+        duration: 3000,
+        isClosable: true,
+      });
 
       await loadEnabledServers();
     } catch (error) {
-      console.error('Failed to toggle MCP server:', error);
+      console.error(`Failed to toggle MCP server:`, error);
       toast({
         title: 'Operation Failed',
         description: `Could not ${enable ? 'enable' : 'disable'} ${server.displayName}`,
@@ -237,63 +190,16 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({ onSave }) =>
     }
   };
 
-  const handleRunHealthCheck = async () => {
-    if (!address) return;
-
-    setGlobalLoading(true);
-    try {
-      const response = await fetch('/api/mcp/health-check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: address })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setLastHealthCheck(new Date());
-        await loadEnabledServers(); // Refresh status
-        
-        toast({
-          title: 'Health Check Complete',
-          description: `Checked ${Object.keys(data.healthResults || {}).length} servers`,
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to run health check:', error);
-      toast({
-        title: 'Health Check Failed',
-        description: 'Could not check server health',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      setGlobalLoading(false);
-    }
-  };
-
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'connected':
-        return <CheckCircle size={16} color="#48BB78" />;
+        return <CheckCircle size={14} color="#48BB78" />;
       case 'error':
-        return <XCircle size={16} color="#F56565" />;
+        return <XCircle size={14} color="#F56565" />;
       case 'disconnected':
-        return <AlertCircle size={16} color="#ED8936" />;
+        return <AlertCircle size={14} color="#ED8936" />;
       default:
-        return <AlertCircle size={16} color="#A0AEC0" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'connected': return 'green';
-      case 'error': return 'red';
-      case 'disconnected': return 'orange';
-      default: return 'gray';
+        return <AlertCircle size={14} color="#A0AEC0" />;
     }
   };
 
@@ -311,271 +217,199 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({ onSave }) =>
     );
   };
 
-  // Group servers by category
-  const serversByCategory = availableServers.reduce((acc, server) => {
-    if (!acc[server.category]) {
-      acc[server.category] = [];
-    }
-    acc[server.category].push(server);
-    return acc;
-  }, {} as Record<string, MCPServer[]>);
-
   if (!address) {
     return (
-      <Box textAlign="center" py={8}>
-        <Text color="rgba(255, 255, 255, 0.6)" fontSize="14px">
-          Please connect your wallet to manage MCP servers
+      <VStack spacing={6} align="center" py={8}>
+        <Text color="rgba(255, 255, 255, 0.6)" fontSize="16px" textAlign="center">
+          Connect your wallet to manage MCP servers
         </Text>
-      </Box>
+        <Text color="rgba(255, 255, 255, 0.4)" fontSize="14px" textAlign="center">
+          MCP (Model Context Protocol) allows you to connect external tools and services to your AI agents
+        </Text>
+      </VStack>
     );
   }
 
   if (globalLoading && availableServers.length === 0) {
     return (
-      <Box textAlign="center" py={8}>
-        <Spinner size="lg" color="white" />
-        <Text color="rgba(255, 255, 255, 0.6)" fontSize="14px" mt={4}>
+      <VStack spacing={4} align="center" py={8}>
+        <Spinner size="lg" color="blue.400" />
+        <Text color="rgba(255, 255, 255, 0.6)" fontSize="16px">
           Loading MCP servers...
         </Text>
-      </Box>
+      </VStack>
     );
   }
 
   const totalEnabledServers = enabledServers.filter(s => s.isEnabled).length;
-  const connectedServers = enabledServers.filter(s => s.connectionStatus === 'connected').length;
   const totalAvailableTools = enabledServers.reduce((sum, s) => sum + (s.availableTools || 0), 0);
 
   return (
-    <VStack spacing={4} align="stretch">
+    <VStack spacing={6} align="stretch">
+      {/* Header */}
       <Box>
-        <Text color="white" fontSize="14px" fontWeight="500" mb={2}>
+        <Text color="white" fontSize="18px" fontWeight="600" mb={2}>
           MCP Server Configuration
         </Text>
-        <Text fontSize="12px" color="rgba(255, 255, 255, 0.6)">
-          Enable Model Context Protocol (MCP) servers to extend your agent capabilities with external tools and services.
+        <Text fontSize="14px" color="rgba(255, 255, 255, 0.7)">
+          Connect external tools and services using the Model Context Protocol (MCP).
         </Text>
       </Box>
 
-      {/* Status Overview */}
-      <Box
-        bg="rgba(255, 255, 255, 0.02)"
-        border="1px solid rgba(255, 255, 255, 0.1)"
-        borderRadius="8px"
-        p={4}
-      >
-        <HStack justify="space-between" mb={3}>
-          <Text color="white" fontSize="13px" fontWeight="500">
-            Server Status Overview
-          </Text>
-          <Button
-            leftIcon={globalLoading ? <Spinner size="xs" /> : <RefreshCw size={14} />}
-            onClick={handleRunHealthCheck}
-            size="xs"
-            variant="ghost"
-            colorScheme="whiteAlpha"
-            fontSize="11px"
-            isDisabled={globalLoading || totalEnabledServers === 0}
-          >
-            Health Check
-          </Button>
-        </HStack>
-
-        <Grid templateColumns="repeat(3, 1fr)" gap={4}>
-          <Box textAlign="center">
-            <Text color="white" fontSize="18px" fontWeight="bold">
+      {/* Quick Stats */}
+      {totalEnabledServers > 0 && (
+        <HStack
+          bg="rgba(255, 255, 255, 0.05)"
+          border="1px solid rgba(255, 255, 255, 0.1)"
+          borderRadius="12px"
+          p={4}
+          justify="space-around"
+        >
+          <VStack spacing={1}>
+            <Text color="white" fontSize="24px" fontWeight="bold">
               {totalEnabledServers}
             </Text>
-            <Text color="rgba(255, 255, 255, 0.6)" fontSize="11px">
-              Enabled
+            <Text color="rgba(255, 255, 255, 0.6)" fontSize="12px">
+              Enabled Servers
             </Text>
-          </Box>
-          <Box textAlign="center">
-            <Text color="#48BB78" fontSize="18px" fontWeight="bold">
-              {connectedServers}
-            </Text>
-            <Text color="rgba(255, 255, 255, 0.6)" fontSize="11px">
-              Connected
-            </Text>
-          </Box>
-          <Box textAlign="center">
-            <Text color="#4299E1" fontSize="18px" fontWeight="bold">
+          </VStack>
+          <VStack spacing={1}>
+            <Text color="#4299E1" fontSize="24px" fontWeight="bold">
               {totalAvailableTools}
             </Text>
-            <Text color="rgba(255, 255, 255, 0.6)" fontSize="11px">
-              Tools Available
+            <Text color="rgba(255, 255, 255, 0.6)" fontSize="12px">
+              Available Tools
             </Text>
-          </Box>
-        </Grid>
+          </VStack>
+        </HStack>
+      )}
 
-        {lastHealthCheck && (
-          <Text color="rgba(255, 255, 255, 0.5)" fontSize="10px" textAlign="center" mt={2}>
-            Last health check: {lastHealthCheck.toLocaleTimeString()}
-          </Text>
-        )}
-      </Box>
-
-      {/* Missing Credentials Alert */}
+      {/* Credentials Warning */}
       {Object.keys(userCredentials).length === 0 && (
-        <Alert status="warning" bg="rgba(237, 137, 54, 0.1)" border="1px solid rgba(237, 137, 54, 0.3)">
+        <Alert 
+          status="warning" 
+          bg="rgba(237, 137, 54, 0.1)" 
+          border="1px solid rgba(237, 137, 54, 0.3)"
+          borderRadius="8px"
+        >
           <AlertIcon color="orange.400" />
           <Box>
-            <AlertTitle fontSize="12px" color="orange.400">No credentials configured!</AlertTitle>
-            <AlertDescription fontSize="11px" color="rgba(255, 255, 255, 0.7)">
+            <AlertTitle fontSize="14px" color="orange.400">
+              No API credentials found
+            </AlertTitle>
+            <AlertDescription fontSize="13px" color="rgba(255, 255, 255, 0.8)">
               Configure your API credentials in the Credentials tab to enable MCP servers.
             </AlertDescription>
           </Box>
         </Alert>
       )}
 
-      {/* Server Categories */}
+      {/* Server List */}
       <VStack spacing={3} align="stretch">
-        {Object.entries(serversByCategory).map(([category, servers]) => {
-          const isExpanded = expandedCategories[category] ?? true;
-          const categoryEnabledCount = servers.filter(s => isServerEnabled(s.name)).length;
+        {availableServers.map((server) => {
+          const enabled = isServerEnabled(server.name);
+          const status = getServerStatus(server.name);
+          const hasCredentials = hasRequiredCredentials(server);
+          const isLoading = loading[server.name];
 
           return (
             <Box
-              key={category}
+              key={server.name}
               bg="rgba(255, 255, 255, 0.02)"
               border="1px solid rgba(255, 255, 255, 0.1)"
-              borderRadius="8px"
-              overflow="hidden"
+              borderRadius="12px"
+              p={4}
+              _hover={{ bg: "rgba(255, 255, 255, 0.05)" }}
+              transition="all 0.2s ease"
             >
-              {/* Category Header */}
-              <Flex
-                p={3}
-                align="center"
-                justify="space-between"
-                cursor="pointer"
-                onClick={() => setExpandedCategories(prev => ({
-                  ...prev,
-                  [category]: !isExpanded
-                }))}
-                _hover={{ bg: "rgba(255, 255, 255, 0.02)" }}
-              >
-                <HStack spacing={3}>
-                  <HStack spacing={2}>
-                    {isExpanded ? <ChevronDown size={16} color="rgba(255, 255, 255, 0.6)" /> : 
-                                 <ChevronRight size={16} color="rgba(255, 255, 255, 0.6)" />}
-                    <Text color="white" fontSize="13px" fontWeight="500">
-                      {category}
+              <Flex align="center" justify="space-between">
+                <HStack spacing={3} flex={1}>
+                  <Box
+                    width="32px"
+                    height="32px"
+                    borderRadius="8px"
+                    bg="rgba(66, 153, 225, 0.2)"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                  >
+                    <Settings size={16} color="#4299E1" />
+                  </Box>
+                  
+                  <VStack align="start" spacing={1} flex={1}>
+                    <HStack spacing={2}>
+                      <Text color="white" fontSize="16px" fontWeight="500">
+                        {server.displayName}
+                      </Text>
+                      {server.isPopular && (
+                        <Badge colorScheme="blue" size="sm">
+                          Popular
+                        </Badge>
+                      )}
+                    </HStack>
+                    
+                    <Text fontSize="14px" color="rgba(255, 255, 255, 0.7)">
+                      {server.description}
                     </Text>
-                  </HStack>
-                  <Badge colorScheme={categoryEnabledCount > 0 ? "green" : "gray"} size="sm">
-                    {categoryEnabledCount}/{servers.length}
-                  </Badge>
+                    
+                    {/* Server Status */}
+                    {enabled && status && (
+                      <HStack spacing={3} mt={1}>
+                        <HStack spacing={1}>
+                          {getStatusIcon(status.connectionStatus)}
+                          <Text fontSize="12px" color="rgba(255, 255, 255, 0.6)" textTransform="capitalize">
+                            {status.connectionStatus}
+                          </Text>
+                        </HStack>
+                        {status.availableTools > 0 && (
+                          <Text fontSize="12px" color="rgba(255, 255, 255, 0.6)">
+                            {status.availableTools} tools available
+                          </Text>
+                        )}
+                      </HStack>
+                    )}
+
+                    {/* Missing Credentials Warning */}
+                    {!hasCredentials && (
+                      <Text fontSize="12px" color="orange.400">
+                        Missing credentials: {server.requiredCredentials.join(', ')}
+                      </Text>
+                    )}
+                  </VStack>
+                </HStack>
+
+                <HStack spacing={3}>
+                  {isLoading && <Spinner size="sm" color="blue.400" />}
+                  
+                  <Switch
+                    size="md"
+                    isChecked={enabled}
+                    isDisabled={isLoading || (!enabled && !hasCredentials)}
+                    onChange={(e) => handleToggleServer(server.name, e.target.checked)}
+                    colorScheme="blue"
+                  />
                 </HStack>
               </Flex>
-
-              {/* Category Servers */}
-              <Collapse in={isExpanded}>
-                <Box px={3} pb={3}>
-                  <Divider borderColor="rgba(255, 255, 255, 0.1)" mb={3} />
-                  
-                  <VStack spacing={2} align="stretch">
-                    {servers.map((server) => {
-                      const enabled = isServerEnabled(server.name);
-                      const status = getServerStatus(server.name);
-                      const hasCredentials = hasRequiredCredentials(server);
-                      const isLoading = loading[server.name];
-
-                      return (
-                        <Flex
-                          key={server.name}
-                          p={3}
-                          bg="rgba(255, 255, 255, 0.02)"
-                          borderRadius="6px"
-                          align="center"
-                          justify="space-between"
-                          border="1px solid rgba(255, 255, 255, 0.05)"
-                        >
-                          <HStack spacing={3} flex={1}>
-                            <Box
-                              width="24px"
-                              height="24px"
-                              borderRadius="4px"
-                              bg="rgba(255, 255, 255, 0.1)"
-                              display="flex"
-                              alignItems="center"
-                              justifyContent="center"
-                            >
-                              <Settings size={12} color="rgba(255, 255, 255, 0.6)" />
-                            </Box>
-                            
-                            <VStack align="start" spacing={0} flex={1}>
-                              <HStack spacing={2}>
-                                <Text color="white" fontSize="12px" fontWeight="500">
-                                  {server.displayName}
-                                </Text>
-                                {server.isPopular && (
-                                  <Badge colorScheme="blue" size="xs">
-                                    <Zap size={8} style={{ marginRight: '2px' }} />
-                                    Popular
-                                  </Badge>
-                                )}
-                              </HStack>
-                              <Text fontSize="10px" color="rgba(255, 255, 255, 0.6)">
-                                {server.description}
-                              </Text>
-                              
-                              {/* Status and Tools Info */}
-                              {enabled && status && (
-                                <HStack spacing={3} mt={1}>
-                                  <HStack spacing={1}>
-                                    {getStatusIcon(status.connectionStatus)}
-                                    <Text fontSize="9px" color={`${getStatusColor(status.connectionStatus)}.400`}>
-                                      {status.connectionStatus}
-                                    </Text>
-                                  </HStack>
-                                  {status.availableTools > 0 && (
-                                    <Text fontSize="9px" color="rgba(255, 255, 255, 0.5)">
-                                      {status.availableTools} tools
-                                    </Text>
-                                  )}
-                                </HStack>
-                              )}
-                            </VStack>
-                          </HStack>
-
-                          <HStack spacing={2}>
-                            {!hasCredentials && (
-                              <Tooltip
-                                label={`Missing credentials: ${server.requiredCredentials.join(', ')}`}
-                                placement="top"
-                              >
-                                <Box>
-                                  <AlertCircle size={14} color="#ED8936" />
-                                </Box>
-                              </Tooltip>
-                            )}
-                            
-                            <Switch
-                              size="sm"
-                              isChecked={enabled}
-                              isDisabled={isLoading || (!enabled && !hasCredentials)}
-                              onChange={(e) => handleToggleServer(server.name, e.target.checked)}
-                              colorScheme="green"
-                            />
-                            
-                            {isLoading && <Spinner size="xs" color="white" />}
-                          </HStack>
-                        </Flex>
-                      );
-                    })}
-                  </VStack>
-                </Box>
-              </Collapse>
             </Box>
           );
         })}
       </VStack>
 
       {availableServers.length === 0 && !globalLoading && (
-        <Box textAlign="center" py={8}>
-          <Text color="rgba(255, 255, 255, 0.6)" fontSize="14px">
+        <VStack spacing={4} align="center" py={8}>
+          <Text color="rgba(255, 255, 255, 0.6)" fontSize="16px">
             No MCP servers available
           </Text>
-        </Box>
+          <Button
+            leftIcon={<RefreshCw size={16} />}
+            onClick={loadMCPData}
+            size="sm"
+            variant="outline"
+            colorScheme="blue"
+          >
+            Refresh
+          </Button>
+        </VStack>
       )}
     </VStack>
   );

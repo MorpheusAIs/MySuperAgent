@@ -13,9 +13,8 @@ interface ComprehensiveStats {
     recurringJobs: number;
     activeScheduledJobs: number;
     completedToday: number;
-    timeSavedHours: number;
-    efficiencyScore: number;
-    uptime: string;
+    humanEquivalentHours: number;
+    totalIncomeEarned: number;
   };
   carouselMessages: string[];
   timestamp: string;

@@ -2,12 +2,9 @@ import { AgentsButton } from '@/components/Agents/Button';
 import { CombinedAuth } from '@/components/Auth/CombinedAuth';
 import { CdpWalletsButton } from '@/components/CdpWallets/Button';
 import { StyledTooltip } from '@/components/Common/StyledTooltip';
-import { ApiCredentialsButton } from '@/components/Credentials/Button';
 import { DashboardButton } from '@/components/Dashboard/Button';
 import { SettingsButton } from '@/components/Settings';
-import { SyncButton } from '@/components/Sync/Button';
 import { TeamsButton } from '@/components/Teams/Button';
-import { ToolsButton } from '@/components/Tools/Button';
 import { SchedulingPreferencesButton } from '@/components/UserPreferences/Button';
 import { Box, Divider, Flex, Text, Tooltip } from '@chakra-ui/react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -159,19 +156,10 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                         pl={1}
                       >
                         <div className={styles.menuItem}>
-                          <ToolsButton />
-                        </div>
-                        <div className={styles.menuItem}>
                           <AgentsButton />
                         </div>
                         <div className={styles.menuItem}>
                           <TeamsButton />
-                        </div>
-                        <div className={styles.menuItem}>
-                          <ApiCredentialsButton />
-                        </div>
-                        <div className={styles.menuItem}>
-                          <SyncButton />
                         </div>
                         <StyledTooltip
                           label="Coinbase Developer Platform's managed wallets integration coming soon. This will enable secure key management and automated CDP interactions such as trading, borrowing, and more."

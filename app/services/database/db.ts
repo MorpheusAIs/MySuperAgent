@@ -36,6 +36,8 @@ export interface UserPreferences {
   default_schedule_type: 'once' | 'daily' | 'weekly' | 'custom';
   default_schedule_time: string;
   timezone: string;
+  ai_personality?: string;
+  user_bio?: string;
   created_at: Date;
   updated_at: Date;
 }

@@ -1,6 +1,5 @@
 import { SendIcon } from '@/components/CustomIcon/SendIcon';
 import { ScheduleButton } from '@/components/ScheduleButton';
-import { ToolsButton } from '@/components/Tools/ToolsButton';
 import BASE_URL from '@/services/config/constants';
 import { isFeatureEnabled } from '@/services/featureFlags';
 import {
@@ -53,6 +52,22 @@ export const ChatInput: FC<ChatInputProps> = ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scheduleRef = useRef<InlineScheduleRef>(null);
+
+  // Auto-resize textarea based on content
+  const adjustTextareaHeight = () => {
+    const textarea = inputRef.current;
+    if (textarea) {
+      // Reset height to get the correct scrollHeight
+      textarea.style.height = '48px';
+      const newHeight = Math.min(Math.max(textarea.scrollHeight, 48), 320);
+      textarea.style.height = `${newHeight}px`;
+    }
+  };
+
+  // Adjust height when message content changes
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [message]);
 
   // Add this useEffect to prevent focus zoom on mobile
   useEffect(() => {
@@ -280,7 +295,11 @@ export const ChatInput: FC<ChatInputProps> = ({
               onKeyDown={handleKeyDown}
               disabled={isSubmitting || disabled}
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                // Trigger auto-resize on next tick to ensure textarea has updated
+                setTimeout(adjustTextareaHeight, 0);
+              }}
               placeholder={
                 attachedFiles.length > 0
                   ? `${attachedFiles.length} file${
@@ -288,11 +307,23 @@ export const ChatInput: FC<ChatInputProps> = ({
                     } attached - ${placeholder}`
                   : placeholder
               }
-              minH="36px"
-              maxH="240px"
+              minH="48px"
+              maxH="320px"
               resize="none"
-              overflow="hidden"
+              overflow="auto"
               autoComplete="off"
+              sx={{
+                '&::-webkit-scrollbar': {
+                  width: '6px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  borderRadius: '3px',
+                },
+                '&::-webkit-scrollbar-thumb:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                },
+              }}
             />
 
             <IconButton
@@ -397,12 +428,6 @@ export const ChatInput: FC<ChatInputProps> = ({
               />
             </div>
 
-            {/* Right aligned tools button */}
-            {isFeatureEnabled('feature.tools_configuration') && (
-              <div className={styles.rightActions}>
-                <ToolsButton apiBaseUrl={BASE_URL} />
-              </div>
-            )}
           </div>
 
           {/* Inline Schedule Component */}

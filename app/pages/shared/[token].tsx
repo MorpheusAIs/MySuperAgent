@@ -295,7 +295,7 @@ export default function SharedJobPage() {
                   Want to create your own AI agent job?
                 </Text>
                 <Text color="rgba(255, 255, 255, 0.85)" fontFamily="Inter">
-                  Join MySuperAgent to access our full suite of AI agents and tools
+                  Join Morpheus to access our full suite of AI agents and tools
                 </Text>
                 <Button
                   bg="#59F886"
@@ -328,7 +328,7 @@ export default function SharedJobPage() {
                   _hover={{ color: "#48D96E" }}
                   fontWeight="500"
                 >
-                  MySuperAgent
+                  Morpheus
                 </ChakraLink>
               </Text>
             </Box>

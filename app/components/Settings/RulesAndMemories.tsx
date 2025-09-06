@@ -1,4 +1,5 @@
 import { useWalletAddress } from '@/services/wallet/utils';
+import RulesAndMemoriesAPI from '@/services/api-clients/rulesAndMemories';
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import {
   Box,
@@ -86,25 +87,21 @@ export const RulesAndMemories: React.FC<RulesAndMemoriesProps> = ({
 
       setIsLoading(true);
       try {
-        // Use localStorage for now since API has database issues
-        loadFromLocalStorage();
-
-        // TODO: Re-enable when database issues are resolved
-        // if (walletAddress) {
-        //   try {
-        //     const [rulesData, memoriesData] = await Promise.all([
-        //       RulesAndMemoriesAPI.getUserRules(walletAddress),
-        //       RulesAndMemoriesAPI.getUserMemories(walletAddress),
-        //     ]);
-        //     setRules(rulesData);
-        //     setMemories(memoriesData);
-        //   } catch (apiError) {
-        //     console.warn('API not available, using localStorage fallback:', apiError);
-        //     loadFromLocalStorage();
-        //   }
-        // } else {
-        //   loadFromLocalStorage();
-        // }
+        if (walletAddress) {
+          try {
+            const [rulesData, memoriesData] = await Promise.all([
+              RulesAndMemoriesAPI.getUserRules(walletAddress),
+              RulesAndMemoriesAPI.getUserMemories(walletAddress),
+            ]);
+            setRules(rulesData);
+            setMemories(memoriesData);
+          } catch (apiError) {
+            console.warn('API not available, using localStorage fallback:', apiError);
+            loadFromLocalStorage();
+          }
+        } else {
+          loadFromLocalStorage();
+        }
       } catch (error: any) {
         console.error('Error loading rules and memories:', error);
         loadFromLocalStorage();
@@ -161,25 +158,21 @@ export const RulesAndMemories: React.FC<RulesAndMemoriesProps> = ({
     try {
       const walletAddress = getAddress();
 
-      // Always use localStorage for now since API has issues
-      addRuleToLocalStorage();
-
-      // TODO: Re-enable API when database issues are resolved
-      // if (walletAddress) {
-      //   try {
-      //     const newRuleData = await RulesAndMemoriesAPI.createRule(
-      //       walletAddress,
-      //       newRule.title,
-      //       newRule.content
-      //     );
-      //     setRules((prev) => [newRuleData, ...prev]);
-      //   } catch (apiError) {
-      //     console.warn('API not available, using localStorage:', apiError);
-      //     addRuleToLocalStorage();
-      //   }
-      // } else {
-      //   addRuleToLocalStorage();
-      // }
+      if (walletAddress) {
+        try {
+          const newRuleData = await RulesAndMemoriesAPI.createRule(
+            walletAddress,
+            newRule.title,
+            newRule.content
+          );
+          setRules((prev) => [newRuleData, ...prev]);
+        } catch (apiError) {
+          console.warn('API not available, using localStorage:', apiError);
+          addRuleToLocalStorage();
+        }
+      } else {
+        addRuleToLocalStorage();
+      }
 
       setNewRule({ title: '', content: '' });
       onRuleModalClose();
@@ -235,19 +228,45 @@ export const RulesAndMemories: React.FC<RulesAndMemoriesProps> = ({
 
     setIsSubmitting(true);
     try {
-      // Use localStorage for now since API has issues
-      const newMemoryData: UserMemory = {
-        id: Date.now().toString(),
-        wallet_address: getAddress() || 'local',
-        title: newMemory.title,
-        content: newMemory.content,
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
+      const walletAddress = getAddress();
 
-      const updatedMemories = [newMemoryData, ...memories];
-      setMemories(updatedMemories);
-      saveToLocalStorage(rules, updatedMemories);
+      if (walletAddress) {
+        try {
+          const newMemoryData = await RulesAndMemoriesAPI.createMemory(
+            walletAddress,
+            newMemory.title,
+            newMemory.content
+          );
+          setMemories((prev) => [newMemoryData, ...prev]);
+        } catch (apiError) {
+          console.warn('API not available, using localStorage:', apiError);
+          // Fallback to localStorage
+          const localMemoryData: UserMemory = {
+            id: Date.now().toString(),
+            wallet_address: walletAddress,
+            title: newMemory.title,
+            content: newMemory.content,
+            created_at: new Date(),
+            updated_at: new Date(),
+          };
+          const updatedMemories = [localMemoryData, ...memories];
+          setMemories(updatedMemories);
+          saveToLocalStorage(rules, updatedMemories);
+        }
+      } else {
+        // Local storage fallback for non-wallet users
+        const localMemoryData: UserMemory = {
+          id: Date.now().toString(),
+          wallet_address: 'local',
+          title: newMemory.title,
+          content: newMemory.content,
+          created_at: new Date(),
+          updated_at: new Date(),
+        };
+        const updatedMemories = [localMemoryData, ...memories];
+        setMemories(updatedMemories);
+        saveToLocalStorage(rules, updatedMemories);
+      }
 
       setNewMemory({ title: '', content: '' });
       onMemoryModalClose();
