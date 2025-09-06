@@ -1,3 +1,5 @@
+"use client";
+
 import React, {
   useReducer,
   useCallback,
@@ -223,7 +225,7 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
               useResearch: true, // Always use orchestration
               walletAddress: walletAddress,
             }),
-            new Promise((_, reject) => 
+            new Promise<never>((_, reject) => 
               setTimeout(() => reject(new Error('Orchestration request timeout after 6 minutes')), 6 * 60 * 1000)
             )
           ]);

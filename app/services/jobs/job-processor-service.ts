@@ -128,7 +128,10 @@ export class JobProcessorService {
             job_id: job.id,
             role: 'user',
             content: job.initial_message,
-            order_index: 0
+            order_index: 0,
+            metadata: {},
+            requires_action: false,
+            is_streaming: false
           });
           
           // Update job status to running
@@ -166,7 +169,9 @@ export class JobProcessorService {
               content: typeof agentResponse.content === 'string' ? agentResponse.content : JSON.stringify(agentResponse.content),
               agent_name: current_agent,
               metadata: agentResponse.metadata || {},
-              order_index: 1
+              order_index: 1,
+              requires_action: false,
+              is_streaming: false
             });
             
             // Update job status to completed
