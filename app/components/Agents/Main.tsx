@@ -37,6 +37,8 @@ import {
   Cpu,
 } from 'lucide-react';
 import { useAccount, useSignMessage } from 'wagmi';
+import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import { useWalletAddress } from '@/services/wallet/utils';
 import styles from './Main.module.css';
 
 interface Agent {
@@ -79,10 +81,13 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  const { isAuthenticated, loginWithGoogle, loginWithTwitter, loginWithWallet } = usePrivyAuth();
+  const { getAddress } = useWalletAddress();
   const toast = useToast();
 
   const loadUserAgentData = useCallback(async () => {
-    if (!address) return;
+    const userAddress = getAddress();
+    if (!userAddress) return;
     
     try {
       await Promise.all([
@@ -99,7 +104,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
         isClosable: true,
       });
     }
-  }, [address, toast]);
+  }, [getAddress, toast]);
 
   const loadAvailableAgents = async () => {
     try {
@@ -137,10 +142,11 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   };
 
   const loadEnabledAgents = async () => {
-    if (!address) return;
+    const userAddress = getAddress();
+    if (!userAddress) return;
 
     try {
-      const response = await fetch(`/api/agents/status?walletAddress=${address}`);
+      const response = await fetch(`/api/agents/status?walletAddress=${userAddress}`);
       if (response.ok) {
         const data = await response.json();
         setEnabledAgents(data.agents || []);
@@ -151,13 +157,14 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   };
 
   const loadUserConfig = async () => {
-    if (!address) return;
+    const userAddress = getAddress();
+    if (!userAddress) return;
 
     try {
       const response = await fetch('/api/agents/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: address })
+        body: JSON.stringify({ walletAddress: userAddress })
       });
 
       if (response.ok) {
@@ -176,22 +183,23 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     });
   }, []);
   
-  // Load user-specific data when wallet connects
+  // Load user-specific data when authenticated
   useEffect(() => {
-    if (address) {
+    if (isAuthenticated) {
       loadUserAgentData();
     } else {
-      // Clear user data when wallet disconnects
+      // Clear user data when not authenticated
       setEnabledAgents([]);
       setUserConfig({});
     }
-  }, [address, loadUserAgentData]);
+  }, [isAuthenticated, loadUserAgentData]);
 
   const handleToggleAgent = async (agentName: string, enable: boolean) => {
-    if (!address) {
+    const userAddress = getAddress();
+    if (!userAddress) {
       toast({
-        title: 'Wallet Required',
-        description: 'Please connect your wallet to manage agents',
+        title: 'Authentication Required',
+        description: 'Please sign in to manage agents',
         status: 'error',
         duration: 3000,
         isClosable: true,
@@ -214,7 +222,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            walletAddress: address,
+            walletAddress: userAddress,
             agentName,
             signature
           })
@@ -236,7 +244,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            walletAddress: address,
+            walletAddress: userAddress,
             agentName
           })
         });
@@ -270,7 +278,8 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   };
 
   const handleRefreshAgents = async () => {
-    if (!address) return;
+    const userAddress = getAddress();
+    if (!userAddress) return;
 
     setGlobalLoading(true);
     try {
@@ -350,17 +359,51 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     );
   }
 
-  if (!address) {
+  if (!isAuthenticated) {
     return (
       <Box className={styles.container}>
         <Box className={styles.emptyState}>
           <VStack spacing={6}>
             <Bot size={64} color="rgba(255, 255, 255, 0.3)" />
             <VStack spacing={3}>
-              <Text className={styles.emptyTitle}>Connect Your Wallet</Text>
+              <Text className={styles.emptyTitle}>Sign In Required</Text>
               <Text className={styles.emptySubtitle}>
-                Please connect your wallet to access and manage your AI agents
+                Please sign in to access and manage your AI agents
               </Text>
+              <VStack spacing={3} pt={4}>
+                <Button
+                  onClick={loginWithGoogle}
+                  bg="#59F886"
+                  color="#000"
+                  _hover={{ bg: '#4AE066' }}
+                  size="lg"
+                  width="200px"
+                >
+                  Sign in with Google
+                </Button>
+                <Button
+                  onClick={loginWithTwitter}
+                  bg="rgba(89, 248, 134, 0.2)"
+                  color="#59F886"
+                  border="1px solid #59F886"
+                  _hover={{ bg: 'rgba(89, 248, 134, 0.3)' }}
+                  size="lg"
+                  width="200px"
+                >
+                  Sign in with Twitter
+                </Button>
+                <Button
+                  onClick={loginWithWallet}
+                  bg="rgba(89, 248, 134, 0.2)"
+                  color="#59F886"
+                  border="1px solid #59F886"
+                  _hover={{ bg: 'rgba(89, 248, 134, 0.3)' }}
+                  size="lg"
+                  width="200px"
+                >
+                  Sign in with Wallet
+                </Button>
+              </VStack>
             </VStack>
           </VStack>
         </Box>

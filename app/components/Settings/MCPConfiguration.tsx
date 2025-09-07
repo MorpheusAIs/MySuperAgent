@@ -18,6 +18,8 @@ import {
 } from '@chakra-ui/react';
 import { CheckCircle, XCircle, AlertCircle, Settings, RefreshCw } from 'lucide-react';
 import { useAccount } from 'wagmi';
+import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import { useWalletAddress } from '@/services/wallet/utils';
 
 interface MCPConfigurationProps {
   onSave?: () => void;
@@ -50,14 +52,17 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({ onSave }) =>
   const [globalLoading, setGlobalLoading] = useState(false);
   
   const { address } = useAccount();
+  const { isAuthenticated, loginWithGoogle, loginWithTwitter, loginWithWallet } = usePrivyAuth();
+  const { getAddress } = useWalletAddress();
   const toast = useToast();
 
   // Load data on mount
   useEffect(() => {
-    if (address) {
+    const userAddress = getAddress();
+    if (isAuthenticated && userAddress) {
       loadMCPData();
     }
-  }, [address]);
+  }, [isAuthenticated, getAddress]);
 
   const loadMCPData = async () => {
     setGlobalLoading(true);
@@ -87,10 +92,11 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({ onSave }) =>
   };
 
   const loadEnabledServers = async () => {
-    if (!address) return;
+    const userAddress = getAddress();
+    if (!userAddress) return;
 
     try {
-      const response = await fetch(`/api/mcp/servers/status?walletAddress=${address}`);
+      const response = await fetch(`/api/mcp/servers/status?walletAddress=${userAddress}`);
       if (response.ok) {
         const data = await response.json();
         setEnabledServers(data.servers || []);
@@ -101,13 +107,14 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({ onSave }) =>
   };
 
   const loadUserCredentials = async () => {
-    if (!address) return;
+    const userAddress = getAddress();
+    if (!userAddress) return;
 
     try {
       const response = await fetch('/api/credentials/services', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: address })
+        body: JSON.stringify({ walletAddress: userAddress })
       });
 
       if (response.ok) {
@@ -120,10 +127,11 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({ onSave }) =>
   };
 
   const handleToggleServer = async (serverName: string, enable: boolean) => {
-    if (!address) {
+    const userAddress = getAddress();
+    if (!userAddress) {
       toast({
-        title: 'Wallet Required',
-        description: 'Please connect your wallet to manage MCP servers',
+        title: 'Authentication Required',
+        description: 'Please sign in to manage MCP servers',
         status: 'error',
         duration: 3000,
         isClosable: true,
@@ -158,7 +166,7 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({ onSave }) =>
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: address,
+          walletAddress: userAddress,
           serverName
         })
       });
@@ -217,15 +225,49 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({ onSave }) =>
     );
   };
 
-  if (!address) {
+  if (!isAuthenticated) {
     return (
       <VStack spacing={6} align="center" py={8}>
         <Text color="rgba(255, 255, 255, 0.6)" fontSize="16px" textAlign="center">
-          Connect your wallet to manage MCP servers
+          Sign in to manage MCP servers
         </Text>
-        <Text color="rgba(255, 255, 255, 0.4)" fontSize="14px" textAlign="center">
+        <Text color="rgba(255, 255, 255, 0.4)" fontSize="14px" textAlign="center" maxW="400px">
           MCP (Model Context Protocol) allows you to connect external tools and services to your AI agents
         </Text>
+        <VStack spacing={3} pt={4}>
+          <Button
+            onClick={loginWithGoogle}
+            bg="#59F886"
+            color="#000"
+            _hover={{ bg: '#4AE066' }}
+            size="lg"
+            width="200px"
+          >
+            Sign in with Google
+          </Button>
+          <Button
+            onClick={loginWithTwitter}
+            bg="rgba(89, 248, 134, 0.2)"
+            color="#59F886"
+            border="1px solid #59F886"
+            _hover={{ bg: 'rgba(89, 248, 134, 0.3)' }}
+            size="lg"
+            width="200px"
+          >
+            Sign in with Twitter
+          </Button>
+          <Button
+            onClick={loginWithWallet}
+            bg="rgba(89, 248, 134, 0.2)"
+            color="#59F886"
+            border="1px solid #59F886"
+            _hover={{ bg: 'rgba(89, 248, 134, 0.3)' }}
+            size="lg"
+            width="200px"
+          >
+            Sign in with Wallet
+          </Button>
+        </VStack>
       </VStack>
     );
   }

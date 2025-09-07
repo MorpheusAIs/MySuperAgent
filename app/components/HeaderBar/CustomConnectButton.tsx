@@ -1,4 +1,4 @@
-import { CombinedAuth } from '@/components/Auth/CombinedAuth';
+import { PrivyLoginButton } from '@/components/PrivyLoginButton';
 import { ChevronDownIcon, CopyIcon, ExternalLinkIcon } from '@chakra-ui/icons';
 import {
   Avatar,
@@ -78,10 +78,9 @@ export const CustomConnectButton: FC = () => {
 
   return (
     <div>
-      <CombinedAuth
-        variant="compact"
+      <PrivyLoginButton
+        variant="header"
         size={isMobile ? 'sm' : 'md'}
-        showLabels={false}
       />
     </div>
   );

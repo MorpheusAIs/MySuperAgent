@@ -6,6 +6,9 @@ html, body {
   min-height: 100vh;
   overflow-x: hidden;
   overflow-y: auto;
+  background-color: #000;
+  margin: 0;
+  padding: 0;
 }
 
 #__next {

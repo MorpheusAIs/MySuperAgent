@@ -9,7 +9,9 @@ import type { AppProps } from 'next/app';
 import '../styles/globals.css';
 
 import { AuthProvider } from '@/contexts/auth/AuthProvider';
+import { PrivyAuthProvider } from '@/contexts/auth/PrivyAuthProvider';
 import { GlobalSearchProvider } from '@/contexts/GlobalSearchProvider';
+import { PrivyProvider } from '@privy-io/react-auth';
 import {
   AvatarComponent,
   darkTheme,
@@ -153,29 +155,53 @@ const client = new QueryClient();
 function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   return (
     <SessionProvider session={session}>
-      <WagmiProvider config={config}>
-        <QueryClientProvider client={client}>
-          <RainbowKitProvider
-            avatar={CustomAvatar}
-            theme={darkTheme({
-              accentColor: '#111613',
-              accentColorForeground: 'white',
-              borderRadius: 'small',
-              fontStack: 'system',
-              overlayBlur: 'small',
-            })}
-          >
-            <AuthProvider>
-              <ChakraProvider theme={theme}>
-                <GlobalSearchProvider>
-                  <Component {...pageProps} />
-                  <Analytics />
-                </GlobalSearchProvider>
-              </ChakraProvider>
-            </AuthProvider>
-          </RainbowKitProvider>
-        </QueryClientProvider>
-      </WagmiProvider>
+      <PrivyProvider
+        appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'cmf9b4j1301gdkz0cxud5ox6p'}
+        config={{
+          loginMethods: ['google', 'twitter', 'wallet', 'email', 'sms'],
+          appearance: {
+            theme: 'dark',
+            accentColor: '#59F886',
+            logo: '/assets/logo.svg',
+            showWalletLoginFirst: false,
+            walletChainType: 'ethereum-only',
+          },
+          embeddedWallets: {
+            createOnLogin: 'users-without-wallets',
+            requireUserPasswordOnCreate: false,
+            noPromptOnSignature: false,
+          },
+          mfa: {
+            noPromptOnMfaRequired: false,
+          },
+        }}
+      >
+        <WagmiProvider config={config}>
+          <QueryClientProvider client={client}>
+            <RainbowKitProvider
+              avatar={CustomAvatar}
+              theme={darkTheme({
+                accentColor: '#111613',
+                accentColorForeground: 'white',
+                borderRadius: 'small',
+                fontStack: 'system',
+                overlayBlur: 'small',
+              })}
+            >
+              <PrivyAuthProvider>
+                <AuthProvider>
+                  <ChakraProvider theme={theme}>
+                    <GlobalSearchProvider>
+                      <Component {...pageProps} />
+                      <Analytics />
+                    </GlobalSearchProvider>
+                  </ChakraProvider>
+                </AuthProvider>
+              </PrivyAuthProvider>
+            </RainbowKitProvider>
+          </QueryClientProvider>
+        </WagmiProvider>
+      </PrivyProvider>
     </SessionProvider>
   );
 }

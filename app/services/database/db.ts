@@ -23,7 +23,10 @@ try {
 
 // Types
 export interface User {
+  id?: number;
   wallet_address: string;
+  email?: string | null;
+  privy_user_id?: string | null;
   created_at: Date;
   updated_at: Date;
   last_active: Date;
@@ -175,7 +178,7 @@ export interface UserMemory {
 
 // Database service classes
 export class UserDB {
-  static async createOrUpdateUser(walletAddress: string): Promise<User> {
+  static async createOrUpdateUser(identifier: string): Promise<User> {
     const query = `
       INSERT INTO users (wallet_address, last_active)
       VALUES ($1, CURRENT_TIMESTAMP)
@@ -184,14 +187,14 @@ export class UserDB {
       RETURNING *;
     `;
 
-    const result = await pool.query(query, [walletAddress]);
+    const result = await pool.query(query, [identifier]);
     return result.rows[0];
   }
 
-  static async getUser(walletAddress: string): Promise<User | null> {
+  static async getUser(identifier: string): Promise<User | null> {
     const query =
       'SELECT * FROM users WHERE wallet_address = $1 AND deleted_at IS NULL;';
-    const result = await pool.query(query, [walletAddress]);
+    const result = await pool.query(query, [identifier]);
     return result.rows[0] || null;
   }
 
@@ -207,6 +210,89 @@ export class UserDB {
       'UPDATE users SET deleted_at = NULL WHERE wallet_address = $1;';
     const result = await pool.query(query, [walletAddress]);
     return (result.rowCount || 0) > 0;
+  }
+
+  static async getUserByPrivyId(privyUserId: string): Promise<User | null> {
+    const query =
+      'SELECT * FROM users WHERE privy_user_id = $1 AND deleted_at IS NULL;';
+    const result = await pool.query(query, [privyUserId]);
+    return result.rows[0] || null;
+  }
+
+  static async getUserByEmail(email: string): Promise<User | null> {
+    const query =
+      'SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL;';
+    const result = await pool.query(query, [email.toLowerCase()]);
+    return result.rows[0] || null;
+  }
+
+  static async getUserByWalletAddress(identifier: string): Promise<User | null> {
+    return this.getUser(identifier);
+  }
+
+  static async createUser(userData: {
+    wallet_address?: string | null;
+    email?: string | null;
+    privy_user_id?: string;
+    created_at?: Date;
+    updated_at?: Date;
+  }): Promise<User> {
+    const query = `
+      INSERT INTO users (wallet_address, email, privy_user_id, created_at, updated_at, last_active)
+      VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+      RETURNING *;
+    `;
+    
+    const result = await pool.query(query, [
+      userData.wallet_address || null,
+      userData.email ? userData.email.toLowerCase() : null,
+      userData.privy_user_id || null,
+      userData.created_at || new Date(),
+      userData.updated_at || new Date(),
+    ]);
+    return result.rows[0];
+  }
+
+  static async updateUser(identifier: string, userData: {
+    wallet_address?: string | null;
+    email?: string | null;
+    privy_user_id?: string;
+    updated_at?: Date;
+  }): Promise<User> {
+    const updateFields = [];
+    const values = [];
+    let paramCount = 1;
+
+    if (userData.wallet_address !== undefined) {
+      updateFields.push(`wallet_address = $${paramCount++}`);
+      values.push(userData.wallet_address);
+    }
+    if (userData.email !== undefined) {
+      updateFields.push(`email = $${paramCount++}`);
+      values.push(userData.email ? userData.email.toLowerCase() : null);
+    }
+    if (userData.privy_user_id !== undefined) {
+      updateFields.push(`privy_user_id = $${paramCount++}`);
+      values.push(userData.privy_user_id);
+    }
+    
+    updateFields.push(`updated_at = $${paramCount++}`);
+    values.push(userData.updated_at || new Date());
+    
+    updateFields.push(`last_active = $${paramCount++}`);
+    values.push(new Date());
+    
+    values.push(identifier);
+
+    const query = `
+      UPDATE users 
+      SET ${updateFields.join(', ')}
+      WHERE wallet_address = $${paramCount}
+      RETURNING *;
+    `;
+
+    const result = await pool.query(query, values);
+    return result.rows[0];
   }
 }
 

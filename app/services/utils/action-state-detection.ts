@@ -288,7 +288,7 @@ function getSuggestedActions(state: ActionState): string[] {
     [ActionState.ERROR]: ['Retry', 'Report Issue', 'Try Different Approach'],
     [ActionState.SUCCESS]: ['Continue', 'View Details', 'Share Result'],
     [ActionState.PROCESSING]: ['Wait', 'Cancel'],
-    [ActionState.RATE_LIMITED]: ['Wait', 'Try Later', 'Upgrade Plan'],
+    [ActionState.RATE_LIMITED]: ['Wait', 'Try Later', 'Sign In'],
     
     // Default empty arrays
     [ActionState.TRANSACTION_PENDING]: [],

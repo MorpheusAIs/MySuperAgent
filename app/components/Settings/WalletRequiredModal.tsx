@@ -1,20 +1,24 @@
-import { Button, HStack, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Spacer, Text, useDisclosure } from '@chakra-ui/react';
+import { Button, HStack, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Spacer, Text, useDisclosure, VStack } from '@chakra-ui/react';
 import { ConnectButton, useAccountModal, useConnectModal } from '@rainbow-me/rainbowkit';
 import React, { FC, ComponentPropsWithoutRef, useEffect } from 'react';
 import { useAccount } from 'wagmi';
+import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import { Mail, Wallet } from 'lucide-react';
+import { FaTwitter } from 'react-icons/fa';
 
 export interface WalletRequiredModal extends ComponentPropsWithoutRef<'div'> {
-    agentRequiresWallet: boolean;
+    agentRequiresAuth: boolean;
 }
 
-export const WalletRequiredModal: FC<WalletRequiredModal> = ({ agentRequiresWallet }) => {
+export const WalletRequiredModal: FC<WalletRequiredModal> = ({ agentRequiresAuth }) => {
 
     const { address } = useAccount();
     const { openConnectModal } = useConnectModal();
     const { isOpen, onOpen, onClose } = useDisclosure();
+    const { isAuthenticated, loginWithGoogle, loginWithTwitter, loginWithWallet } = usePrivyAuth();
 
     useEffect(() => {
-        if (!agentRequiresWallet) {
+        if (!agentRequiresAuth) {
             if (isOpen) {
                 onClose();
             }
@@ -22,15 +26,19 @@ export const WalletRequiredModal: FC<WalletRequiredModal> = ({ agentRequiresWall
             return;
         }
 
-        if (!address && !isOpen) {
+        // Check if user is authenticated via Privy OR has wallet connected
+        const hasAccess = isAuthenticated || !!address;
+        
+        if (!hasAccess && !isOpen) {
             onOpen();
-        } else if (address && isOpen) {
+        } else if (hasAccess && isOpen) {
             onClose();
         }
     }, [
         address,
         isOpen,
-        agentRequiresWallet,
+        agentRequiresAuth,
+        isAuthenticated,
     ]);
 
     return (
@@ -45,33 +53,83 @@ export const WalletRequiredModal: FC<WalletRequiredModal> = ({ agentRequiresWall
                 <ModalOverlay />
                 <ModalContent
                     sx={{
-                        backgroundColor: '#353936',
-                        borderColor: '#313137',
+                        backgroundColor: '#27292c',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
                         color: 'white',
-                        borderRadius: '8px',
-                        padding: 1,
+                        borderRadius: '12px',
+                        padding: 4,
                     }}
                 >
-                    <ModalHeader>Connect your wallet</ModalHeader>
+                    <ModalHeader>Sign In Required</ModalHeader>
                     <ModalBody>
-                        <Text
-                            sx={{
-                                fontSize: '16px',
-                                lineHeight: '18px',
-                            }}
-                        >
-                            In order to use this agent you need to connect your wallet and select the correct network.
-                        </Text>
+                        <VStack spacing={4} align="stretch">
+                            <Text
+                                sx={{
+                                    fontSize: '16px',
+                                    lineHeight: '1.5',
+                                    color: 'rgba(255, 255, 255, 0.8)',
+                                }}
+                            >
+                                To use this feature, please sign in with one of the available methods:
+                            </Text>
+                            
+                            <VStack spacing={3}>
+                                <Button
+                                    onClick={loginWithGoogle}
+                                    leftIcon={<Mail size={20} />}
+                                    bg="#59F886"
+                                    color="#000"
+                                    _hover={{
+                                        bg: '#4AE066',
+                                        transform: 'translateY(-1px)',
+                                        boxShadow: '0 4px 12px rgba(89, 248, 134, 0.3)',
+                                    }}
+                                    size="lg"
+                                    width="full"
+                                    fontWeight="600"
+                                    borderRadius="8px"
+                                >
+                                    Sign in with Google
+                                </Button>
+                                
+                                <Button
+                                    onClick={loginWithTwitter}
+                                    leftIcon={<FaTwitter size={20} />}
+                                    bg="rgba(89, 248, 134, 0.2)"
+                                    color="#59F886"
+                                    border="1px solid #59F886"
+                                    _hover={{
+                                        bg: 'rgba(89, 248, 134, 0.3)',
+                                        transform: 'translateY(-1px)',
+                                    }}
+                                    size="lg"
+                                    width="full"
+                                    fontWeight="600"
+                                    borderRadius="8px"
+                                >
+                                    Sign in with Twitter
+                                </Button>
+                                
+                                <Button
+                                    onClick={loginWithWallet}
+                                    leftIcon={<Wallet size={20} />}
+                                    bg="rgba(89, 248, 134, 0.2)"
+                                    color="#59F886"
+                                    border="1px solid #59F886"
+                                    _hover={{
+                                        bg: 'rgba(89, 248, 134, 0.3)',
+                                        transform: 'translateY(-1px)',
+                                    }}
+                                    size="lg"
+                                    width="full"
+                                    fontWeight="600"
+                                    borderRadius="8px"
+                                >
+                                    Sign in with Wallet
+                                </Button>
+                            </VStack>
+                        </VStack>
                     </ModalBody>
-                    <ModalFooter>
-                        <HStack>
-                            <Spacer />
-                            <Button onClick={openConnectModal} variant={'greenCustom'} sx={{
-                                pl: 7,
-                                pr: 7,
-                            }}>Connect</Button>
-                        </HStack>
-                    </ModalFooter>
                 </ModalContent>
             </Modal >
         </>

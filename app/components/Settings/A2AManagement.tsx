@@ -52,6 +52,8 @@ import {
   Zap
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
+import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import { useWalletAddress } from '@/services/wallet/utils';
 
 interface A2AManagementProps {
   onSave?: () => void;
@@ -96,6 +98,8 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
   const [selectedAgent, setSelectedAgent] = useState<A2AAgentStatus | null>(null);
   
   const { address } = useAccount();
+  const { isAuthenticated, loginWithGoogle, loginWithTwitter, loginWithWallet } = usePrivyAuth();
+  const { getAddress } = useWalletAddress();
   const toast = useToast();
   const { isOpen: isMessageModalOpen, onOpen: onMessageModalOpen, onClose: onMessageModalClose } = useDisclosure();
   const { isOpen: isDiscoveryModalOpen, onOpen: onDiscoveryModalOpen, onClose: onDiscoveryModalClose } = useDisclosure();
@@ -107,17 +111,18 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
 
   // Load data on mount
   useEffect(() => {
-    if (address) {
+    if (isAuthenticated) {
       loadConnectedAgents();
     }
-  }, [address]);
+  }, [isAuthenticated]);
 
   const loadConnectedAgents = async () => {
-    if (!address) return;
+    const userAddress = getAddress();
+    if (!userAddress) return;
 
     setGlobalLoading(true);
     try {
-      const response = await fetch(`/api/a2a/agents/${address}`);
+      const response = await fetch(`/api/a2a/agents/${userAddress}`);
       if (response.ok) {
         const data = await response.json();
         setConnectedAgents(data.agents || []);
@@ -137,7 +142,8 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
   };
 
   const handleDiscoverAgents = async () => {
-    if (!address || !discoveryUrl.trim()) {
+    const userAddress = getAddress();
+    if (!userAddress || !discoveryUrl.trim()) {
       toast({
         title: 'Invalid Input',
         description: 'Please enter a valid server URL',
@@ -150,7 +156,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
 
     setLoading(prev => ({ ...prev, discovery: true }));
     try {
-      const response = await fetch(`/api/a2a/discover?walletAddress=${address}&serverUrl=${encodeURIComponent(discoveryUrl)}`);
+      const response = await fetch(`/api/a2a/discover?walletAddress=${userAddress}&serverUrl=${encodeURIComponent(discoveryUrl)}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -182,7 +188,8 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
   };
 
   const handleConnectAgent = async (agentCard: A2AAgentCard) => {
-    if (!address) return;
+    const userAddress = getAddress();
+    if (!userAddress) return;
 
     setLoading(prev => ({ ...prev, [agentCard.id]: true }));
     try {
@@ -190,7 +197,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: address,
+          walletAddress: userAddress,
           agentCard,
           endpoint: agentCard.endpoint
         })
@@ -226,7 +233,8 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
   };
 
   const handleDisconnectAgent = async (agentId: string) => {
-    if (!address) return;
+    const userAddress = getAddress();
+    if (!userAddress) return;
 
     if (!confirm('Are you sure you want to disconnect from this agent?')) {
       return;
@@ -238,7 +246,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: address,
+          walletAddress: userAddress,
           agentId
         })
       });
@@ -271,7 +279,8 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
   };
 
   const handleToggleAgent = async (agentId: string, enabled: boolean) => {
-    if (!address) return;
+    const userAddress = getAddress();
+    if (!userAddress) return;
 
     setLoading(prev => ({ ...prev, [`toggle_${agentId}`]: true }));
     try {
@@ -279,7 +288,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: address,
+          walletAddress: userAddress,
           agentId,
           enabled
         })
@@ -313,7 +322,8 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
   };
 
   const handleSendMessage = async () => {
-    if (!address || !selectedAgent || !messageContent.trim()) return;
+    const userAddress = getAddress();
+    if (!userAddress || !selectedAgent || !messageContent.trim()) return;
 
     setSendingMessage(true);
     try {
@@ -321,7 +331,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: address,
+          walletAddress: userAddress,
           targetAgentId: selectedAgent.agentId,
           message: {
             content: messageContent,
@@ -360,14 +370,15 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
   };
 
   const handleRunHealthCheck = async () => {
-    if (!address) return;
+    const userAddress = getAddress();
+    if (!userAddress) return;
 
     setGlobalLoading(true);
     try {
       const response = await fetch('/api/a2a/health/check-all', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: address })
+        body: JSON.stringify({ walletAddress: userAddress })
       });
 
       if (response.ok) {
@@ -418,13 +429,50 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
     }
   };
 
-  if (!address) {
+  if (!isAuthenticated) {
     return (
-      <Box textAlign="center" py={8}>
-        <Text color="rgba(255, 255, 255, 0.6)" fontSize="14px">
-          Please connect your wallet to manage A2A agents
+      <VStack spacing={6} align="center" py={8}>
+        <Text color="rgba(255, 255, 255, 0.6)" fontSize="16px" textAlign="center">
+          Sign in to manage A2A agents
         </Text>
-      </Box>
+        <Text color="rgba(255, 255, 255, 0.4)" fontSize="14px" textAlign="center" maxW="400px">
+          A2A (Agent-to-Agent) allows you to connect and collaborate with external AI agents
+        </Text>
+        <VStack spacing={3} pt={4}>
+          <Button
+            onClick={loginWithGoogle}
+            bg="#59F886"
+            color="#000"
+            _hover={{ bg: '#4AE066' }}
+            size="lg"
+            width="200px"
+          >
+            Sign in with Google
+          </Button>
+          <Button
+            onClick={loginWithTwitter}
+            bg="rgba(89, 248, 134, 0.2)"
+            color="#59F886"
+            border="1px solid #59F886"
+            _hover={{ bg: 'rgba(89, 248, 134, 0.3)' }}
+            size="lg"
+            width="200px"
+          >
+            Sign in with Twitter
+          </Button>
+          <Button
+            onClick={loginWithWallet}
+            bg="rgba(89, 248, 134, 0.2)"
+            color="#59F886"
+            border="1px solid #59F886"
+            _hover={{ bg: 'rgba(89, 248, 134, 0.3)' }}
+            size="lg"
+            width="200px"
+          >
+            Sign in with Wallet
+          </Button>
+        </VStack>
+      </VStack>
     );
   }
 
