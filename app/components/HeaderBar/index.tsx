@@ -11,7 +11,7 @@ import { Settings } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { FC, useState } from 'react';
-import { CustomConnectButton } from './CustomConnectButton';
+import { PrivyLoginButton } from '@/components/PrivyLoginButton';
 import styles from './index.module.css';
 
 interface HeaderBarProps {
@@ -97,7 +97,7 @@ export const HeaderBar: FC<HeaderBarProps> = ({ onBackToJobs }) => {
               />
             </Tooltip>
             <Box className={styles.connectButtonWrapper}>
-              <CustomConnectButton />
+              <PrivyLoginButton />
             </Box>
           </HStack>
         </HStack>

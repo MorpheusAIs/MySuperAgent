@@ -8,6 +8,18 @@ export type AnalyticsEvent =
   | 'auth.authenticated'
   | 'auth.logout'
   | 'auth.error'
+  | 'auth.privy_authenticated'
+  | 'auth.privy_error'
+  | 'auth.google_login_started'
+  | 'auth.google_login_success'
+  | 'auth.google_login_error'
+  | 'auth.wallet_login_started'
+  | 'auth.wallet_login_success'
+  | 'auth.wallet_login_error'
+  | 'auth.twitter_login_started'
+  | 'auth.twitter_login_success'
+  | 'auth.twitter_login_error'
+  | 'auth.privy_logout'
   
   // Agent interaction events
   | 'agent.selected'
@@ -82,6 +94,11 @@ export interface EventProperties {
   userId?: string;
   wallet?: string;
   walletId?: string;
+  
+  // Authentication properties
+  privyUserId?: string;
+  authMethod?: string;
+  email?: string;
   
   // Job properties
   jobId?: string;

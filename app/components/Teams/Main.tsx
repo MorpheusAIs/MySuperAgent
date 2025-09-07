@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
+import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import { useWalletAddress } from '@/services/wallet/utils';
 import styles from './Main.module.css';
 
 interface Agent {
@@ -60,13 +62,16 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   });
 
   const { address } = useAccount();
+  const { isAuthenticated, loginWithGoogle, loginWithTwitter, loginWithWallet } = usePrivyAuth();
+  const { getAddress } = useWalletAddress();
   const toast = useToast();
 
   const fetchTeams = useCallback(async () => {
-    if (!address) return;
+    const userAddress = getAddress();
+    if (!userAddress) return;
 
     try {
-      const response = await fetch(`/api/teams?wallet_address=${address}`);
+      const response = await fetch(`/api/teams?wallet_address=${userAddress}`);
       if (response.ok) {
         const data = await response.json();
         setTeams(data);
@@ -81,7 +86,7 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     } finally {
       setLoading(false);
     }
-  }, [address, toast]);
+  }, [getAddress, toast]);
 
   const fetchAvailableAgents = useCallback(async () => {
     try {
@@ -96,14 +101,15 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   }, []);
 
   useEffect(() => {
-    if (address) {
+    if (isAuthenticated) {
       fetchTeams();
       fetchAvailableAgents();
     }
-  }, [address, fetchTeams, fetchAvailableAgents]);
+  }, [isAuthenticated, fetchTeams, fetchAvailableAgents]);
 
   const handleCreateTeam = async () => {
-    if (!address || !formData.name || formData.agents.length === 0) {
+    const userAddress = getAddress();
+    if (!userAddress || !formData.name || formData.agents.length === 0) {
       toast({
         title: 'Missing required fields',
         description: 'Please provide a name and select at least one agent',
@@ -121,7 +127,7 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
         },
         body: JSON.stringify({
           ...formData,
-          wallet_address: address,
+          wallet_address: userAddress,
         }),
       });
 
@@ -249,6 +255,58 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
         : [...prev.agents, agentName],
     }));
   };
+
+  if (!isAuthenticated) {
+    return (
+      <Box className={styles.container}>
+        <VStack spacing={6} align="center" py={12}>
+          <Users size={64} color="rgba(255, 255, 255, 0.3)" />
+          <VStack spacing={3}>
+            <Text fontSize="24px" fontWeight="600" color="white">
+              Sign In Required
+            </Text>
+            <Text fontSize="16px" color="rgba(255, 255, 255, 0.6)" textAlign="center" maxW="400px">
+              Sign in to create and manage teams of AI agents for complex tasks
+            </Text>
+            <VStack spacing={3} pt={4}>
+              <Button
+                onClick={loginWithGoogle}
+                bg="#59F886"
+                color="#000"
+                _hover={{ bg: '#4AE066' }}
+                size="lg"
+                width="200px"
+              >
+                Sign in with Google
+              </Button>
+              <Button
+                onClick={loginWithTwitter}
+                bg="rgba(89, 248, 134, 0.2)"
+                color="#59F886"
+                border="1px solid #59F886"
+                _hover={{ bg: 'rgba(89, 248, 134, 0.3)' }}
+                size="lg"
+                width="200px"
+              >
+                Sign in with Twitter
+              </Button>
+              <Button
+                onClick={loginWithWallet}
+                bg="rgba(89, 248, 134, 0.2)"
+                color="#59F886"
+                border="1px solid #59F886"
+                _hover={{ bg: 'rgba(89, 248, 134, 0.3)' }}
+                size="lg"
+                width="200px"
+              >
+                Sign in with Wallet
+              </Button>
+            </VStack>
+          </VStack>
+        </VStack>
+      </Box>
+    );
+  }
 
   if (loading) {
     return (

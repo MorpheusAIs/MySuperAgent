@@ -65,7 +65,10 @@ export const decryptData = async (
   console.log("[LIT] Starting decryption process");
 
   try {
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    if (!window.ethereum) {
+      throw new Error('No ethereum provider found');
+    }
+    const provider = new ethers.BrowserProvider(window.ethereum as any);
     const signer = await provider.getSigner();
     const walletAddress = await signer.getAddress();
 

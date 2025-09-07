@@ -1,11 +1,12 @@
 import { AgentsButton } from '@/components/Agents/Button';
-import { CombinedAuth } from '@/components/Auth/CombinedAuth';
 import { CdpWalletsButton } from '@/components/CdpWallets/Button';
 import { StyledTooltip } from '@/components/Common/StyledTooltip';
 import { DashboardButton } from '@/components/Dashboard/Button';
+import { PrivyLoginButton } from '@/components/PrivyLoginButton';
 import { SettingsButton } from '@/components/Settings';
 import { TeamsButton } from '@/components/Teams/Button';
 import { SchedulingPreferencesButton } from '@/components/UserPreferences/Button';
+import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
 import { Box, Divider, Flex, Text, Tooltip } from '@chakra-ui/react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
@@ -73,6 +74,16 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
   isHeaderVisible = true,
 }) => {
   const ToggleIcon = isSidebarOpen ? IconChevronLeft : IconChevronRight;
+  const { isAuthenticated } = usePrivyAuth();
+
+  // For wallet connection support alongside Privy, we can still check account but don't require it
+  const WalletConnectWrapper = ({ children }: { children: (account: any) => React.ReactNode }) => {
+    return (
+      <ConnectButton.Custom>
+        {({ account }) => children(account)}
+      </ConnectButton.Custom>
+    );
+  };
 
   return (
     <div
@@ -88,19 +99,23 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
             transition: 'padding-top 0.3s ease',
           }}
         >
-          <ConnectButton.Custom>
-            {({ account }) => (
+          <WalletConnectWrapper>
+            {(account) => {
+              // Use Privy authentication OR wallet connection for access
+              const hasAccess = isAuthenticated || !!account;
+              
+              return (
               <div className={styles.mainContent}>
                 <MenuSection title="General">
                   <Tooltip
-                    isDisabled={!!account}
-                    label="A wallet connection is required to access dashboard features."
+                    isDisabled={hasAccess}
+                    label="Sign in to access dashboard features."
                     placement="right"
                   >
                     <div className={styles.menuItem}>
                       <Box
-                        pointerEvents={account ? 'auto' : 'none'}
-                        opacity={account ? 1 : 0.5}
+                        pointerEvents={hasAccess ? 'auto' : 'none'}
+                        opacity={hasAccess ? 1 : 0.5}
                       >
                         <DashboardButton />
                       </Box>
@@ -112,28 +127,28 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
 
                 <MenuSection title="Preferences">
                   <Tooltip
-                    isDisabled={!!account}
-                    label="Connect your wallet to access personalized settings and configurations. These settings are unique to each wallet address and help customize your experience."
+                    isDisabled={hasAccess}
+                    label="Sign in to access personalized settings and configurations."
                     placement="right"
                   >
                     <div className={styles.menuItem}>
                       <Box
-                        pointerEvents={account ? 'auto' : 'none'}
-                        opacity={account ? 1 : 0.5}
+                        pointerEvents={hasAccess ? 'auto' : 'none'}
+                        opacity={hasAccess ? 1 : 0.5}
                       >
                         <SettingsButton />
                       </Box>
                     </div>
                   </Tooltip>
                   <Tooltip
-                    isDisabled={!!account}
-                    label="Configure your default scheduling preferences and job automation settings. Requires wallet connection for personalized settings."
+                    isDisabled={hasAccess}
+                    label="Sign in to configure your default scheduling preferences and job automation settings."
                     placement="right"
                   >
                     <div className={styles.menuItem}>
                       <Box
-                        pointerEvents={account ? 'auto' : 'none'}
-                        opacity={account ? 1 : 0.5}
+                        pointerEvents={hasAccess ? 'auto' : 'none'}
+                        opacity={hasAccess ? 1 : 0.5}
                       >
                         <SchedulingPreferencesButton />
                       </Box>
@@ -145,14 +160,14 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
 
                 <MenuSection title="Advanced">
                   <Tooltip
-                    isDisabled={!!account}
-                    label="A wallet connection is required to access advanced features like workflows, API integrations, device sync, and CDP wallets."
+                    isDisabled={hasAccess}
+                    label="Sign in to access advanced features like workflows, API integrations, device sync, and CDP wallets."
                     placement="right"
                   >
                     <div>
                       <Box
-                        pointerEvents={account ? 'auto' : 'none'}
-                        opacity={account ? 1 : 0.5}
+                        pointerEvents={hasAccess ? 'auto' : 'none'}
+                        opacity={hasAccess ? 1 : 0.5}
                         pl={1}
                       >
                         <div className={styles.menuItem}>
@@ -204,12 +219,20 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                   />
                 </MenuSection>
               </div>
-            )}
-          </ConnectButton.Custom>
+              );
+            }}
+          </WalletConnectWrapper>
 
           <div className={styles.footer}>
             <Box p={4}>
-              <CombinedAuth variant="full" size="sm" showLabels={true} />
+              <Box 
+                bg="rgba(255, 255, 255, 0.02)" 
+                borderRadius="12px" 
+                border="1px solid rgba(255, 255, 255, 0.08)"
+                p={3}
+              >
+                <PrivyLoginButton variant="sidebar" size="sm" />
+              </Box>
             </Box>
           </div>
         </div>

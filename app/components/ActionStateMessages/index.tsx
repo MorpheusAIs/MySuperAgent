@@ -597,9 +597,9 @@ const RateLimitedMessage: FC<{
           variant="ghost" 
           size="sm"
           rightIcon={<ExternalLinkIcon />}
-          onClick={() => onAction?.('upgrade_plan')}
+          onClick={() => onAction?.('sign_in')}
         >
-          Upgrade Plan
+          Sign In
         </Button>
       </HStack>
     </Box>

@@ -1,4 +1,4 @@
-import { useAuth } from '@/contexts/auth/AuthProvider';
+import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
 import {
   AlertDialog,
   AlertDialogBody,
@@ -20,17 +20,17 @@ import {
   useToast,
   VStack,
 } from '@chakra-ui/react';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
   Copy,
   Crown,
   LogOut,
+  Mail,
   Shield,
   Trash2,
   User,
   Wallet,
 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { FaTwitter } from 'react-icons/fa';
 import { useEffect, useRef, useState } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
 
@@ -47,20 +47,26 @@ interface UsageData {
 export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
-  const { isAuthenticated, logout } = useAuth();
-  const { data: session } = useSession();
+  const { 
+    isAuthenticated, 
+    logout, 
+    userEmail, 
+    userWallet, 
+    loginWithGoogle, 
+    loginWithTwitter, 
+    loginWithWallet 
+  } = usePrivyAuth();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isDeleting, setIsDeleting] = useState(false);
   const [usageData, setUsageData] = useState<UsageData | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const toast = useToast();
 
-  // Determine user plan based on wallet connection
-  // If wallet is connected, user is on Pro plan regardless of authentication status
-  const isProUser = isConnected && address;
-  const hasGoogleAuth = !!session?.user;
-  const planType = isProUser ? 'Pro' : 'Free';
-  const messageLimit = isProUser ? 'Unlimited' : '10 per day';
+  // Determine user plan based on authentication - Privy users are all "Pro" now
+  const isProUser = isAuthenticated;
+  const authMethod = userWallet ? 'wallet' : userEmail ? 'email' : 'twitter';
+  const planType = 'Pro'; // All authenticated users are Pro now
+  const messageLimit = 'Unlimited'; // All authenticated users get unlimited
   const messagesUsed = usageData?.messagesUsedToday || 0;
 
   // Fetch usage data for free users
@@ -112,12 +118,14 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
     }
   };
 
-  const handleDisconnectWallet = () => {
-    disconnect();
-    logout(); // Also logout from the auth system
+  const handleSignOut = () => {
+    if (isConnected) {
+      disconnect(); // Disconnect wallet if connected
+    }
+    logout(); // Logout from Privy
     toast({
-      title: 'Wallet disconnected',
-      description: 'Your wallet has been disconnected',
+      title: 'Signed out',
+      description: 'You have been signed out successfully',
       status: 'info',
       duration: 2000,
       isClosable: true,
@@ -186,23 +194,23 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                   </Box>
                   <VStack align="start" spacing={0}>
                     <Text color="white" fontWeight="600">
-                      {planType} Plan
+                      {isAuthenticated ? 'Pro Plan' : 'Free Plan'}
                     </Text>
                     <Text color="rgba(255, 255, 255, 0.7)" fontSize="sm">
-                      {isProUser
+                      {isAuthenticated
                         ? 'Full access to all features'
-                        : 'Limited access with email authentication'}
+                        : 'Sign in to access all features'}
                     </Text>
                   </VStack>
                 </HStack>
                 <Badge
-                  colorScheme={isProUser ? 'green' : 'gray'}
+                  colorScheme={isAuthenticated ? 'green' : 'gray'}
                   variant="solid"
                   px={3}
                   py={1}
                   borderRadius="full"
                 >
-                  {planType}
+                  {isAuthenticated ? 'Pro' : 'Free'}
                 </Badge>
               </Flex>
 
@@ -214,14 +222,12 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                     Message Usage
                   </Text>
                   <Text color="rgba(255, 255, 255, 0.7)" fontSize="sm">
-                    {isProUser
-                      ? messageLimit
-                      : `${messagesUsed}/10 messages used today`}
+                    {isAuthenticated ? 'Unlimited messages' : 'Sign in for unlimited access'}
                   </Text>
                 </VStack>
-                {!isProUser && (
-                  <Text color="orange.400" fontSize="sm" fontWeight="500">
-                    {10 - messagesUsed} remaining
+                {isAuthenticated && (
+                  <Text color="#59F886" fontSize="sm" fontWeight="500">
+                    ∞ Unlimited
                   </Text>
                 )}
               </Flex>
@@ -234,33 +240,42 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                     Authentication Method
                   </Text>
                   <Text color="rgba(255, 255, 255, 0.7)" fontSize="sm">
-                    {isProUser
+                    {!isAuthenticated
+                      ? 'No Authentication'
+                      : userWallet
                       ? 'Crypto Wallet Connected'
-                      : hasGoogleAuth
-                      ? `Google Account (${session?.user?.email})`
-                      : 'No Authentication'}
+                      : userEmail
+                      ? `Google Account (${userEmail})`
+                      : 'Twitter Account'}
                   </Text>
                 </VStack>
                 <HStack spacing={2}>
-                  {isProUser ? (
-                    <>
-                      <Wallet size={16} color="#59F886" />
-                      <Text color="#59F886" fontSize="sm" fontWeight="500">
-                        Pro Plan
-                      </Text>
-                    </>
-                  ) : hasGoogleAuth ? (
-                    <>
-                      <User size={16} color="#FFA500" />
-                      <Text color="#FFA500" fontSize="sm" fontWeight="500">
-                        Free Plan
-                      </Text>
-                    </>
-                  ) : (
+                  {!isAuthenticated ? (
                     <>
                       <User size={16} color="rgba(255, 255, 255, 0.7)" />
                       <Text color="rgba(255, 255, 255, 0.7)" fontSize="sm">
                         Not Signed In
+                      </Text>
+                    </>
+                  ) : userWallet ? (
+                    <>
+                      <Wallet size={16} color="#59F886" />
+                      <Text color="#59F886" fontSize="sm" fontWeight="500">
+                        Wallet
+                      </Text>
+                    </>
+                  ) : userEmail ? (
+                    <>
+                      <Mail size={16} color="#59F886" />
+                      <Text color="#59F886" fontSize="sm" fontWeight="500">
+                        Google
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <FaTwitter size={16} color="#59F886" />
+                      <Text color="#59F886" fontSize="sm" fontWeight="500">
+                        Twitter
                       </Text>
                     </>
                   )}
@@ -271,11 +286,11 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
         </Card>
       </Box>
 
-      {/* Wallet Management Section (only show for pro users) */}
-      {isProUser && address && (
+      {/* Account Management Section (only show for authenticated users) */}
+      {isAuthenticated && (
         <Box>
           <Heading size="md" color="white" mb={4}>
-            Wallet Management
+            Account Management
           </Heading>
           <Card
             bg="rgba(255, 255, 255, 0.05)"
@@ -285,65 +300,69 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
               <VStack spacing={4} align="stretch">
                 <HStack spacing={3}>
                   <Box p={2} borderRadius="md" bg="#59F886" color="#000">
-                    <Wallet size={20} />
+                    {userWallet ? <Wallet size={20} /> : userEmail ? <Mail size={20} /> : <FaTwitter size={20} />}
                   </Box>
                   <VStack align="start" spacing={0}>
                     <Text color="white" fontWeight="600">
-                      Connected Wallet
+                      Connected Account
                     </Text>
                     <Text color="rgba(255, 255, 255, 0.7)" fontSize="sm">
-                      Manage your connected crypto wallet
+                      Manage your authentication and account settings
                     </Text>
                   </VStack>
                 </HStack>
 
                 <Divider borderColor="rgba(255, 255, 255, 0.1)" />
 
-                {/* Wallet Address */}
+                {/* Account Details */}
                 <Flex justify="space-between" align="center">
                   <VStack align="start" spacing={0}>
                     <Text color="white" fontWeight="500">
-                      Wallet Address
+                      Account Details
                     </Text>
                     <Text
                       color="rgba(255, 255, 255, 0.7)"
                       fontSize="sm"
-                      fontFamily="mono"
+                      fontFamily={userWallet ? "mono" : "inherit"}
                     >
-                      {address?.slice(0, 6)}...{address?.slice(-4)}
+                      {userWallet 
+                        ? `${userWallet.slice(0, 6)}...${userWallet.slice(-4)}`
+                        : userEmail || 'Twitter Account'}
                     </Text>
                   </VStack>
-                  <Button
-                    onClick={handleCopyAddress}
-                    size="sm"
-                    leftIcon={<Copy size={16} />}
-                    variant="outline"
-                    colorScheme="green"
-                  >
-                    Copy
-                  </Button>
+                  {userWallet && (
+                    <Button
+                      onClick={handleCopyAddress}
+                      size="sm"
+                      leftIcon={<Copy size={16} />}
+                      variant="outline"
+                      colorScheme="green"
+                    >
+                      Copy
+                    </Button>
+                  )}
                 </Flex>
 
                 <Divider borderColor="rgba(255, 255, 255, 0.1)" />
 
-                {/* Disconnect Wallet */}
+                {/* Sign Out */}
                 <Flex justify="space-between" align="center">
                   <VStack align="start" spacing={0}>
                     <Text color="white" fontWeight="500">
-                      Disconnect Wallet
+                      Sign Out
                     </Text>
                     <Text color="rgba(255, 255, 255, 0.7)" fontSize="sm">
-                      This will switch you back to Free plan
+                      Sign out of your account
                     </Text>
                   </VStack>
                   <Button
-                    onClick={handleDisconnectWallet}
+                    onClick={handleSignOut}
                     size="sm"
                     leftIcon={<LogOut size={16} />}
                     variant="outline"
                     colorScheme="orange"
                   >
-                    Disconnect
+                    Sign Out
                   </Button>
                 </Flex>
               </VStack>
@@ -352,11 +371,11 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
         </Box>
       )}
 
-      {/* Upgrade Section (only show for free users) */}
-      {!isProUser && (
+      {/* Sign In Section (only show for unauthenticated users) */}
+      {!isAuthenticated && (
         <Box>
           <Heading size="md" color="white" mb={4}>
-            Upgrade to Pro
+            Sign In to Get Started
           </Heading>
           <Card
             bg="linear-gradient(135deg, rgba(89, 248, 134, 0.1) 0%, rgba(89, 248, 134, 0.05) 100%)"
@@ -373,8 +392,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                       Unlock Full Access
                     </Heading>
                     <Text color="rgba(255, 255, 255, 0.8)" fontSize="sm">
-                      Connect your crypto wallet to get unlimited messages and
-                      premium features
+                      Sign in with Google, Twitter, or your crypto wallet
                     </Text>
                   </VStack>
                 </HStack>
@@ -383,47 +401,76 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                   <HStack spacing={2}>
                     <Shield size={16} color="#59F886" />
                     <Text color="white" fontSize="sm">
-                      Unlimited messages per day
+                      Unlimited messages and features
                     </Text>
                   </HStack>
                   <HStack spacing={2}>
                     <Shield size={16} color="#59F886" />
                     <Text color="white" fontSize="sm">
-                      Priority support
+                      Personalized settings and preferences
                     </Text>
                   </HStack>
                   <HStack spacing={2}>
                     <Shield size={16} color="#59F886" />
                     <Text color="white" fontSize="sm">
-                      Advanced features and integrations
+                      Advanced integrations and automations
                     </Text>
                   </HStack>
                 </VStack>
 
-                <Box pt={2}>
-                  <ConnectButton.Custom>
-                    {({ openConnectModal, connectModalOpen }) => (
-                      <Button
-                        onClick={openConnectModal}
-                        bg="#59F886"
-                        color="#000"
-                        _hover={{
-                          bg: '#4AE066',
-                          transform: 'translateY(-1px)',
-                          boxShadow: '0 4px 12px rgba(89, 248, 134, 0.3)',
-                        }}
-                        size="lg"
-                        width="full"
-                        fontWeight="600"
-                        borderRadius="12px"
-                        isLoading={connectModalOpen}
-                        leftIcon={<Wallet size={20} />}
-                      >
-                        Connect Wallet to Upgrade
-                      </Button>
-                    )}
-                  </ConnectButton.Custom>
-                </Box>
+                <VStack spacing={2} pt={2}>
+                  <Button
+                    onClick={loginWithGoogle}
+                    bg="#59F886"
+                    color="#000"
+                    _hover={{
+                      bg: '#4AE066',
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 12px rgba(89, 248, 134, 0.3)',
+                    }}
+                    size="lg"
+                    width="full"
+                    fontWeight="600"
+                    borderRadius="12px"
+                    leftIcon={<Mail size={20} />}
+                  >
+                    Sign In with Google
+                  </Button>
+                  <Button
+                    onClick={loginWithTwitter}
+                    bg="rgba(89, 248, 134, 0.2)"
+                    color="#59F886"
+                    border="1px solid #59F886"
+                    _hover={{
+                      bg: 'rgba(89, 248, 134, 0.3)',
+                      transform: 'translateY(-1px)',
+                    }}
+                    size="lg"
+                    width="full"
+                    fontWeight="600"
+                    borderRadius="12px"
+                    leftIcon={<FaTwitter size={20} />}
+                  >
+                    Sign In with Twitter
+                  </Button>
+                  <Button
+                    onClick={loginWithWallet}
+                    bg="rgba(89, 248, 134, 0.2)"
+                    color="#59F886"
+                    border="1px solid #59F886"
+                    _hover={{
+                      bg: 'rgba(89, 248, 134, 0.3)',
+                      transform: 'translateY(-1px)',
+                    }}
+                    size="lg"
+                    width="full"
+                    fontWeight="600"
+                    borderRadius="12px"
+                    leftIcon={<Wallet size={20} />}
+                  >
+                    Sign In with Wallet
+                  </Button>
+                </VStack>
               </VStack>
             </CardBody>
           </Card>

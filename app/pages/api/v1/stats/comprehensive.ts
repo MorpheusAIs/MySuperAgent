@@ -54,7 +54,6 @@ export default async function handler(
       `has completed ${stats.totalJobs.toLocaleString()} total jobs to date`,
       `handles ${stats.recurringJobs} recurring jobs actively`,
       `has worked ${stats.humanEquivalentHours} human equivalent hours`,
-      `completed ${stats.completedToday} jobs over the past day`,
       stats.totalIncomeEarned > 0 ? `has earned $${stats.totalIncomeEarned.toLocaleString()} for humans so far` : null,
     ].filter(Boolean); // Remove null messages
 
