@@ -169,7 +169,6 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
           embeddedWallets: {
             createOnLogin: 'users-without-wallets',
             requireUserPasswordOnCreate: false,
-            noPromptOnSignature: false,
           },
           mfa: {
             noPromptOnMfaRequired: false,

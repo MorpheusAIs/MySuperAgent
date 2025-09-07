@@ -92,7 +92,7 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
             
             // Store authentication data
             localStorage.setItem("authToken", access_token);
-            localStorage.setItem("userId", user_id.toString());
+            localStorage.setItem("userId", user_id?.toString() || '');
             localStorage.setItem("privyUserId", user.id);
 
             setAuthToken(access_token);
@@ -102,10 +102,10 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
             // Track successful authentication
             trackEvent('auth.privy_authenticated', {
               privyUserId: user.id,
-              userId: user_id.toString(),
+              userId: user_id?.toString(),
               authMethod: user.email ? 'google' : 'wallet',
               email: user.email?.address,
-              wallet: userWallet,
+              wallet: userWallet || undefined,
             });
           }
         } catch (error) {

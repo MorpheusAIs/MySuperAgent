@@ -15,7 +15,10 @@ import {
  * Get the Irys uploader
  */
 export const getIrysUploader = async () => {
-  const provider = new ethers.BrowserProvider(window.ethereum);
+  if (!window.ethereum) {
+    throw new Error('No ethereum provider found');
+  }
+  const provider = new ethers.BrowserProvider(window.ethereum as any);
   const irysUploader = await WebUploader(WebEthereum).withAdapter(
     EthersV6Adapter(provider)
   );
