@@ -19,6 +19,7 @@ import styles from './Main.module.css';
 import { MCPConfiguration } from './MCPConfiguration';
 import { RulesAndMemories } from './RulesAndMemories';
 import { UserCredentials } from './UserCredentials';
+import { UserPreferencesComponent } from '../UserPreferences';
 
 interface SettingsMainProps {
   isSidebarOpen?: boolean;
@@ -27,10 +28,11 @@ interface SettingsMainProps {
 const TAB_CONFIG = [
   { id: 'account', name: 'Account', index: 0 },
   { id: 'general', name: 'General', index: 1 },
-  { id: 'rules', name: 'Rules & Memories', index: 2 },
-  { id: 'credentials', name: 'Credentials', index: 3 },
-  { id: 'mcp', name: 'MCP Servers', index: 4 },
-  { id: 'a2a', name: 'A2A Agents', index: 5 },
+  { id: 'scheduling', name: 'Scheduling', index: 2 },
+  { id: 'rules', name: 'Rules & Memories', index: 3 },
+  { id: 'credentials', name: 'Credentials', index: 4 },
+  { id: 'mcp', name: 'MCP Servers', index: 5 },
+  { id: 'a2a', name: 'A2A Agents', index: 6 },
 ];
 
 export const SettingsMain: React.FC<SettingsMainProps> = ({
@@ -108,6 +110,11 @@ export const SettingsMain: React.FC<SettingsMainProps> = ({
                 <TabPanel p={0} h="full">
                   <Box className={styles.tabContent}>
                     <GeneralSettings onSave={() => {}} />
+                  </Box>
+                </TabPanel>
+                <TabPanel p={0} h="full">
+                  <Box className={styles.tabContent}>
+                    <UserPreferencesComponent />
                   </Box>
                 </TabPanel>
                 <TabPanel p={0} h="full">

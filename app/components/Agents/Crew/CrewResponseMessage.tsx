@@ -552,38 +552,45 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
             
             {metadata.userSpecificAgents !== undefined && (
               <VStack align="end" spacing={1}>
-                <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="wider">User Context</Text>
-                <Badge 
-                  colorScheme={metadata.userSpecificAgents ? 'green' : 'gray'} 
-                  variant="subtle"
-                  fontSize="xs"
-                  px={2}
+                <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="wider">Agent Pool</Text>
+                <Tooltip 
+                  label={metadata.userSpecificAgents 
+                    ? "Using your personal agents and tools (MCP/A2A connections)" 
+                    : "Using default system agents only"
+                  } 
+                  placement="left"
                 >
-                  {metadata.userSpecificAgents ? 'Personalized' : 'Default'}
-                </Badge>
+                  <Badge 
+                    colorScheme={metadata.userSpecificAgents ? 'green' : 'gray'} 
+                    variant="subtle"
+                    fontSize="xs"
+                    px={2}
+                    cursor="help"
+                  >
+                    {metadata.userSpecificAgents ? 'Personal + System' : 'System Only'}
+                  </Badge>
+                </Tooltip>
               </VStack>
             )}
           </HStack>
           
-          {/* Available Agents Summary */}
-          {metadata.availableAgents && metadata.availableAgents.length > 0 && (
+          {/* Used Agents Summary */}
+          {allAgents && allAgents.length > 0 && (
             <Box>
               <HStack justify="space-between" mb={2}>
-                <Text fontSize="sm" fontWeight="semibold" color="gray.300">Agent Pool</Text>
-                <Text fontSize="xs" color="gray.500">{metadata.availableAgents.length} agents available</Text>
+                <Text fontSize="sm" fontWeight="semibold" color="gray.300">Agents Used</Text>
+                <Text fontSize="xs" color="gray.500">{allAgents.length} agents</Text>
               </HStack>
               
               <Box maxH="120px" overflowY="auto" bg="gray.850" borderRadius="md" p={2}>
                 <Box display="grid" gridTemplateColumns="repeat(auto-fit, minmax(120px, 1fr))" gap={2}>
-                  {metadata.availableAgents.map((agent: any, idx: number) => {
-                    const agentName = typeof agent === 'string' ? agent : agent.name;
-                    const agentType = typeof agent === 'string' ? 'core' : agent.type;
-                    const isSelected = agentName === (metadata.selectedAgent || metadata.selected_agent);
+                  {allAgents.map((agent: string, idx: number) => {
+                    const isSelected = agent === (metadata.selectedAgent || metadata.selected_agent);
                     
                     return (
                       <Badge 
                         key={idx} 
-                        colorScheme={isSelected ? 'blue' : agentType === 'core' ? 'gray' : 'green'} 
+                        colorScheme={isSelected ? 'blue' : 'green'} 
                         variant={isSelected ? 'solid' : 'outline'}
                         fontSize="2xs"
                         px={2}
@@ -592,7 +599,7 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
                         textAlign="center"
                         fontWeight={isSelected ? 'bold' : 'normal'}
                       >
-                        {agentName?.replace(/_/g, ' ')?.replace(/backend/gi, '')}
+                        {agent?.replace(/_/g, ' ')?.replace(/backend/gi, '')}
                       </Badge>
                     );
                   })}

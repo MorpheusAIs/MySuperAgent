@@ -2,17 +2,15 @@ import { AgentsButton } from '@/components/Agents/Button';
 import { CdpWalletsButton } from '@/components/CdpWallets/Button';
 import { StyledTooltip } from '@/components/Common/StyledTooltip';
 import { DashboardButton } from '@/components/Dashboard/Button';
+import { ModelSelectionButton } from '@/components/ModelSelection';
 import { PrivyLoginButton } from '@/components/PrivyLoginButton';
 import { SettingsButton } from '@/components/Settings';
 import { TeamsButton } from '@/components/Teams/Button';
-import { SchedulingPreferencesButton } from '@/components/UserPreferences/Button';
 import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
 import { Box, Divider, Flex, Text, Tooltip } from '@chakra-ui/react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
   IconBrandDiscord,
-  IconBrandGithub,
-  IconBrandTwitter,
   IconChevronLeft,
   IconChevronRight,
   IconQuestionMark,
@@ -48,12 +46,31 @@ const MenuSection = ({
   </Box>
 );
 
+const LetterIcon = ({ letter }: { letter: string }) => (
+  <Box
+    display="inline-flex"
+    alignItems="center"
+    justifyContent="center"
+    width="20px"
+    height="20px"
+    borderRadius="4px"
+    bg="rgba(255, 255, 255, 0.1)"
+    color="white"
+    fontSize="12px"
+    fontWeight="bold"
+  >
+    {letter}
+  </Box>
+);
+
 const ExternalLinkMenuItem = ({
   icon: Icon,
+  letter,
   title,
   href,
 }: {
-  icon: React.ElementType;
+  icon?: React.ElementType;
+  letter?: string;
   title: string;
   href: string;
 }) => (
@@ -62,7 +79,11 @@ const ExternalLinkMenuItem = ({
     onClick={() => window.open(href, '_blank', 'noopener,noreferrer')}
   >
     <Flex align="center" gap={3}>
-      {Icon && <Icon size={20} />}
+      {letter ? (
+        <LetterIcon letter={letter} />
+      ) : (
+        Icon && <Icon size={20} />
+      )}
       <Text>{title}</Text>
     </Flex>
   </div>
@@ -128,7 +149,7 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                 <MenuSection title="Preferences">
                   <Tooltip
                     isDisabled={hasAccess}
-                    label="Sign in to access personalized settings and configurations."
+                    label="Sign in to access personalized settings, scheduling preferences, and configurations."
                     placement="right"
                   >
                     <div className={styles.menuItem}>
@@ -140,20 +161,9 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                       </Box>
                     </div>
                   </Tooltip>
-                  <Tooltip
-                    isDisabled={hasAccess}
-                    label="Sign in to configure your default scheduling preferences and job automation settings."
-                    placement="right"
-                  >
-                    <div className={styles.menuItem}>
-                      <Box
-                        pointerEvents={hasAccess ? 'auto' : 'none'}
-                        opacity={hasAccess ? 1 : 0.5}
-                      >
-                        <SchedulingPreferencesButton />
-                      </Box>
-                    </div>
-                  </Tooltip>
+                  <Box className={styles.modelSelection}>
+                    <ModelSelectionButton />
+                  </Box>
                 </MenuSection>
 
                 <Divider my={0.5} borderColor="whiteAlpha.200" />
@@ -198,12 +208,12 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                     href="https://discord.gg/Dc26EFb6JK"
                   />
                   <ExternalLinkMenuItem
-                    icon={IconBrandTwitter}
+                    letter="T"
                     title="Follow us on Twitter"
                     href="https://twitter.com/MorpheusAIs"
                   />
                   <ExternalLinkMenuItem
-                    icon={IconBrandGithub}
+                    letter="G"
                     title="Become a contributor"
                     href="https://github.com/MorpheusAIs/Docs"
                   />

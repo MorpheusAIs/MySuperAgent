@@ -2,14 +2,13 @@
   width: 100%;
   display: flex;
   padding: 16px;
-  justify-content: center;
   color: white;
 }
 
 .messageWrapper {
   width: 100%;
-  max-width: 50rem;
   display: flex;
+  flex: 1;
 }
 
 .userMessage .messageWrapper {
@@ -26,6 +25,7 @@
 
 .assistantContent {
   width: 100%;
+  flex: 1;
   background-color: #000;
   font-size: 14px;
 }
