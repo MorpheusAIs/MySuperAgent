@@ -1,59 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import { useWalletAddress } from '@/services/wallet/utils';
 import {
-  VStack,
-  HStack,
+  Badge,
   Box,
-  Text,
   Button,
-  Grid,
-  Input,
-  FormControl,
-  FormLabel,
-  useToast,
-  Spinner,
-  IconButton,
   Collapse,
   Divider,
-  Badge,
   Flex,
-  Alert,
-  AlertIcon,
-  AlertTitle,
-  AlertDescription,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
-  Tooltip,
+  FormControl,
+  FormLabel,
+  Grid,
+  HStack,
+  IconButton,
+  Input,
   Menu,
   MenuButton,
-  MenuList,
   MenuItem,
-  useDisclosure,
+  MenuList,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
+  Spinner,
+  Text,
   Textarea,
+  Tooltip,
+  useDisclosure,
+  useToast,
+  VStack,
 } from '@chakra-ui/react';
-import { 
-  ChevronDown, 
-  ChevronRight, 
-  RefreshCw, 
-  Settings, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
-  Users, 
+import {
+  AlertCircle,
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  MessageSquare,
+  MoreVertical,
   Plus,
+  RefreshCw,
   Search,
   Send,
   Trash2,
-  MoreVertical,
-  MessageSquare,
-  Zap
+  Users,
+  XCircle,
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
-import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
-import { useWalletAddress } from '@/services/wallet/utils';
 
 interface A2AManagementProps {
   onSave?: () => void;
@@ -91,18 +85,31 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [globalLoading, setGlobalLoading] = useState(false);
   const [discoveryUrl, setDiscoveryUrl] = useState('');
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >({
     connected: true,
-    discovery: false
+    discovery: false,
   });
-  const [selectedAgent, setSelectedAgent] = useState<A2AAgentStatus | null>(null);
-  
+  const [selectedAgent, setSelectedAgent] = useState<A2AAgentStatus | null>(
+    null
+  );
+
   const { address } = useAccount();
-  const { isAuthenticated, loginWithGoogle, loginWithTwitter, loginWithWallet } = usePrivyAuth();
+  const { isAuthenticated, loginWithGoogle, loginWithX, loginWithWallet } =
+    usePrivyAuth();
   const { getAddress } = useWalletAddress();
   const toast = useToast();
-  const { isOpen: isMessageModalOpen, onOpen: onMessageModalOpen, onClose: onMessageModalClose } = useDisclosure();
-  const { isOpen: isDiscoveryModalOpen, onOpen: onDiscoveryModalOpen, onClose: onDiscoveryModalClose } = useDisclosure();
+  const {
+    isOpen: isMessageModalOpen,
+    onOpen: onMessageModalOpen,
+    onClose: onMessageModalClose,
+  } = useDisclosure();
+  const {
+    isOpen: isDiscoveryModalOpen,
+    onOpen: onDiscoveryModalOpen,
+    onClose: onDiscoveryModalClose,
+  } = useDisclosure();
 
   // Message sending state
   const [messageContent, setMessageContent] = useState('');
@@ -154,15 +161,19 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
       return;
     }
 
-    setLoading(prev => ({ ...prev, discovery: true }));
+    setLoading((prev) => ({ ...prev, discovery: true }));
     try {
-      const response = await fetch(`/api/a2a/discover?walletAddress=${userAddress}&serverUrl=${encodeURIComponent(discoveryUrl)}`);
-      
+      const response = await fetch(
+        `/api/a2a/discover?walletAddress=${userAddress}&serverUrl=${encodeURIComponent(
+          discoveryUrl
+        )}`
+      );
+
       if (response.ok) {
         const data = await response.json();
         setDiscoveredAgents(data.agents || []);
-        setExpandedSections(prev => ({ ...prev, discovery: true }));
-        
+        setExpandedSections((prev) => ({ ...prev, discovery: true }));
+
         toast({
           title: 'Discovery Complete',
           description: `Found ${data.total || 0} agents on the network`,
@@ -183,7 +194,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
         isClosable: true,
       });
     } finally {
-      setLoading(prev => ({ ...prev, discovery: false }));
+      setLoading((prev) => ({ ...prev, discovery: false }));
     }
   };
 
@@ -191,7 +202,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
     const userAddress = getAddress();
     if (!userAddress) return;
 
-    setLoading(prev => ({ ...prev, [agentCard.id]: true }));
+    setLoading((prev) => ({ ...prev, [agentCard.id]: true }));
     try {
       const response = await fetch('/api/a2a/agents/connect', {
         method: 'POST',
@@ -199,8 +210,8 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
         body: JSON.stringify({
           walletAddress: userAddress,
           agentCard,
-          endpoint: agentCard.endpoint
-        })
+          endpoint: agentCard.endpoint,
+        }),
       });
 
       if (response.ok) {
@@ -211,10 +222,12 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
           duration: 3000,
           isClosable: true,
         });
-        
+
         await loadConnectedAgents();
         // Remove from discovered agents
-        setDiscoveredAgents(prev => prev.filter(a => a.id !== agentCard.id));
+        setDiscoveredAgents((prev) =>
+          prev.filter((a) => a.id !== agentCard.id)
+        );
       } else {
         throw new Error('Connection failed');
       }
@@ -228,7 +241,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
         isClosable: true,
       });
     } finally {
-      setLoading(prev => ({ ...prev, [agentCard.id]: false }));
+      setLoading((prev) => ({ ...prev, [agentCard.id]: false }));
     }
   };
 
@@ -240,15 +253,15 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
       return;
     }
 
-    setLoading(prev => ({ ...prev, [agentId]: true }));
+    setLoading((prev) => ({ ...prev, [agentId]: true }));
     try {
       const response = await fetch('/api/a2a/agents/disconnect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletAddress: userAddress,
-          agentId
-        })
+          agentId,
+        }),
       });
 
       if (response.ok) {
@@ -259,7 +272,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
           duration: 3000,
           isClosable: true,
         });
-        
+
         await loadConnectedAgents();
       } else {
         throw new Error('Disconnection failed');
@@ -274,7 +287,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
         isClosable: true,
       });
     } finally {
-      setLoading(prev => ({ ...prev, [agentId]: false }));
+      setLoading((prev) => ({ ...prev, [agentId]: false }));
     }
   };
 
@@ -282,7 +295,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
     const userAddress = getAddress();
     if (!userAddress) return;
 
-    setLoading(prev => ({ ...prev, [`toggle_${agentId}`]: true }));
+    setLoading((prev) => ({ ...prev, [`toggle_${agentId}`]: true }));
     try {
       const response = await fetch('/api/a2a/agents/toggle', {
         method: 'POST',
@@ -290,8 +303,8 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
         body: JSON.stringify({
           walletAddress: userAddress,
           agentId,
-          enabled
-        })
+          enabled,
+        }),
       });
 
       if (response.ok) {
@@ -302,7 +315,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
           duration: 3000,
           isClosable: true,
         });
-        
+
         await loadConnectedAgents();
       } else {
         throw new Error('Toggle failed');
@@ -317,7 +330,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
         isClosable: true,
       });
     } finally {
-      setLoading(prev => ({ ...prev, [`toggle_${agentId}`]: false }));
+      setLoading((prev) => ({ ...prev, [`toggle_${agentId}`]: false }));
     }
   };
 
@@ -335,9 +348,9 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
           targetAgentId: selectedAgent.agentId,
           message: {
             content: messageContent,
-            type: messageType
-          }
-        })
+            type: messageType,
+          },
+        }),
       });
 
       if (response.ok) {
@@ -349,7 +362,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
           duration: 3000,
           isClosable: true,
         });
-        
+
         setMessageContent('');
         onMessageModalClose();
       } else {
@@ -378,13 +391,13 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
       const response = await fetch('/api/a2a/health/check-all', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: userAddress })
+        body: JSON.stringify({ walletAddress: userAddress }),
       });
 
       if (response.ok) {
         const data = await response.json();
         await loadConnectedAgents();
-        
+
         toast({
           title: 'Health Check Complete',
           description: `Checked ${data.summary?.total || 0} agents`,
@@ -422,21 +435,35 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'connected': return 'green';
-      case 'error': return 'red';
-      case 'disconnected': return 'orange';
-      default: return 'gray';
+      case 'connected':
+        return 'green';
+      case 'error':
+        return 'red';
+      case 'disconnected':
+        return 'orange';
+      default:
+        return 'gray';
     }
   };
 
   if (!isAuthenticated) {
     return (
       <VStack spacing={6} align="center" py={8}>
-        <Text color="rgba(255, 255, 255, 0.6)" fontSize="16px" textAlign="center">
+        <Text
+          color="rgba(255, 255, 255, 0.6)"
+          fontSize="16px"
+          textAlign="center"
+        >
           Sign in to manage A2A agents
         </Text>
-        <Text color="rgba(255, 255, 255, 0.4)" fontSize="14px" textAlign="center" maxW="400px">
-          A2A (Agent-to-Agent) allows you to connect and collaborate with external AI agents
+        <Text
+          color="rgba(255, 255, 255, 0.4)"
+          fontSize="14px"
+          textAlign="center"
+          maxW="400px"
+        >
+          A2A (Agent-to-Agent) allows you to connect and collaborate with
+          external AI agents
         </Text>
         <VStack spacing={3} pt={4}>
           <Button
@@ -450,7 +477,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
             Sign in with Google
           </Button>
           <Button
-            onClick={loginWithTwitter}
+            onClick={loginWithX}
             bg="rgba(89, 248, 134, 0.2)"
             color="#59F886"
             border="1px solid #59F886"
@@ -458,7 +485,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
             size="lg"
             width="200px"
           >
-            Sign in with Twitter
+            Sign in with X
           </Button>
           <Button
             onClick={loginWithWallet}
@@ -476,8 +503,10 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
     );
   }
 
-  const connectedCount = connectedAgents.filter(a => a.connectionStatus === 'connected').length;
-  const enabledCount = connectedAgents.filter(a => a.isEnabled).length;
+  const connectedCount = connectedAgents.filter(
+    (a) => a.connectionStatus === 'connected'
+  ).length;
+  const enabledCount = connectedAgents.filter((a) => a.isEnabled).length;
 
   return (
     <VStack spacing={4} align="stretch">
@@ -486,7 +515,8 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
           A2A Agent Management
         </Text>
         <Text fontSize="12px" color="rgba(255, 255, 255, 0.6)">
-          Connect to external agents using the Agent-to-Agent (A2A) protocol for distributed task execution and communication.
+          Connect to external agents using the Agent-to-Agent (A2A) protocol for
+          distributed task execution and communication.
         </Text>
       </Box>
 
@@ -502,7 +532,9 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
             Agent Status Overview
           </Text>
           <Button
-            leftIcon={globalLoading ? <Spinner size="xs" /> : <RefreshCw size={14} />}
+            leftIcon={
+              globalLoading ? <Spinner size="xs" /> : <RefreshCw size={14} />
+            }
             onClick={handleRunHealthCheck}
             size="xs"
             variant="ghost"
@@ -554,15 +586,20 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
           align="center"
           justify="space-between"
           cursor="pointer"
-          onClick={() => setExpandedSections(prev => ({
-            ...prev,
-            discovery: !prev.discovery
-          }))}
-          _hover={{ bg: "rgba(255, 255, 255, 0.02)" }}
+          onClick={() =>
+            setExpandedSections((prev) => ({
+              ...prev,
+              discovery: !prev.discovery,
+            }))
+          }
+          _hover={{ bg: 'rgba(255, 255, 255, 0.02)' }}
         >
           <HStack spacing={3}>
-            {expandedSections.discovery ? <ChevronDown size={16} color="rgba(255, 255, 255, 0.6)" /> : 
-                           <ChevronRight size={16} color="rgba(255, 255, 255, 0.6)" />}
+            {expandedSections.discovery ? (
+              <ChevronDown size={16} color="rgba(255, 255, 255, 0.6)" />
+            ) : (
+              <ChevronRight size={16} color="rgba(255, 255, 255, 0.6)" />
+            )}
             <Search size={16} color="rgba(255, 255, 255, 0.6)" />
             <Text color="white" fontSize="13px" fontWeight="500">
               Discover New Agents
@@ -576,7 +613,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
         <Collapse in={expandedSections.discovery}>
           <Box px={3} pb={3}>
             <Divider borderColor="rgba(255, 255, 255, 0.1)" mb={3} />
-            
+
             <VStack spacing={3} align="stretch">
               <HStack spacing={2}>
                 <Input
@@ -588,18 +625,24 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
                   color="white"
                   fontSize="12px"
                   _focus={{
-                    borderColor: "rgba(255, 255, 255, 0.3)",
-                    boxShadow: "none"
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    boxShadow: 'none',
                   }}
                 />
                 <Button
-                  leftIcon={loading.discovery ? <Spinner size="xs" /> : <Search size={14} />}
+                  leftIcon={
+                    loading.discovery ? (
+                      <Spinner size="xs" />
+                    ) : (
+                      <Search size={14} />
+                    )
+                  }
                   onClick={handleDiscoverAgents}
                   isDisabled={loading.discovery || !discoveryUrl.trim()}
                   size="sm"
                   bg="rgba(255, 255, 255, 0.1)"
                   color="white"
-                  _hover={{ bg: "rgba(255, 255, 255, 0.15)" }}
+                  _hover={{ bg: 'rgba(255, 255, 255, 0.15)' }}
                   fontSize="12px"
                 >
                   Discover
@@ -639,13 +682,19 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
                       </VStack>
 
                       <Button
-                        leftIcon={loading[agent.id] ? <Spinner size="xs" /> : <Plus size={14} />}
+                        leftIcon={
+                          loading[agent.id] ? (
+                            <Spinner size="xs" />
+                          ) : (
+                            <Plus size={14} />
+                          )
+                        }
                         onClick={() => handleConnectAgent(agent)}
                         isDisabled={loading[agent.id]}
                         size="sm"
                         bg="rgba(0, 255, 0, 0.1)"
                         color="green.400"
-                        _hover={{ bg: "rgba(0, 255, 0, 0.15)" }}
+                        _hover={{ bg: 'rgba(0, 255, 0, 0.15)' }}
                         fontSize="11px"
                       >
                         Connect
@@ -671,21 +720,29 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
           align="center"
           justify="space-between"
           cursor="pointer"
-          onClick={() => setExpandedSections(prev => ({
-            ...prev,
-            connected: !prev.connected
-          }))}
-          _hover={{ bg: "rgba(255, 255, 255, 0.02)" }}
+          onClick={() =>
+            setExpandedSections((prev) => ({
+              ...prev,
+              connected: !prev.connected,
+            }))
+          }
+          _hover={{ bg: 'rgba(255, 255, 255, 0.02)' }}
         >
           <HStack spacing={3}>
-            {expandedSections.connected ? <ChevronDown size={16} color="rgba(255, 255, 255, 0.6)" /> : 
-                            <ChevronRight size={16} color="rgba(255, 255, 255, 0.6)" />}
+            {expandedSections.connected ? (
+              <ChevronDown size={16} color="rgba(255, 255, 255, 0.6)" />
+            ) : (
+              <ChevronRight size={16} color="rgba(255, 255, 255, 0.6)" />
+            )}
             <Users size={16} color="rgba(255, 255, 255, 0.6)" />
             <Text color="white" fontSize="13px" fontWeight="500">
               Connected Agents
             </Text>
           </HStack>
-          <Badge colorScheme={connectedAgents.length > 0 ? "green" : "gray"} size="sm">
+          <Badge
+            colorScheme={connectedAgents.length > 0 ? 'green' : 'gray'}
+            size="sm"
+          >
             {connectedAgents.length} agents
           </Badge>
         </Flex>
@@ -693,10 +750,14 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
         <Collapse in={expandedSections.connected}>
           <Box px={3} pb={3}>
             <Divider borderColor="rgba(255, 255, 255, 0.1)" mb={3} />
-            
+
             {connectedAgents.length === 0 ? (
               <Box textAlign="center" py={6}>
-                <Users size={32} color="rgba(255, 255, 255, 0.3)" style={{ margin: '0 auto 8px' }} />
+                <Users
+                  size={32}
+                  color="rgba(255, 255, 255, 0.3)"
+                  style={{ margin: '0 auto 8px' }}
+                />
                 <Text color="rgba(255, 255, 255, 0.6)" fontSize="12px">
                   No agents connected yet
                 </Text>
@@ -728,7 +789,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
                       >
                         <Users size={12} color="rgba(255, 255, 255, 0.6)" />
                       </Box>
-                      
+
                       <VStack align="start" spacing={0} flex={1}>
                         <HStack spacing={2}>
                           <Text color="white" fontSize="12px" fontWeight="500">
@@ -740,11 +801,16 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
                             </Badge>
                           )}
                         </HStack>
-                        
+
                         <HStack spacing={3}>
                           <HStack spacing={1}>
                             {getStatusIcon(agent.connectionStatus)}
-                            <Text fontSize="9px" color={`${getStatusColor(agent.connectionStatus)}.400`}>
+                            <Text
+                              fontSize="9px"
+                              color={`${getStatusColor(
+                                agent.connectionStatus
+                              )}.400`}
+                            >
                               {agent.connectionStatus}
                             </Text>
                           </HStack>
@@ -770,22 +836,33 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
                           isDisabled={agent.connectionStatus !== 'connected'}
                         />
                       </Tooltip>
-                      
+
                       <Menu>
                         <MenuButton
                           as={IconButton}
                           aria-label="More options"
-                          icon={loading[agent.agentId] ? <Spinner size="xs" /> : <MoreVertical size={14} />}
+                          icon={
+                            loading[agent.agentId] ? (
+                              <Spinner size="xs" />
+                            ) : (
+                              <MoreVertical size={14} />
+                            )
+                          }
                           size="sm"
                           variant="ghost"
                           colorScheme="whiteAlpha"
                           isDisabled={loading[agent.agentId]}
                         />
-                        <MenuList bg="#1A202C" border="1px solid rgba(255, 255, 255, 0.1)">
+                        <MenuList
+                          bg="#1A202C"
+                          border="1px solid rgba(255, 255, 255, 0.1)"
+                        >
                           <MenuItem
-                            onClick={() => handleToggleAgent(agent.agentId, !agent.isEnabled)}
+                            onClick={() =>
+                              handleToggleAgent(agent.agentId, !agent.isEnabled)
+                            }
                             bg="transparent"
-                            _hover={{ bg: "rgba(255, 255, 255, 0.1)" }}
+                            _hover={{ bg: 'rgba(255, 255, 255, 0.1)' }}
                             color="white"
                             fontSize="12px"
                           >
@@ -794,7 +871,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
                           <MenuItem
                             onClick={() => handleDisconnectAgent(agent.agentId)}
                             bg="transparent"
-                            _hover={{ bg: "rgba(255, 0, 0, 0.1)" }}
+                            _hover={{ bg: 'rgba(255, 0, 0, 0.1)' }}
                             color="red.400"
                             fontSize="12px"
                           >
@@ -815,7 +892,11 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
       {/* Send Message Modal */}
       <Modal isOpen={isMessageModalOpen} onClose={onMessageModalClose}>
         <ModalOverlay bg="rgba(0, 0, 0, 0.8)" />
-        <ModalContent bg="#1A202C" border="1px solid rgba(255, 255, 255, 0.1)" color="white">
+        <ModalContent
+          bg="#1A202C"
+          border="1px solid rgba(255, 255, 255, 0.1)"
+          color="white"
+        >
           <ModalHeader fontSize="16px">
             Send Message to {selectedAgent?.agentName}
           </ModalHeader>
@@ -849,25 +930,31 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
                 <Textarea
                   value={messageContent}
                   onChange={(e) => setMessageContent(e.target.value)}
-                  placeholder={messageType === 'json' ? '{"action": "example", "data": {}}' : 'Enter your message...'}
+                  placeholder={
+                    messageType === 'json'
+                      ? '{"action": "example", "data": {}}'
+                      : 'Enter your message...'
+                  }
                   bg="rgba(255, 255, 255, 0.05)"
                   border="1px solid rgba(255, 255, 255, 0.1)"
                   fontSize="12px"
                   rows={6}
                   _focus={{
-                    borderColor: "rgba(255, 255, 255, 0.3)",
-                    boxShadow: "none"
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    boxShadow: 'none',
                   }}
                 />
               </FormControl>
 
               <Button
-                leftIcon={sendingMessage ? <Spinner size="xs" /> : <Send size={14} />}
+                leftIcon={
+                  sendingMessage ? <Spinner size="xs" /> : <Send size={14} />
+                }
                 onClick={handleSendMessage}
                 isDisabled={sendingMessage || !messageContent.trim()}
                 bg="rgba(255, 255, 255, 0.1)"
                 color="white"
-                _hover={{ bg: "rgba(255, 255, 255, 0.15)" }}
+                _hover={{ bg: 'rgba(255, 255, 255, 0.15)' }}
                 size="sm"
               >
                 Send Message

@@ -1,7 +1,18 @@
 import { BaseAgent } from '@/services/agents/core/base-agent';
-import { cryptoPriceTool, cryptoMarketCapTool, defiTvlTool } from '@/services/agents/tools/crypto-data';
-import { braveSearchTool, websiteSearchTool, dalleTool, visionTool } from '@/services/agents/tools/crewai-equivalents';
-import { websiteContentTool, newsSearchTool } from '@/services/agents/tools/web-scraper';
+import {
+  braveSearchTool,
+  dalleTool,
+  visionTool,
+} from '@/services/agents/tools/crewai-equivalents';
+import {
+  cryptoMarketCapTool,
+  cryptoPriceTool,
+  defiTvlTool,
+} from '@/services/agents/tools/crypto-data';
+import {
+  newsSearchTool,
+  websiteContentTool,
+} from '@/services/agents/tools/web-scraper';
 
 // ======== MCP AGENTS ========
 // These agents use MCP servers and Apify tools dynamically
@@ -21,7 +32,9 @@ export class McpRedditAgent extends BaseAgent {
     return `You are a specialized agent that searches and retrieves information from Reddit. You excel at finding discussions, opinions, and community knowledge across Reddit's diverse communities. Use this agent when you need to find specific Reddit posts, comments, or understand what different communities are saying about a particular topic.`;
   }
 
-  getTools() { return {}; }
+  getTools() {
+    return {};
+  }
 }
 
 export class McpBraveAgent extends BaseAgent {
@@ -61,7 +74,9 @@ export class McpHackerNewsAgent extends BaseAgent {
     return `You are specialized in analyzing Hacker News content, discussions, and trends in the tech community.`;
   }
 
-  getTools() { return {}; }
+  getTools() {
+    return {};
+  }
 }
 
 export class McpGoogleMapsAgent extends BaseAgent {
@@ -79,7 +94,9 @@ export class McpGoogleMapsAgent extends BaseAgent {
     return `You are specialized in location-based searches and geographic information using Google Maps data.`;
   }
 
-  getTools() { return {}; }
+  getTools() {
+    return {};
+  }
 }
 
 export class McpAirbnbAgent extends BaseAgent {
@@ -97,7 +114,9 @@ export class McpAirbnbAgent extends BaseAgent {
     return `You are specialized in Airbnb property analysis, rental market data, and accommodation insights.`;
   }
 
-  getTools() { return {}; }
+  getTools() {
+    return {};
+  }
 }
 
 export class McpYtTranscriptsAgent extends BaseAgent {
@@ -115,7 +134,9 @@ export class McpYtTranscriptsAgent extends BaseAgent {
     return `You are specialized in extracting and analyzing YouTube video transcripts and content.`;
   }
 
-  getTools() { return {}; }
+  getTools() {
+    return {};
+  }
 }
 
 export class McpPuppeteerAgent extends BaseAgent {
@@ -133,7 +154,9 @@ export class McpPuppeteerAgent extends BaseAgent {
     return `You are specialized in advanced web scraping using Puppeteer for dynamic and complex web applications.`;
   }
 
-  getTools() { return {}; }
+  getTools() {
+    return {};
+  }
 }
 
 // ======== CRYPTO SPECIALIZED AGENTS ========
@@ -194,7 +217,7 @@ export class MorRewardsAgentBackend extends BaseAgent {
 export class RugcheckAgentBackend extends BaseAgent {
   constructor() {
     super(
-      'rugcheck', 
+      'rugcheck',
       'Token Safety Analyst',
       ['token safety', 'rug pull detection', 'smart contract analysis'],
       'gpt-4o-mini',
@@ -228,7 +251,9 @@ export class CodexAgentBackend extends BaseAgent {
     return `You are specialized in code analysis, smart contract development, and blockchain-related programming tasks.`;
   }
 
-  getTools() { return {}; }
+  getTools() {
+    return {};
+  }
 }
 
 export class ImagenAgentBackend extends BaseAgent {
@@ -291,7 +316,9 @@ export class DefaultAgentBackend extends BaseAgent {
     return `You are a general purpose assistant that can help with a wide variety of tasks and coordinate with other specialized agents when needed.`;
   }
 
-  getTools() { return {}; }
+  getTools() {
+    return {};
+  }
 }
 
 export class RagAgentBackend extends BaseAgent {
@@ -309,7 +336,9 @@ export class RagAgentBackend extends BaseAgent {
     return `You are specialized in retrieval-augmented generation, using document databases and knowledge bases to provide contextual and accurate answers.`;
   }
 
-  getTools() { return {}; }
+  getTools() {
+    return {};
+  }
 }
 
 export class ElfaAgentBackend extends BaseAgent {
@@ -371,7 +400,7 @@ export class TweetSizzlerAgentBackend extends BaseAgent {
   constructor() {
     super(
       'tweet_sizzler',
-      'Twitter Content Optimizer',
+      'X Content Optimizer',
       ['tweet optimization', 'social media content', 'engagement analysis'],
       'gpt-4o-mini',
       true
@@ -379,8 +408,10 @@ export class TweetSizzlerAgentBackend extends BaseAgent {
   }
 
   getInstructions(): string {
-    return `You are specialized in Twitter content optimization, creating engaging tweets, and analyzing social media engagement patterns.`;
+    return `You are specialized in X content optimization, creating engaging posts, and analyzing social media engagement patterns.`;
   }
 
-  getTools() { return {}; }
+  getTools() {
+    return {};
+  }
 }

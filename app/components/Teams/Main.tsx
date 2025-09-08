@@ -1,3 +1,5 @@
+import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import { useWalletAddress } from '@/services/wallet/utils';
 import {
   Box,
   Button,
@@ -17,20 +19,9 @@ import {
   useToast,
   VStack,
 } from '@chakra-ui/react';
-import {
-  ArrowLeft,
-  Bot,
-  ChevronUp,
-  Edit2,
-  Plus,
-  Trash2,
-  Users,
-  X,
-} from 'lucide-react';
+import { Bot, ChevronUp, Edit2, Plus, Trash2, Users, X } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
-import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
-import { useWalletAddress } from '@/services/wallet/utils';
 import styles from './Main.module.css';
 
 interface Agent {
@@ -62,7 +53,8 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   });
 
   const { address } = useAccount();
-  const { isAuthenticated, loginWithGoogle, loginWithTwitter, loginWithWallet } = usePrivyAuth();
+  const { isAuthenticated, loginWithGoogle, loginWithX, loginWithWallet } =
+    usePrivyAuth();
   const { getAddress } = useWalletAddress();
   const toast = useToast();
 
@@ -120,8 +112,8 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     }
 
     try {
-      const response = await fetch("/api/teams", {
-        method: "POST",
+      const response = await fetch('/api/teams', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -166,7 +158,7 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
 
     try {
       const response = await fetch(`/api/teams/${editingTeam.id}`, {
-        method: "PUT",
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -200,7 +192,7 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
 
     try {
       const response = await fetch(`/api/teams/${teamId}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
 
       if (response.ok) {
@@ -265,7 +257,12 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
             <Text fontSize="24px" fontWeight="600" color="white">
               Sign In Required
             </Text>
-            <Text fontSize="16px" color="rgba(255, 255, 255, 0.6)" textAlign="center" maxW="400px">
+            <Text
+              fontSize="16px"
+              color="rgba(255, 255, 255, 0.6)"
+              textAlign="center"
+              maxW="400px"
+            >
               Sign in to create and manage teams of AI agents for complex tasks
             </Text>
             <VStack spacing={3} pt={4}>
@@ -280,7 +277,7 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                 Sign in with Google
               </Button>
               <Button
-                onClick={loginWithTwitter}
+                onClick={loginWithX}
                 bg="rgba(89, 248, 134, 0.2)"
                 color="#59F886"
                 border="1px solid #59F886"
@@ -288,7 +285,7 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                 size="lg"
                 width="200px"
               >
-                Sign in with Twitter
+                Sign in with X
               </Button>
               <Button
                 onClick={loginWithWallet}

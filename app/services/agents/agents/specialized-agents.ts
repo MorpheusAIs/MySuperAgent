@@ -1,5 +1,8 @@
 import { BaseAgent } from '@/services/agents/core/base-agent';
-import { braveSearchTool, websiteSearchTool } from '@/services/agents/tools/crewai-equivalents';
+import {
+  braveSearchTool,
+  websiteSearchTool,
+} from '@/services/agents/tools/crewai-equivalents';
 
 // ======== RESEARCH & SEARCH AGENTS ========
 
@@ -97,7 +100,7 @@ export class InstagramAgentBackend extends BaseAgent {
   constructor() {
     super(
       'instagram_agent',
-      'Instagram Data Specialist', 
+      'Instagram Data Specialist',
       ['Instagram data extraction', 'post analysis', 'engagement metrics'],
       'gpt-4o-mini',
       true // Uses Apify tools: instagram_scraper
@@ -126,7 +129,11 @@ export class TikTokAgent extends BaseAgent {
     super(
       'tiktok_agent',
       'TikTok Content Analyst',
-      ['TikTok content analysis', 'trend identification', 'engagement patterns'],
+      [
+        'TikTok content analysis',
+        'trend identification',
+        'engagement patterns',
+      ],
       'gpt-4o-mini',
       true // Uses Apify tools: tiktok_scraper
     );
@@ -149,19 +156,19 @@ Your goal is to extract and analyze trending content, user data, and engagement 
   }
 }
 
-export class TwitterAnalystBackend extends BaseAgent {
+export class XAnalystBackend extends BaseAgent {
   constructor() {
     super(
-      'twitter_analyst',
-      'Twitter/X Data Specialist',
-      ['Twitter analysis', 'social listening', 'trend monitoring'],
+      'x_analyst',
+      'X Data Specialist',
+      ['X analysis', 'social listening', 'trend monitoring'],
       'gpt-4o-mini',
       true // Uses Apify tools: twitter_scraper
     );
   }
 
   getInstructions(): string {
-    return `You are a social listening expert who specializes in Twitter/X analytics. Skilled at extracting valuable signals from the noise of social conversations and identifying meaningful patterns.
+    return `You are a social listening expert who specializes in X analytics. Skilled at extracting valuable signals from the noise of social conversations and identifying meaningful patterns.
 
 Important workflow instructions:
 1) Always use tools directly without unnecessary thinking steps.
@@ -169,7 +176,7 @@ Important workflow instructions:
 3) After retrieving information, move directly to answering without additional tool calls.
 4) Limit follow-up questions and stick to the original task.
 
-Your goal is to extract, monitor, and analyze Twitter/X conversations, trends, and user activity.`;
+Your goal is to extract, monitor, and analyze X conversations, trends, and user activity.`;
   }
 
   getTools() {
