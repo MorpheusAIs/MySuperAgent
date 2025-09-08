@@ -1,28 +1,28 @@
-import { Axios } from "axios";
 import {
   decryptData,
   downloadFromIrys,
-} from "@/services/lit-protocol/decryption";
+} from '@/services/lit-protocol/decryption';
+import { Axios } from 'axios';
 
 export const postTweet = async (
   backendClient: Axios,
   content: string
 ): Promise<void> => {
-  const irysUrl = localStorage.getItem("twitter_irys_url");
+  const irysUrl = localStorage.getItem('x_irys_url');
 
   if (!irysUrl) {
     throw new Error(
-      "X API credentials not found. Please set them in the settings."
+      'X API credentials not found. Please set them in the settings.'
     );
   }
 
   try {
-    const irysId = irysUrl.split("/").pop() || "";
+    const irysId = irysUrl.split('/').pop() || '';
     const [ciphertext, dataToEncryptHash, accessControlConditions] =
       await downloadFromIrys(irysId);
 
     if (!ciphertext || !dataToEncryptHash || !accessControlConditions) {
-      throw new Error("Missing required data from Irys");
+      throw new Error('Missing required data from Irys');
     }
 
     const decrypted = await decryptData(
@@ -33,7 +33,7 @@ export const postTweet = async (
 
     const credentials = JSON.parse(decrypted);
 
-    await backendClient.post("/tweet/post", {
+    await backendClient.post('/tweet/post', {
       post_content: content,
       api_key: credentials.apiKey,
       api_secret: credentials.apiSecret,
@@ -41,7 +41,7 @@ export const postTweet = async (
       access_token_secret: credentials.accessTokenSecret,
     });
   } catch (error) {
-    console.error("Error posting tweet:", error);
+    console.error('Error posting tweet:', error);
     throw error;
   }
 };
@@ -50,10 +50,10 @@ export const regenerateTweet = async (
   backendClient: Axios
 ): Promise<string> => {
   try {
-    const response = await backendClient.post("/tweet/regenerate");
+    const response = await backendClient.post('/tweet/regenerate');
     return response.data;
   } catch (error) {
-    console.error("Error regenerating tweet:", error);
+    console.error('Error regenerating tweet:', error);
     throw error;
   }
 };

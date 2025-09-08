@@ -86,7 +86,7 @@ Visit [https://mysuperagent.io](https://mysuperagent.io) to access the hosted pl
 
 - Modern web browser (Chrome, Firefox, Safari)
 - Web3 wallet for blockchain interactions
-- API keys for specific agent integrations (Coinbase, Twitter, etc)
+- API keys for specific agent integrations (Coinbase, X, etc)
 
 ### Local Development
 

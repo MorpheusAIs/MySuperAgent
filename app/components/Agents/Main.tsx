@@ -1,44 +1,37 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import { useWalletAddress } from '@/services/wallet/utils';
 import {
+  Badge,
   Box,
-  Text,
   Button,
-  VStack,
+  Divider,
+  Flex,
   HStack,
   Input,
   InputGroup,
   InputLeftElement,
   Select,
-  Switch,
-  useToast,
-  Flex,
-  Spinner,
-  Divider,
   SimpleGrid,
-  Badge,
+  Spinner,
+  Switch,
+  Text,
   Tooltip,
-  IconButton,
-  Alert,
-  AlertIcon,
-  AlertTitle,
-  AlertDescription,
+  useToast,
+  VStack,
 } from '@chakra-ui/react';
 import {
-  Bot,
-  Search,
-  RefreshCw,
-  CheckCircle,
-  XCircle,
   AlertCircle,
-  Settings,
-  ExternalLink,
-  Play,
-  Pause,
+  Bot,
+  CheckCircle,
   Cpu,
+  ExternalLink,
+  RefreshCw,
+  Search,
+  Settings,
+  XCircle,
 } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
-import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
-import { useWalletAddress } from '@/services/wallet/utils';
 import styles from './Main.module.css';
 
 interface Agent {
@@ -78,22 +71,20 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showOnlyEnabled, setShowOnlyEnabled] = useState(false);
-  
+
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
-  const { isAuthenticated, loginWithGoogle, loginWithTwitter, loginWithWallet } = usePrivyAuth();
+  const { isAuthenticated, loginWithGoogle, loginWithX, loginWithWallet } =
+    usePrivyAuth();
   const { getAddress } = useWalletAddress();
   const toast = useToast();
 
   const loadUserAgentData = useCallback(async () => {
     const userAddress = getAddress();
     if (!userAddress) return;
-    
+
     try {
-      await Promise.all([
-        loadEnabledAgents(),
-        loadUserConfig()
-      ]);
+      await Promise.all([loadEnabledAgents(), loadUserConfig()]);
     } catch (error) {
       console.error('Failed to load user agent data:', error);
       toast({
@@ -113,7 +104,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
         const data = await response.json();
         const agents = data.agents || [];
         setAvailableAgents(agents);
-        
+
         // Initialize default enabled agents (popular ones) if not already initialized
         if (!defaultsInitialized && agents.length > 0) {
           const defaultEnabled = agents
@@ -125,9 +116,9 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
               lastUsed: null,
               tasksCompleted: 0,
             }));
-          setEnabledAgents(prev => {
+          setEnabledAgents((prev) => {
             // Merge with any existing enabled agents
-            const existingNames = prev.map(a => a.agentName);
+            const existingNames = prev.map((a) => a.agentName);
             const newAgents = defaultEnabled.filter(
               (a: AgentStatus) => !existingNames.includes(a.agentName)
             );
@@ -146,7 +137,9 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     if (!userAddress) return;
 
     try {
-      const response = await fetch(`/api/agents/status?walletAddress=${userAddress}`);
+      const response = await fetch(
+        `/api/agents/status?walletAddress=${userAddress}`
+      );
       if (response.ok) {
         const data = await response.json();
         setEnabledAgents(data.agents || []);
@@ -164,7 +157,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
       const response = await fetch('/api/agents/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: userAddress })
+        body: JSON.stringify({ walletAddress: userAddress }),
       });
 
       if (response.ok) {
@@ -182,7 +175,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
       setGlobalLoading(false);
     });
   }, []);
-  
+
   // Load user-specific data when authenticated
   useEffect(() => {
     if (isAuthenticated) {
@@ -207,10 +200,10 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
       return;
     }
 
-    const agent = availableAgents.find(a => a.name === agentName);
+    const agent = availableAgents.find((a) => a.name === agentName);
     if (!agent) return;
 
-    setLoading(prev => ({ ...prev, [agentName]: true }));
+    setLoading((prev) => ({ ...prev, [agentName]: true }));
 
     try {
       if (enable) {
@@ -224,8 +217,8 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
           body: JSON.stringify({
             walletAddress: userAddress,
             agentName,
-            signature
-          })
+            signature,
+          }),
         });
 
         if (!response.ok) {
@@ -245,8 +238,8 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             walletAddress: userAddress,
-            agentName
-          })
+            agentName,
+          }),
         });
 
         if (!response.ok) {
@@ -267,13 +260,15 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
       console.error('Failed to toggle agent:', error);
       toast({
         title: 'Operation Failed',
-        description: `Could not ${enable ? 'enable' : 'disable'} ${agent.displayName}`,
+        description: `Could not ${enable ? 'enable' : 'disable'} ${
+          agent.displayName
+        }`,
         status: 'error',
         duration: 3000,
         isClosable: true,
       });
     } finally {
-      setLoading(prev => ({ ...prev, [agentName]: false }));
+      setLoading((prev) => ({ ...prev, [agentName]: false }));
     }
   };
 
@@ -321,32 +316,44 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   };
 
   const isAgentEnabled = (agentName: string) => {
-    return enabledAgents.some(a => a.agentName === agentName && a.isEnabled);
+    return enabledAgents.some((a) => a.agentName === agentName && a.isEnabled);
   };
 
   const getAgentStatus = (agentName: string) => {
-    return enabledAgents.find(a => a.agentName === agentName);
+    return enabledAgents.find((a) => a.agentName === agentName);
   };
 
   // Filter and search logic
-  const categories = ['all', ...Array.from(new Set(availableAgents.map(a => a.category)))];
-  
-  const filteredAgents = availableAgents.filter(agent => {
-    const matchesSearch = agent.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         agent.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         agent.capabilities.some(cap => cap.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesCategory = selectedCategory === 'all' || agent.category === selectedCategory;
-    
+  const categories = [
+    'all',
+    ...Array.from(new Set(availableAgents.map((a) => a.category))),
+  ];
+
+  const filteredAgents = availableAgents.filter((agent) => {
+    const matchesSearch =
+      agent.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      agent.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      agent.capabilities.some((cap) =>
+        cap.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+    const matchesCategory =
+      selectedCategory === 'all' || agent.category === selectedCategory;
+
     const matchesEnabledFilter = !showOnlyEnabled || isAgentEnabled(agent.name);
-    
+
     return matchesSearch && matchesCategory && matchesEnabledFilter;
   });
 
   // Statistics
-  const totalEnabledAgents = enabledAgents.filter(a => a.isEnabled).length;
-  const activeAgents = enabledAgents.filter(a => a.status === 'active').length;
-  const totalTasksCompleted = enabledAgents.reduce((sum, a) => sum + (a.tasksCompleted || 0), 0);
+  const totalEnabledAgents = enabledAgents.filter((a) => a.isEnabled).length;
+  const activeAgents = enabledAgents.filter(
+    (a) => a.status === 'active'
+  ).length;
+  const totalTasksCompleted = enabledAgents.reduce(
+    (sum, a) => sum + (a.tasksCompleted || 0),
+    0
+  );
 
   // Show loading only if we don't have basic agent data yet
   if (globalLoading && availableAgents.length === 0) {
@@ -382,7 +389,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                   Sign in with Google
                 </Button>
                 <Button
-                  onClick={loginWithTwitter}
+                  onClick={loginWithX}
                   bg="rgba(89, 248, 134, 0.2)"
                   color="#59F886"
                   border="1px solid #59F886"
@@ -390,7 +397,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                   size="lg"
                   width="200px"
                 >
-                  Sign in with Twitter
+                  Sign in with X
                 </Button>
                 <Button
                   onClick={loginWithWallet}
@@ -420,16 +427,19 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
             <VStack align="start" spacing={1}>
               <Text className={styles.title}>Agents</Text>
               <Text className={styles.subtitle}>
-                Manage your AI agents and configure their capabilities for automated tasks
+                Manage your AI agents and configure their capabilities for
+                automated tasks
               </Text>
             </VStack>
             <Button
-              leftIcon={globalLoading ? <Spinner size="sm" /> : <RefreshCw size={16} />}
+              leftIcon={
+                globalLoading ? <Spinner size="sm" /> : <RefreshCw size={16} />
+              }
               onClick={handleRefreshAgents}
               isDisabled={globalLoading}
               className={styles.actionButton}
               size="lg"
-              _hover={{ transform: "translateY(-1px)" }}
+              _hover={{ transform: 'translateY(-1px)' }}
             >
               Refresh Status
             </Button>
@@ -444,18 +454,24 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
           <Box className={styles.statCard}>
             <Text className={styles.statLabel}>Enabled Agents</Text>
             <Text className={styles.statNumber}>{totalEnabledAgents}</Text>
-            <Text className={styles.statHelper}>of {availableAgents.length} available</Text>
+            <Text className={styles.statHelper}>
+              of {availableAgents.length} available
+            </Text>
           </Box>
-          
+
           <Box className={styles.statCard}>
             <Text className={styles.statLabel}>Active Now</Text>
-            <Text className={styles.statNumber} color="#00ff41">{activeAgents}</Text>
+            <Text className={styles.statNumber} color="#00ff41">
+              {activeAgents}
+            </Text>
             <Text className={styles.statHelper}>ready for tasks</Text>
           </Box>
-          
+
           <Box className={styles.statCard}>
             <Text className={styles.statLabel}>Tasks Completed</Text>
-            <Text className={styles.statNumber} color="#00d435">{totalTasksCompleted}</Text>
+            <Text className={styles.statNumber} color="#00d435">
+              {totalTasksCompleted}
+            </Text>
             <Text className={styles.statHelper}>total executions</Text>
           </Box>
         </SimpleGrid>
@@ -482,15 +498,23 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
             maxW="200px"
             className={styles.categorySelect}
           >
-            {categories.map(category => (
-              <option key={category} value={category} style={{ background: '#1A202C' }}>
-                {category === 'all' ? 'All Categories' : category.charAt(0).toUpperCase() + category.slice(1)}
+            {categories.map((category) => (
+              <option
+                key={category}
+                value={category}
+                style={{ background: '#1A202C' }}
+              >
+                {category === 'all'
+                  ? 'All Categories'
+                  : category.charAt(0).toUpperCase() + category.slice(1)}
               </option>
             ))}
           </Select>
 
           <HStack>
-            <Text fontSize="sm" color="rgba(255, 255, 255, 0.6)">Enabled only</Text>
+            <Text fontSize="sm" color="rgba(255, 255, 255, 0.6)">
+              Enabled only
+            </Text>
             <Switch
               isChecked={showOnlyEnabled}
               onChange={(e) => setShowOnlyEnabled(e.target.checked)}
@@ -536,7 +560,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                               {agent.displayName}
                             </Text>
                             {agent.isPopular && (
-                              <Badge 
+                              <Badge
                                 size="xs"
                                 bg="rgba(0, 255, 65, 0.1)"
                                 color="#00ff41"
@@ -556,7 +580,9 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                         size="sm"
                         isChecked={enabled}
                         isDisabled={isLoading}
-                        onChange={(e) => handleToggleAgent(agent.name, e.target.checked)}
+                        onChange={(e) =>
+                          handleToggleAgent(agent.name, e.target.checked)
+                        }
                         colorScheme="green"
                       />
                     </Flex>
@@ -571,9 +597,13 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                       <Tooltip
                         label={
                           <VStack align="start" spacing={1}>
-                            <Text fontSize="xs" fontWeight="bold">Capabilities:</Text>
+                            <Text fontSize="xs" fontWeight="bold">
+                              Capabilities:
+                            </Text>
                             {agent.capabilities.map((capability, index) => (
-                              <Text key={index} fontSize="xs">• {capability}</Text>
+                              <Text key={index} fontSize="xs">
+                                • {capability}
+                              </Text>
                             ))}
                           </VStack>
                         }
@@ -597,7 +627,11 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                         {enabled && status && (
                           <HStack spacing={1}>
                             {getStatusIcon(status.status)}
-                            <Text fontSize="xs" className={styles.statusText} data-status={status.status}>
+                            <Text
+                              fontSize="xs"
+                              className={styles.statusText}
+                              data-status={status.status}
+                            >
                               {status.status}
                             </Text>
                           </HStack>
@@ -611,7 +645,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                           v{agent.version}
                         </Badge>
                       </HStack>
-                      
+
                       {agent.documentationUrl && (
                         <Button
                           as="a"
@@ -622,9 +656,9 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
                           variant="ghost"
                           className={styles.docButton}
                           p={1}
-                          _hover={{ 
-                            bg: "rgba(0, 255, 65, 0.1)",
-                            borderColor: "#00ff41" 
+                          _hover={{
+                            bg: 'rgba(0, 255, 65, 0.1)',
+                            borderColor: '#00ff41',
                           }}
                         >
                           <ExternalLink size={12} />

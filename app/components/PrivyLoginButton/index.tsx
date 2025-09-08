@@ -1,9 +1,20 @@
-import { Button, Menu, MenuButton, MenuItem, MenuList, HStack, Text, VStack, Icon, Box } from '@chakra-ui/react';
-import { usePrivy } from '@privy-io/react-auth';
-import { ChevronDown, LogIn, Mail, Wallet, LogOut, User } from 'lucide-react';
-import { FaTwitter } from 'react-icons/fa';
 import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
-import { useEffect } from 'react';
+import {
+  Box,
+  Button,
+  HStack,
+  Icon,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
+  Text,
+  VStack,
+} from '@chakra-ui/react';
+import { usePrivy } from '@privy-io/react-auth';
+import { ChevronDown, LogIn, LogOut, Mail, User, Wallet } from 'lucide-react';
+import { useRouter } from 'next/router';
+import { FaXTwitter } from 'react-icons/fa6';
 import { useAccount } from 'wagmi';
 
 interface PrivyLoginButtonProps {
@@ -11,26 +22,29 @@ interface PrivyLoginButtonProps {
   size?: 'sm' | 'md';
 }
 
-export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLoginButtonProps) => {
-  const { 
-    ready, 
-    authenticated, 
-    user,
-    login,
-    logout: privyLogout,
-  } = usePrivy();
-  
-  const { 
-    loginWithGoogle, 
-    loginWithWallet, 
-    loginWithTwitter,
+export const PrivyLoginButton = ({
+  variant = 'header',
+  size = 'md',
+}: PrivyLoginButtonProps) => {
+  const { ready, authenticated, user, login, logout: privyLogout } = usePrivy();
+  const router = useRouter();
+
+  const {
+    loginWithGoogle,
+    loginWithWallet,
+    loginWithX,
     logout,
     userEmail,
     userWallet,
-    isAuthenticated
+    isAuthenticated,
   } = usePrivyAuth();
 
   const { address } = useAccount();
+
+  // Handle navigation to account settings
+  const handleNavigateToAccountSettings = () => {
+    router.push('/settings?tab=account');
+  };
 
   // Handle loading state
   if (!ready) {
@@ -45,7 +59,7 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
         size="md"
         borderRadius="md"
         _hover={{
-          bg: "rgba(89, 248, 134, 0.25)",
+          bg: 'rgba(89, 248, 134, 0.25)',
         }}
       />
     );
@@ -54,27 +68,40 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
   // Handle authenticated state
   if (authenticated && user) {
     const displayName = userEmail || userWallet || user.id.slice(0, 8);
-    const shortDisplay = displayName.length > 20 
-      ? `${displayName.slice(0, 8)}...${displayName.slice(-4)}`
-      : displayName;
+    const shortDisplay =
+      displayName.length > 20
+        ? `${displayName.slice(0, 8)}...${displayName.slice(-4)}`
+        : displayName;
 
-    // Sidebar variant - more compact display
+    // Sidebar variant - more compact display with clickable area
     if (variant === 'sidebar') {
       return (
         <VStack spacing={3} align="stretch">
-          <VStack spacing={2} align="stretch">
+          <VStack
+            spacing={2}
+            align="stretch"
+            cursor="pointer"
+            onClick={handleNavigateToAccountSettings}
+            _hover={{ opacity: 0.8 }}
+            transition="opacity 0.2s"
+          >
             <HStack spacing={2} justify="center">
               <User size={18} color="#59F886" />
-              <Text fontSize="sm" fontWeight="600" color="white" textAlign="center">
+              <Text
+                fontSize="sm"
+                fontWeight="600"
+                color="white"
+                textAlign="center"
+              >
                 Signed In
               </Text>
             </HStack>
-            <Text 
-              fontSize="xs" 
-              fontWeight="400" 
+            <Text
+              fontSize="xs"
+              fontWeight="400"
               color="rgba(255, 255, 255, 0.7)"
               textAlign="center"
-              fontFamily={userWallet ? "mono" : "inherit"}
+              fontFamily={userWallet ? 'mono' : 'inherit'}
             >
               {shortDisplay}
             </Text>
@@ -92,10 +119,10 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
             color="rgba(255, 255, 255, 0.8)"
             border="1px solid rgba(255, 255, 255, 0.1)"
             _hover={{
-              bg: "rgba(255, 0, 0, 0.1)",
-              borderColor: "#ff4444",
-              color: "#ff4444",
-              transform: "translateY(-1px)",
+              bg: 'rgba(255, 0, 0, 0.1)',
+              borderColor: '#ff4444',
+              color: '#ff4444',
+              transform: 'translateY(-1px)',
             }}
             leftIcon={<LogOut size={14} />}
             fontSize="xs"
@@ -120,12 +147,12 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
           borderColor="#59F886"
           borderWidth="1px"
           _hover={{
-            bg: "rgba(89, 248, 134, 0.2)",
-            transform: "translateY(-1px)",
-            boxShadow: "0 4px 12px rgba(89, 248, 134, 0.2)",
+            bg: 'rgba(89, 248, 134, 0.2)',
+            transform: 'translateY(-1px)',
+            boxShadow: '0 4px 12px rgba(89, 248, 134, 0.2)',
           }}
           _active={{
-            bg: "rgba(89, 248, 134, 0.3)",
+            bg: 'rgba(89, 248, 134, 0.3)',
           }}
           size={size}
           borderRadius="md"
@@ -133,7 +160,9 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
         >
           <HStack spacing={2}>
             <User size={16} />
-            <Text fontSize="sm" fontWeight="500">{shortDisplay}</Text>
+            <Text fontSize="sm" fontWeight="500">
+              {shortDisplay}
+            </Text>
           </HStack>
         </MenuButton>
         <MenuList
@@ -144,11 +173,13 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
           <MenuItem
             bg="transparent"
             color="rgba(255, 255, 255, 0.9)"
-            _hover={{ bg: "rgba(255, 255, 255, 0.05)" }}
+            _hover={{ bg: 'rgba(255, 255, 255, 0.05)' }}
             isDisabled
           >
             <VStack align="start" spacing={0}>
-              <Text fontSize="xs" color="rgba(255, 255, 255, 0.6)">Logged in as</Text>
+              <Text fontSize="xs" color="rgba(255, 255, 255, 0.6)">
+                Logged in as
+              </Text>
               <Text fontSize="sm" fontWeight="500">
                 {userEmail && (
                   <HStack spacing={1}>
@@ -159,7 +190,9 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
                 {userWallet && (
                   <HStack spacing={1}>
                     <Wallet size={12} />
-                    <Text>{`${userWallet.slice(0, 6)}...${userWallet.slice(-4)}`}</Text>
+                    <Text>{`${userWallet.slice(0, 6)}...${userWallet.slice(
+                      -4
+                    )}`}</Text>
                   </HStack>
                 )}
                 {!userEmail && !userWallet && (
@@ -169,11 +202,21 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
             </VStack>
           </MenuItem>
           <MenuItem
+            icon={<User size={16} />}
+            onClick={handleNavigateToAccountSettings}
+            bg="transparent"
+            color="rgba(255, 255, 255, 0.9)"
+            _hover={{ bg: 'rgba(89, 248, 134, 0.2)', color: '#59F886' }}
+            transition="all 0.2s"
+          >
+            Account Settings
+          </MenuItem>
+          <MenuItem
             icon={<LogOut size={16} />}
             onClick={logout}
             bg="transparent"
             color="rgba(255, 255, 255, 0.9)"
-            _hover={{ bg: "rgba(255, 0, 0, 0.1)", color: "#ff4444" }}
+            _hover={{ bg: 'rgba(255, 0, 0, 0.1)', color: '#ff4444' }}
             transition="all 0.2s"
           >
             Sign Out
@@ -184,7 +227,7 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
   }
 
   // Handle unauthenticated state
-  
+
   // Sidebar variant - vertical buttons
   if (variant === 'sidebar') {
     return (
@@ -193,15 +236,14 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
           <Text fontSize="sm" fontWeight="600" color="white" textAlign="center">
             Sign In
           </Text>
-          <Text fontSize="xs" color="rgba(255, 255, 255, 0.7)" textAlign="center">
+          <Text
+            fontSize="xs"
+            color="rgba(255, 255, 255, 0.7)"
+            textAlign="center"
+          >
             Choose your preferred method
           </Text>
-          <Box
-            height="1px"
-            bg="rgba(255, 255, 255, 0.1)"
-            width="100%"
-            my={1}
-          />
+          <Box height="1px" bg="rgba(255, 255, 255, 0.1)" width="100%" my={1} />
         </VStack>
         <VStack spacing={2} align="stretch">
           <Button
@@ -211,8 +253,8 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
             bg="#59F886"
             color="#000"
             _hover={{
-              bg: "#4AE066",
-              transform: "translateY(-1px)",
+              bg: '#4AE066',
+              transform: 'translateY(-1px)',
             }}
             fontSize="xs"
             fontWeight="600"
@@ -222,23 +264,23 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
             Google
           </Button>
           <Button
-            onClick={loginWithTwitter}
-            leftIcon={<Icon as={FaTwitter} boxSize="14px" />}
+            onClick={loginWithX}
+            leftIcon={<Icon as={FaXTwitter} boxSize="14px" />}
             size="sm"
             bg="rgba(255, 255, 255, 0.05)"
             color="#59F886"
             border="1px solid rgba(89, 248, 134, 0.3)"
             _hover={{
-              bg: "rgba(89, 248, 134, 0.1)",
-              borderColor: "#59F886",
-              transform: "translateY(-1px)",
+              bg: 'rgba(89, 248, 134, 0.1)',
+              borderColor: '#59F886',
+              transform: 'translateY(-1px)',
             }}
             fontSize="xs"
             fontWeight="500"
             borderRadius="8px"
             transition="all 0.2s"
           >
-            Twitter
+            X
           </Button>
           <Button
             onClick={loginWithWallet}
@@ -248,9 +290,9 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
             color="#59F886"
             border="1px solid rgba(89, 248, 134, 0.3)"
             _hover={{
-              bg: "rgba(89, 248, 134, 0.1)",
-              borderColor: "#59F886",
-              transform: "translateY(-1px)",
+              bg: 'rgba(89, 248, 134, 0.1)',
+              borderColor: '#59F886',
+              transform: 'translateY(-1px)',
             }}
             fontSize="xs"
             fontWeight="500"
@@ -275,12 +317,12 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
         borderColor="#59F886"
         borderWidth="1px"
         _hover={{
-          bg: "rgba(89, 248, 134, 0.25)",
-          transform: "translateY(-1px)",
-          boxShadow: "0 4px 12px rgba(89, 248, 134, 0.3)",
+          bg: 'rgba(89, 248, 134, 0.25)',
+          transform: 'translateY(-1px)',
+          boxShadow: '0 4px 12px rgba(89, 248, 134, 0.3)',
         }}
         _active={{
-          bg: "rgba(89, 248, 134, 0.35)",
+          bg: 'rgba(89, 248, 134, 0.35)',
         }}
         size={size}
         borderRadius="md"
@@ -289,7 +331,9 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
       >
         <HStack spacing={2}>
           <LogIn size={16} />
-          <Text color="#59F886" fontWeight="600">Sign In</Text>
+          <Text color="#59F886" fontWeight="600">
+            Sign In
+          </Text>
         </HStack>
       </MenuButton>
       <MenuList
@@ -302,27 +346,27 @@ export const PrivyLoginButton = ({ variant = 'header', size = 'md' }: PrivyLogin
           onClick={loginWithGoogle}
           bg="transparent"
           color="rgba(255, 255, 255, 0.9)"
-          _hover={{ bg: "rgba(89, 248, 134, 0.2)", color: "#59F886" }}
+          _hover={{ bg: 'rgba(89, 248, 134, 0.2)', color: '#59F886' }}
           transition="all 0.2s"
         >
           Sign in with Google
         </MenuItem>
         <MenuItem
-          icon={<Icon as={FaTwitter} boxSize="16px" />}
-          onClick={loginWithTwitter}
+          icon={<Icon as={FaXTwitter} boxSize="16px" />}
+          onClick={loginWithX}
           bg="transparent"
           color="rgba(255, 255, 255, 0.9)"
-          _hover={{ bg: "rgba(89, 248, 134, 0.2)", color: "#59F886" }}
+          _hover={{ bg: 'rgba(89, 248, 134, 0.2)', color: '#59F886' }}
           transition="all 0.2s"
         >
-          Sign in with Twitter
+          Sign in with X
         </MenuItem>
         <MenuItem
           icon={<Wallet size={16} />}
           onClick={loginWithWallet}
           bg="transparent"
           color="rgba(255, 255, 255, 0.9)"
-          _hover={{ bg: "rgba(89, 248, 134, 0.2)", color: "#59F886" }}
+          _hover={{ bg: 'rgba(89, 248, 134, 0.2)', color: '#59F886' }}
           transition="all 0.2s"
         >
           Sign in with Wallet

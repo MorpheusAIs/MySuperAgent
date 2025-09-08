@@ -1,60 +1,64 @@
-import React, { useState, useEffect } from "react";
-import {
-  VStack,
-  FormControl,
-  FormLabel,
-  Input,
-  Button,
-  Text,
-  Box,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  HStack,
-  IconButton,
-  useToast,
-} from "@chakra-ui/react";
-import { CopyIcon } from "@chakra-ui/icons";
-import { encryptSecret, uploadToIrys } from "@/services/lit-protocol/encryption";
 import {
   decryptData,
   downloadFromIrys,
-} from "@/services/lit-protocol/decryption";
-import styles from "./ApiCredentials.module.css";
+} from '@/services/lit-protocol/decryption';
+import {
+  encryptSecret,
+  uploadToIrys,
+} from '@/services/lit-protocol/encryption';
+import { CopyIcon } from '@chakra-ui/icons';
+import {
+  Box,
+  Button,
+  FormControl,
+  FormLabel,
+  HStack,
+  IconButton,
+  Input,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Text,
+  useToast,
+  VStack,
+} from '@chakra-ui/react';
+import React, { useEffect, useState } from 'react';
+import styles from './ApiCredentials.module.css';
 
-interface TwitterCredentials {
+interface XCredentials {
   apiKey: string;
   apiSecret: string;
   accessToken: string;
   accessTokenSecret: string;
 }
 
-interface TwitterConfigProps {
+interface XConfigProps {
   onSave: () => void;
 }
 
-const CREDENTIAL_LABELS: Record<keyof TwitterCredentials, string> = {
-  apiKey: "API Key",
-  apiSecret: "API Secret",
-  accessToken: "Access Token",
-  accessTokenSecret: "Access Token Secret",
+const CREDENTIAL_LABELS: Record<keyof XCredentials, string> = {
+  apiKey: 'API Key',
+  apiSecret: 'API Secret',
+  accessToken: 'Access Token',
+  accessTokenSecret: 'Access Token Secret',
 };
 
-export const TwitterConfig: React.FC<TwitterConfigProps> = ({ onSave }) => {
-  const [credentials, setCredentials] = useState<TwitterCredentials>({
-    apiKey: "",
-    apiSecret: "",
-    accessToken: "",
-    accessTokenSecret: "",
+export const XConfig: React.FC<XConfigProps> = ({ onSave }) => {
+  const [credentials, setCredentials] = useState<XCredentials>({
+    apiKey: '',
+    apiSecret: '',
+    accessToken: '',
+    accessTokenSecret: '',
   });
-  const [irysUrl, setIrysUrl] = useState<string>("");
-  const [decryptedSecrets, setDecryptedSecrets] =
-    useState<TwitterCredentials | null>(null);
+  const [irysUrl, setIrysUrl] = useState<string>('');
+  const [decryptedSecrets, setDecryptedSecrets] = useState<XCredentials | null>(
+    null
+  );
   const [isDecrypting, setIsDecrypting] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
-    const storedUrl = localStorage.getItem("twitter_irys_url");
+    const storedUrl = localStorage.getItem('x_irys_url');
     if (storedUrl) {
       setIrysUrl(storedUrl);
     }
@@ -66,9 +70,9 @@ export const TwitterConfig: React.FC<TwitterConfigProps> = ({ onSave }) => {
       const hasEmptyFields = Object.values(credentials).some((value) => !value);
       if (hasEmptyFields) {
         toast({
-          title: "Missing credentials",
-          description: "Please fill in all credential fields",
-          status: "error",
+          title: 'Missing credentials',
+          description: 'Please fill in all credential fields',
+          status: 'error',
           duration: 3000,
           isClosable: true,
         });
@@ -81,21 +85,21 @@ export const TwitterConfig: React.FC<TwitterConfigProps> = ({ onSave }) => {
       );
       const uploadedUrl = await uploadToIrys(ciphertext, dataToEncryptHash);
 
-      localStorage.setItem("twitter_irys_url", uploadedUrl);
+      localStorage.setItem('x_irys_url', uploadedUrl);
       setIrysUrl(uploadedUrl);
       setCredentials({
-        apiKey: "",
-        apiSecret: "",
-        accessToken: "",
-        accessTokenSecret: "",
+        apiKey: '',
+        apiSecret: '',
+        accessToken: '',
+        accessTokenSecret: '',
       });
       onSave();
     } catch (error) {
-      console.error("Failed to encrypt and save Twitter credentials:", error);
+      console.error('Failed to encrypt and save X credentials:', error);
       toast({
-        title: "Failed to save credentials",
-        description: "Please try again.",
-        status: "error",
+        title: 'Failed to save credentials',
+        description: 'Please try again.',
+        status: 'error',
         duration: 3000,
         isClosable: true,
       });
@@ -107,14 +111,14 @@ export const TwitterConfig: React.FC<TwitterConfigProps> = ({ onSave }) => {
 
     setIsDecrypting(true);
     try {
-      const irysId = irysUrl.split("/").pop() || "";
-      console.log("Fetching from Irys with ID:", irysId);
+      const irysId = irysUrl.split('/').pop() || '';
+      console.log('Fetching from Irys with ID:', irysId);
 
       const [ciphertext, dataToEncryptHash, accessControlConditions] =
         await downloadFromIrys(irysId);
 
       if (!ciphertext || !dataToEncryptHash || !accessControlConditions) {
-        throw new Error("Missing required data from Irys");
+        throw new Error('Missing required data from Irys');
       }
 
       const decrypted = await decryptData(
@@ -123,18 +127,18 @@ export const TwitterConfig: React.FC<TwitterConfigProps> = ({ onSave }) => {
         accessControlConditions
       );
 
-      const parsedSecrets = JSON.parse(decrypted) as TwitterCredentials;
+      const parsedSecrets = JSON.parse(decrypted) as XCredentials;
       setDecryptedSecrets(parsedSecrets);
 
       setTimeout(() => {
         setDecryptedSecrets(null);
       }, 5000);
     } catch (error) {
-      console.error("Failed to decrypt credentials:", error);
+      console.error('Failed to decrypt credentials:', error);
       toast({
-        title: "Failed to decrypt credentials",
-        description: "Please try again.",
-        status: "error",
+        title: 'Failed to decrypt credentials',
+        description: 'Please try again.',
+        status: 'error',
         duration: 3000,
         isClosable: true,
       });
@@ -144,14 +148,14 @@ export const TwitterConfig: React.FC<TwitterConfigProps> = ({ onSave }) => {
   };
 
   const handleReset = () => {
-    localStorage.removeItem("twitter_irys_url");
-    setIrysUrl("");
+    localStorage.removeItem('x_irys_url');
+    setIrysUrl('');
     setDecryptedSecrets(null);
   };
 
   const truncateUrl = (url: string) => {
-    if (!url) return "";
-    const parts = url.split("/");
+    if (!url) return '';
+    const parts = url.split('/');
     const id = parts[parts.length - 1];
     return `${id.slice(0, 6)}...${id.slice(-4)}`;
   };
@@ -160,15 +164,15 @@ export const TwitterConfig: React.FC<TwitterConfigProps> = ({ onSave }) => {
     try {
       await navigator.clipboard.writeText(text);
       toast({
-        title: "Copied to clipboard",
-        status: "success",
+        title: 'Copied to clipboard',
+        status: 'success',
         duration: 2000,
         isClosable: true,
       });
     } catch (err) {
       toast({
-        title: "Failed to copy",
-        status: "error",
+        title: 'Failed to copy',
+        status: 'error',
         duration: 2000,
         isClosable: true,
       });
@@ -176,7 +180,7 @@ export const TwitterConfig: React.FC<TwitterConfigProps> = ({ onSave }) => {
   };
 
   return (
-    <VStack spacing={6} align="stretch" className="twitter-config-container">
+    <VStack spacing={6} align="stretch" className="x-config-container">
       <Box>
         <Text color="white" fontSize="14px" fontWeight="500" mb={2}>
           X API Configuration
@@ -204,7 +208,7 @@ export const TwitterConfig: React.FC<TwitterConfigProps> = ({ onSave }) => {
               <Input
                 type="password"
                 placeholder={`Enter ${label}`}
-                value={credentials[key as keyof TwitterCredentials]}
+                value={credentials[key as keyof XCredentials]}
                 onChange={(e) =>
                   setCredentials((prev) => ({
                     ...prev,
@@ -281,8 +285,7 @@ export const TwitterConfig: React.FC<TwitterConfigProps> = ({ onSave }) => {
                             color="rgba(255, 255, 255, 0.7)"
                             fontSize="12px"
                           >
-                            {CREDENTIAL_LABELS[key as keyof TwitterCredentials]}
-                            :
+                            {CREDENTIAL_LABELS[key as keyof XCredentials]}:
                           </Text>
                           <HStack
                             mt={1}

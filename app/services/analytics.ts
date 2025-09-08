@@ -1,7 +1,7 @@
 import { track } from '@vercel/analytics';
 
 // Custom event tracking types
-export type AnalyticsEvent = 
+export type AnalyticsEvent =
   // Authentication events
   | 'auth.wallet_connected'
   | 'auth.signature_requested'
@@ -16,11 +16,11 @@ export type AnalyticsEvent =
   | 'auth.wallet_login_started'
   | 'auth.wallet_login_success'
   | 'auth.wallet_login_error'
-  | 'auth.twitter_login_started'
-  | 'auth.twitter_login_success'
-  | 'auth.twitter_login_error'
+  | 'auth.x_login_started'
+  | 'auth.x_login_success'
+  | 'auth.x_login_error'
   | 'auth.privy_logout'
-  
+
   // Agent interaction events
   | 'agent.selected'
   | 'agent.message_sent'
@@ -28,7 +28,7 @@ export type AnalyticsEvent =
   | 'agent.tool_used'
   | 'agent.error'
   | 'agent.selection_saved'
-  
+
   // Job management events
   | 'job.clicked'
   | 'job.scheduled_toggle'
@@ -40,7 +40,7 @@ export type AnalyticsEvent =
   | 'job.tab_changed'
   | 'job.pagination'
   | 'job.share_modal_opened'
-  
+
   // Shared job events
   | 'shared_job.created'
   | 'shared_job.link_copied'
@@ -51,7 +51,7 @@ export type AnalyticsEvent =
   | 'shared_job.page_viewed'
   | 'shared_job.load_error'
   | 'shared_job.cta_clicked'
-  
+
   // Wallet operation events
   | 'wallet.created'
   | 'wallet.restored'
@@ -59,27 +59,27 @@ export type AnalyticsEvent =
   | 'wallet.copied_address'
   | 'wallet.set_active'
   | 'wallet.downloaded'
-  
+
   // Transaction events
   | 'swap.initiated'
   | 'swap.approved'
   | 'swap.completed'
   | 'swap.failed'
   | 'swap.cancelled'
-  
+
   // UI interaction events
   | 'sidebar.toggled'
   | 'settings.opened'
   | 'tools.configuration_opened'
   | 'workflow.selected'
   | 'ui.prefilled_options_toggled'
-  
+
   // Research mode events
   | 'research.initiated'
   | 'research.streaming_started'
   | 'research.agent_progress'
   | 'research.completed'
-  
+
   // File operation events
   | 'file.upload_started'
   | 'file.upload_completed';
@@ -94,19 +94,19 @@ export interface EventProperties {
   userId?: string;
   wallet?: string;
   walletId?: string;
-  
+
   // Authentication properties
   privyUserId?: string;
   authMethod?: string;
   email?: string;
-  
+
   // Job properties
   jobId?: string;
   jobName?: string;
   jobStatus?: string;
   isScheduled?: boolean;
   scheduleType?: string;
-  
+
   // Specific event properties
   error?: string;
   duration?: number;
@@ -124,7 +124,7 @@ export interface EventProperties {
   selectedAgents?: string[];
   researchMode?: boolean;
   progressPercentage?: number;
-  
+
   // Shared job properties
   shareId?: string;
   shareTitle?: string;
@@ -161,7 +161,7 @@ export interface EventProperties {
   subtaskCount?: number;
   totalTokens?: number;
   agentCount?: number;
-  
+
   // UI interaction properties
   inputMethod?: string;
   searchQuery?: string;
@@ -175,24 +175,27 @@ export interface EventProperties {
   fromPage?: number;
   toPage?: number;
   section?: string;
-  
+
   // Feature flags (for analytics correlation)
   featureFlags?: Record<string, boolean | string>;
 }
 
 // Track custom event with optional properties
 export const trackEvent = (
-  event: AnalyticsEvent, 
+  event: AnalyticsEvent,
   properties?: EventProperties
 ): void => {
   try {
     // Add timestamp and session info
     const safeProperties: Record<string, string | number | boolean | null> = {};
-    
+
     // Sanitize properties: only accept primitive values
     if (properties) {
       Object.entries(properties).forEach(([key, value]) => {
-        if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) {
+        if (
+          value === null ||
+          ['string', 'number', 'boolean'].includes(typeof value)
+        ) {
           safeProperties[key] = value;
         } else if (Array.isArray(value)) {
           // Convert arrays to string representation
@@ -203,12 +206,13 @@ export const trackEvent = (
         }
       });
     }
-    
-    const enrichedProperties: Record<string, string | number | boolean | null> = {
-      ...safeProperties,
-      timestamp: new Date().toISOString()
-    };
-    
+
+    const enrichedProperties: Record<string, string | number | boolean | null> =
+      {
+        ...safeProperties,
+        timestamp: new Date().toISOString(),
+      };
+
     // Only add sessionId if available
     if (typeof window !== 'undefined') {
       const sessionId = window.sessionStorage.getItem('sessionId');
@@ -216,10 +220,10 @@ export const trackEvent = (
         enrichedProperties['sessionId'] = sessionId;
       }
     }
-    
+
     // Track with Vercel Analytics
     track(event, enrichedProperties);
-    
+
     // Also log to console in development
     if (process.env.NODE_ENV === 'development') {
       console.log('[Analytics]', event, enrichedProperties);
@@ -257,7 +261,10 @@ export const trackTiming = (
 
 // Session management
 export const initializeSession = (): void => {
-  if (typeof window !== 'undefined' && !window.sessionStorage.getItem('sessionId')) {
+  if (
+    typeof window !== 'undefined' &&
+    !window.sessionStorage.getItem('sessionId')
+  ) {
     const sessionId = generateSessionId();
     window.sessionStorage.setItem('sessionId', sessionId);
   }

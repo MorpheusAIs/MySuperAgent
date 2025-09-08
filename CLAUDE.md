@@ -274,7 +274,7 @@ interface AgentResponse {
 ### Message Type Components
 Different message types have specialized rendering components:
 - `CrewResponseMessage` - Multi-agent task execution results
-- `TweetMessage` - Twitter/social media post previews
+- `TweetMessage` - X/social media post previews
 - `TransactionMessage` - Blockchain transaction details
 - `CodeMessage` - Syntax-highlighted code blocks
 - `DataVisualizationMessage` - Charts and data visualizations

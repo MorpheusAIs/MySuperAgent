@@ -30,8 +30,8 @@ import {
   User,
   Wallet,
 } from 'lucide-react';
-import { FaTwitter } from 'react-icons/fa';
 import { useEffect, useRef, useState } from 'react';
+import { FaXTwitter } from 'react-icons/fa6';
 import { useAccount, useDisconnect } from 'wagmi';
 
 interface AccountSettingsProps {
@@ -47,14 +47,14 @@ interface UsageData {
 export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
-  const { 
-    isAuthenticated, 
-    logout, 
-    userEmail, 
-    userWallet, 
-    loginWithGoogle, 
-    loginWithTwitter, 
-    loginWithWallet 
+  const {
+    isAuthenticated,
+    logout,
+    userEmail,
+    userWallet,
+    loginWithGoogle,
+    loginWithX,
+    loginWithWallet,
   } = usePrivyAuth();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -64,15 +64,15 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
 
   // Determine user plan based on authentication - Privy users are all "Pro" now
   const isProUser = isAuthenticated;
-  const authMethod = userWallet ? 'wallet' : userEmail ? 'email' : 'twitter';
+  const authMethod = userWallet ? 'wallet' : userEmail ? 'email' : 'x';
   const planType = 'Pro'; // All authenticated users are Pro now
   const messageLimit = 'Unlimited'; // All authenticated users get unlimited
   const messagesUsed = usageData?.messagesUsedToday || 0;
 
-  // Fetch usage data for free users
+  // Fetch usage data for authenticated users (optional, since they have unlimited)
   useEffect(() => {
     const fetchUsageData = async () => {
-      if (!isProUser && isAuthenticated) {
+      if (isAuthenticated) {
         try {
           const response = await fetch('/api/auth/usage', {
             headers: {
@@ -91,7 +91,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
     };
 
     fetchUsageData();
-  }, [isProUser, isAuthenticated]);
+  }, [isAuthenticated]);
 
   const handleCopyAddress = () => {
     if (address) {
@@ -222,7 +222,9 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                     Message Usage
                   </Text>
                   <Text color="rgba(255, 255, 255, 0.7)" fontSize="sm">
-                    {isAuthenticated ? 'Unlimited messages' : 'Sign in for unlimited access'}
+                    {isAuthenticated
+                      ? 'Unlimited messages'
+                      : 'Sign in for unlimited access'}
                   </Text>
                 </VStack>
                 {isAuthenticated && (
@@ -246,7 +248,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                       ? 'Crypto Wallet Connected'
                       : userEmail
                       ? `Google Account (${userEmail})`
-                      : 'Twitter Account'}
+                      : 'X Account'}
                   </Text>
                 </VStack>
                 <HStack spacing={2}>
@@ -273,9 +275,9 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                     </>
                   ) : (
                     <>
-                      <FaTwitter size={16} color="#59F886" />
+                      <FaXTwitter size={16} color="#59F886" />
                       <Text color="#59F886" fontSize="sm" fontWeight="500">
-                        Twitter
+                        X
                       </Text>
                     </>
                   )}
@@ -300,7 +302,13 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
               <VStack spacing={4} align="stretch">
                 <HStack spacing={3}>
                   <Box p={2} borderRadius="md" bg="#59F886" color="#000">
-                    {userWallet ? <Wallet size={20} /> : userEmail ? <Mail size={20} /> : <FaTwitter size={20} />}
+                    {userWallet ? (
+                      <Wallet size={20} />
+                    ) : userEmail ? (
+                      <Mail size={20} />
+                    ) : (
+                      <FaXTwitter size={20} />
+                    )}
                   </Box>
                   <VStack align="start" spacing={0}>
                     <Text color="white" fontWeight="600">
@@ -323,11 +331,11 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                     <Text
                       color="rgba(255, 255, 255, 0.7)"
                       fontSize="sm"
-                      fontFamily={userWallet ? "mono" : "inherit"}
+                      fontFamily={userWallet ? 'mono' : 'inherit'}
                     >
-                      {userWallet 
+                      {userWallet
                         ? `${userWallet.slice(0, 6)}...${userWallet.slice(-4)}`
-                        : userEmail || 'Twitter Account'}
+                        : userEmail || 'X Account'}
                     </Text>
                   </VStack>
                   {userWallet && (
@@ -392,7 +400,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                       Unlock Full Access
                     </Heading>
                     <Text color="rgba(255, 255, 255, 0.8)" fontSize="sm">
-                      Sign in with Google, Twitter, or your crypto wallet
+                      Sign in with Google, X, or your crypto wallet
                     </Text>
                   </VStack>
                 </HStack>
@@ -437,7 +445,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                     Sign In with Google
                   </Button>
                   <Button
-                    onClick={loginWithTwitter}
+                    onClick={loginWithX}
                     bg="rgba(89, 248, 134, 0.2)"
                     color="#59F886"
                     border="1px solid #59F886"
@@ -449,9 +457,9 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                     width="full"
                     fontWeight="600"
                     borderRadius="12px"
-                    leftIcon={<FaTwitter size={20} />}
+                    leftIcon={<FaXTwitter size={20} />}
                   >
-                    Sign In with Twitter
+                    Sign In with X
                   </Button>
                   <Button
                     onClick={loginWithWallet}

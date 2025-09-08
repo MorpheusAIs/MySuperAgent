@@ -1,14 +1,14 @@
+import { trackEvent } from '@/services/analytics';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import axios from 'axios';
 import {
   createContext,
   ReactNode,
   useContext,
   useEffect,
   useState,
-} from "react";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { useAccount } from "wagmi";
-import axios from "axios";
-import { trackEvent } from "@/services/analytics";
+} from 'react';
+import { useAccount } from 'wagmi';
 
 // Types
 interface PrivyAuthContextType {
@@ -21,13 +21,15 @@ interface PrivyAuthContextType {
   apiClient: () => any;
   loginWithGoogle: () => Promise<void>;
   loginWithWallet: () => Promise<void>;
-  loginWithTwitter: () => Promise<void>;
+  loginWithX: () => Promise<void>;
   userEmail: string | null;
   userWallet: string | null;
 }
 
 // Create context
-const PrivyAuthContext = createContext<PrivyAuthContextType | undefined>(undefined);
+const PrivyAuthContext = createContext<PrivyAuthContextType | undefined>(
+  undefined
+);
 
 // Provider component
 export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
@@ -39,7 +41,7 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
     logout: privyLogout,
     getAccessToken,
   } = usePrivy();
-  
+
   const { wallets } = useWallets();
   const { address } = useAccount();
 
@@ -58,10 +60,8 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
       setUserEmail(email);
 
       // Get wallet address from user or connected wallets
-      const wallet = user.wallet?.address || 
-                    wallets[0]?.address || 
-                    address || 
-                    null;
+      const wallet =
+        user.wallet?.address || wallets[0]?.address || address || null;
       setUserWallet(wallet);
     } else {
       setUserEmail(null);
@@ -69,49 +69,40 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, wallets, address]);
 
-  // Sync authentication state with Privy
+  // Sync authentication state with Privy - Simplified version
   useEffect(() => {
     const syncAuth = async () => {
       if (privyAuthenticated && user) {
         try {
           setIsLoading(true);
-          
+
           // Get Privy access token
           const privyToken = await getAccessToken();
-          
+
           if (privyToken) {
-            // Register/login with our backend using Privy token
-            const response = await axios.post("/api/auth/privy-verify", {
-              privy_token: privyToken,
-              privy_user_id: user.id,
-              email: user.email?.address,
-              wallet_address: userWallet,
-            });
+            // Store Privy token as our auth token for now
+            localStorage.setItem('authToken', privyToken);
+            localStorage.setItem('userId', user.id);
+            localStorage.setItem('privyUserId', user.id);
 
-            const { access_token, user_id } = response.data;
-            
-            // Store authentication data
-            localStorage.setItem("authToken", access_token);
-            localStorage.setItem("userId", user_id?.toString() || '');
-            localStorage.setItem("privyUserId", user.id);
-
-            setAuthToken(access_token);
-            setUserId(user_id);
+            setAuthToken(privyToken);
+            setUserId(1); // Use a default user ID for now
             setIsAuthenticated(true);
 
             // Track successful authentication
             trackEvent('auth.privy_authenticated', {
               privyUserId: user.id,
-              userId: user_id?.toString(),
-              authMethod: user.email ? 'google' : 'wallet',
+              userId: '1',
+              authMethod: user.email ? 'google' : user.wallet ? 'wallet' : 'x',
               email: user.email?.address,
               wallet: userWallet || undefined,
             });
           }
         } catch (error) {
-          console.error("Privy authentication sync error:", error);
+          console.error('Privy authentication sync error:', error);
           trackEvent('auth.privy_error', {
-            error: error instanceof Error ? error.message : 'Authentication failed',
+            error:
+              error instanceof Error ? error.message : 'Authentication failed',
           });
         } finally {
           setIsLoading(false);
@@ -121,9 +112,9 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
         setIsAuthenticated(false);
         setAuthToken(null);
         setUserId(null);
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("privyUserId");
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('privyUserId');
       }
     };
 
@@ -137,14 +128,14 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       trackEvent('auth.google_login_started');
-      
+
       await login({
         loginMethods: ['google'],
       });
-      
+
       trackEvent('auth.google_login_success');
     } catch (error) {
-      console.error("Google login error:", error);
+      console.error('Google login error:', error);
       trackEvent('auth.google_login_error', {
         error: error instanceof Error ? error.message : 'Google login failed',
       });
@@ -158,14 +149,14 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       trackEvent('auth.wallet_login_started');
-      
+
       await login({
         loginMethods: ['wallet'],
       });
-      
+
       trackEvent('auth.wallet_login_success');
     } catch (error) {
-      console.error("Wallet login error:", error);
+      console.error('Wallet login error:', error);
       trackEvent('auth.wallet_login_error', {
         error: error instanceof Error ? error.message : 'Wallet login failed',
       });
@@ -174,21 +165,21 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Login with Twitter
-  const loginWithTwitter = async () => {
+  // Login with X
+  const loginWithX = async () => {
     try {
       setIsLoading(true);
-      trackEvent('auth.twitter_login_started');
-      
+      trackEvent('auth.x_login_started');
+
       await login({
         loginMethods: ['twitter'],
       });
-      
-      trackEvent('auth.twitter_login_success');
+
+      trackEvent('auth.x_login_success');
     } catch (error) {
-      console.error("Twitter login error:", error);
-      trackEvent('auth.twitter_login_error', {
-        error: error instanceof Error ? error.message : 'Twitter login failed',
+      console.error('X login error:', error);
+      trackEvent('auth.x_login_error', {
+        error: error instanceof Error ? error.message : 'X login failed',
       });
     } finally {
       setIsLoading(false);
@@ -208,38 +199,25 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
   // Logout function
   const logout = async () => {
     try {
-      if (authToken) {
-        // Call logout endpoint to invalidate token on server
-        await axios.post(
-          "/api/auth/logout",
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-            },
-          }
-        );
-      }
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
       // Clear local storage and state
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("privyUserId");
-      
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('privyUserId');
+
       // Track logout event
       trackEvent('auth.privy_logout', {
         userId: userId?.toString(),
         privyUserId: user?.id,
       });
-      
+
       setAuthToken(null);
       setUserId(null);
       setIsAuthenticated(false);
-      
+
       // Logout from Privy
       await privyLogout();
+    } catch (error) {
+      console.error('Logout error:', error);
     }
   };
 
@@ -266,7 +244,7 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
         apiClient,
         loginWithGoogle,
         loginWithWallet,
-        loginWithTwitter,
+        loginWithX,
         userEmail,
         userWallet,
       }}
@@ -280,7 +258,7 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
 export const usePrivyAuth = () => {
   const context = useContext(PrivyAuthContext);
   if (context === undefined) {
-    throw new Error("usePrivyAuth must be used within a PrivyAuthProvider");
+    throw new Error('usePrivyAuth must be used within a PrivyAuthProvider');
   }
   return context;
 };

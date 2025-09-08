@@ -1,29 +1,29 @@
-import React, { useState } from "react";
-import Image from "next/image";
+import { StyledTooltip } from '@/components/Common/StyledTooltip';
 import {
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
-  Grid,
   Box,
-  Text,
-  VStack,
   Button,
   Flex,
-} from "@chakra-ui/react";
-import { ArrowLeft } from "lucide-react";
-import { TwitterConfig } from "./Integrations/TwitterConfig";
-import { CoinbaseConfig } from "./Integrations/CoinbaseConfig";
-import { OneInchConfig } from "./Integrations/OneInchConfig";
-import { ElfaConfig } from "./Integrations/ElfaConfig";
-import { CodexConfig } from "./Integrations/CodexConfig";
-import { SantimentConfig } from "./Integrations/SantimentConfig";
-import styles from "./Integrations/ApiCredentials.module.css";
-import { useAccount } from "wagmi";
-import { StyledTooltip } from "@/components/Common/StyledTooltip";
+  Grid,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
+  Text,
+  VStack,
+} from '@chakra-ui/react';
+import { ArrowLeft } from 'lucide-react';
+import Image from 'next/image';
+import React, { useState } from 'react';
+import { useAccount } from 'wagmi';
+import styles from './Integrations/ApiCredentials.module.css';
+import { CodexConfig } from './Integrations/CodexConfig';
+import { CoinbaseConfig } from './Integrations/CoinbaseConfig';
+import { ElfaConfig } from './Integrations/ElfaConfig';
+import { OneInchConfig } from './Integrations/OneInchConfig';
+import { SantimentConfig } from './Integrations/SantimentConfig';
+import { XConfig } from './Integrations/TwitterConfig';
 
 interface ApiOption {
   id: string;
@@ -35,42 +35,42 @@ interface ApiOption {
 
 const API_OPTIONS: ApiOption[] = [
   {
-    id: "twitter",
-    name: "X API",
-    logo: "/images/x-logo.jpg",
-    component: TwitterConfig,
+    id: 'twitter',
+    name: 'X API',
+    logo: '/images/x-logo.jpg',
+    component: XConfig,
   },
   {
-    id: "coinbase",
-    name: "Coinbase API",
-    logo: "/images/coinbase-logo.png",
+    id: 'coinbase',
+    name: 'Coinbase API',
+    logo: '/images/coinbase-logo.png',
     component: CoinbaseConfig,
   },
   {
-    id: "oneinch",
-    name: "1inch API",
-    logo: "/images/one-inch-logo.png",
+    id: 'oneinch',
+    name: '1inch API',
+    logo: '/images/one-inch-logo.png',
     component: OneInchConfig,
     proEnabled: true,
   },
   {
-    id: "elfa",
-    name: "Elfa API",
-    logo: "/images/elfa-logo.jpg",
+    id: 'elfa',
+    name: 'Elfa API',
+    logo: '/images/elfa-logo.jpg',
     component: ElfaConfig,
     proEnabled: true,
   },
   {
-    id: "codex",
-    name: "Codex API",
-    logo: "/images/codex-logo.png",
+    id: 'codex',
+    name: 'Codex API',
+    logo: '/images/codex-logo.png',
     component: CodexConfig,
     proEnabled: true,
   },
   {
-    id: "santiment",
-    name: "Santiment API",
-    logo: "/images/santiment-logo.jpeg",
+    id: 'santiment',
+    name: 'Santiment API',
+    logo: '/images/santiment-logo.jpeg',
     component: SantimentConfig,
     proEnabled: true,
   },
@@ -133,7 +133,7 @@ export const ApiCredentialsModal: React.FC<ApiCredentialsModalProps> = ({
               top="50%"
               transform="translateY(-50%)"
               color="white"
-              _hover={{ bg: "rgba(255, 255, 255, 0.1)" }}
+              _hover={{ bg: 'rgba(255, 255, 255, 0.1)' }}
               fontSize="14px"
             >
               Back
@@ -142,13 +142,13 @@ export const ApiCredentialsModal: React.FC<ApiCredentialsModalProps> = ({
           <Flex justify="center">
             {selectedApi
               ? API_OPTIONS.find((api) => api.id === selectedApi)?.name
-              : "API Credentials"}
+              : 'API Credentials'}
           </Flex>
         </ModalHeader>
 
         <ModalCloseButton
           color="white"
-          _hover={{ bg: "rgba(255, 255, 255, 0.1)" }}
+          _hover={{ bg: 'rgba(255, 255, 255, 0.1)' }}
         />
 
         <ModalBody padding="16px">
@@ -178,10 +178,10 @@ export const ApiCredentialsModal: React.FC<ApiCredentialsModalProps> = ({
                       bg="rgba(255, 255, 255, 0.02)"
                       border="1px solid rgba(255, 255, 255, 0.1)"
                       borderRadius="8px"
-                      cursor={isDisabled ? "default" : "pointer"}
+                      cursor={isDisabled ? 'default' : 'pointer'}
                       onClick={() => !isDisabled && setSelectedApi(api.id)}
                       _hover={{
-                        bg: isDisabled ? "none" : "rgba(255, 255, 255, 0.05)",
+                        bg: isDisabled ? 'none' : 'rgba(255, 255, 255, 0.05)',
                       }}
                       transition="background-color 0.2s"
                       className={styles.apiOption}
@@ -200,7 +200,7 @@ export const ApiCredentialsModal: React.FC<ApiCredentialsModalProps> = ({
                             src={api.logo}
                             alt={`${api.name} logo`}
                             fill
-                            style={{ objectFit: "cover" }}
+                            style={{ objectFit: 'cover' }}
                           />
                         </Box>
                         <Text color="white" fontSize="14px" fontWeight="500">
@@ -233,7 +233,7 @@ export const ApiCredentialsModal: React.FC<ApiCredentialsModalProps> = ({
                     src="/images/lit-logo.png"
                     alt="Lit Protocol logo"
                     fill
-                    style={{ objectFit: "contain" }}
+                    style={{ objectFit: 'contain' }}
                   />
                 </Box>
               </VStack>

@@ -8,7 +8,6 @@ import { Analytics } from '@vercel/analytics/react';
 import type { AppProps } from 'next/app';
 import '../styles/globals.css';
 
-import { AuthProvider } from '@/contexts/auth/AuthProvider';
 import { PrivyAuthProvider } from '@/contexts/auth/PrivyAuthProvider';
 import { GlobalSearchProvider } from '@/contexts/GlobalSearchProvider';
 import { PrivyProvider } from '@privy-io/react-auth';
@@ -156,7 +155,9 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   return (
     <SessionProvider session={session}>
       <PrivyProvider
-        appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'cmf9b4j1301gdkz0cxud5ox6p'}
+        appId={
+          process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'cmf9b4j1301gdkz0cxud5ox6p'
+        }
         config={{
           loginMethods: ['google', 'twitter', 'wallet', 'email', 'sms'],
           appearance: {
@@ -188,14 +189,12 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
               })}
             >
               <PrivyAuthProvider>
-                <AuthProvider>
-                  <ChakraProvider theme={theme}>
-                    <GlobalSearchProvider>
-                      <Component {...pageProps} />
-                      <Analytics />
-                    </GlobalSearchProvider>
-                  </ChakraProvider>
-                </AuthProvider>
+                <ChakraProvider theme={theme}>
+                  <GlobalSearchProvider>
+                    <Component {...pageProps} />
+                    <Analytics />
+                  </GlobalSearchProvider>
+                </ChakraProvider>
               </PrivyAuthProvider>
             </RainbowKitProvider>
           </QueryClientProvider>
