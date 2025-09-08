@@ -4,10 +4,20 @@ import { SettingsMain } from '@/components/Settings/Main';
 import { useGlobalUI } from '@/contexts/GlobalSearchProvider';
 import { Box, Flex } from '@chakra-ui/react';
 import type { NextPage } from 'next';
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 import styles from './index.module.css';
 
 const SettingsPage: NextPage = () => {
   const { isSidebarOpen, setSidebarOpen } = useGlobalUI();
+  const router = useRouter();
+
+  // Redirect to account tab if no tab is specified
+  useEffect(() => {
+    if (!router.query.tab) {
+      router.replace('/settings?tab=account', undefined, { shallow: true });
+    }
+  }, [router]);
 
   return (
     <Box className={styles.container}>

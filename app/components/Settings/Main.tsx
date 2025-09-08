@@ -24,22 +24,41 @@ interface SettingsMainProps {
   isSidebarOpen?: boolean;
 }
 
+const TAB_CONFIG = [
+  { id: 'account', name: 'Account', index: 0 },
+  { id: 'general', name: 'General', index: 1 },
+  { id: 'rules', name: 'Rules & Memories', index: 2 },
+  { id: 'credentials', name: 'Credentials', index: 3 },
+  { id: 'mcp', name: 'MCP Servers', index: 4 },
+  { id: 'a2a', name: 'A2A Agents', index: 5 },
+];
+
 export const SettingsMain: React.FC<SettingsMainProps> = ({
   isSidebarOpen = true,
 }) => {
   const router = useRouter();
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Update tab index based on URL parameter
   useEffect(() => {
     const tab = router.query.tab;
     if (tab && typeof tab === 'string') {
-      const index = parseInt(tab, 10);
-      if (!isNaN(index) && index >= 0 && index <= 5) {
-        setTabIndex(index);
+      const tabConfig = TAB_CONFIG.find((t) => t.id === tab);
+      if (tabConfig) {
+        setTabIndex(tabConfig.index);
       }
     }
   }, [router.query.tab]);
+
+  // Handle tab change and update URL
+  const handleTabChange = (index: number) => {
+    setTabIndex(index);
+    const tabConfig = TAB_CONFIG.find((t) => t.index === index);
+    if (tabConfig) {
+      router.push(`/settings?tab=${tabConfig.id}`, undefined, {
+        shallow: true,
+      });
+    }
+  };
 
   return (
     <Container maxW="full" minH="100vh" bg="#0A0A0A" color="white" p={0}>
@@ -60,7 +79,7 @@ export const SettingsMain: React.FC<SettingsMainProps> = ({
           <Box className={styles.content} flex={1}>
             <Tabs
               index={tabIndex}
-              onChange={setTabIndex}
+              onChange={handleTabChange}
               orientation="horizontal"
               variant="unstyled"
               h="full"
@@ -71,41 +90,13 @@ export const SettingsMain: React.FC<SettingsMainProps> = ({
                 pb={4}
                 mb={6}
               >
-                <Tab className={styles.tab}>
-                  <Text fontSize="sm" fontWeight="500">
-                    Account
-                  </Text>
-                </Tab>
-                <Tab className={styles.tab}>
-                  <Text fontSize="sm" fontWeight="500">
-                    General
-                  </Text>
-                </Tab>
-                <Tab className={styles.tab}>
-                  <Text fontSize="sm" fontWeight="500">
-                    Rules & Memories
-                  </Text>
-                </Tab>
-                <Tab className={styles.tab}>
-                  <Text fontSize="sm" fontWeight="500">
-                    Credentials
-                  </Text>
-                </Tab>
-                <Tab className={styles.tab}>
-                  <Text fontSize="sm" fontWeight="500">
-                    MCP Servers
-                  </Text>
-                </Tab>
-                <Tab className={styles.tab}>
-                  <Text fontSize="sm" fontWeight="500">
-                    A2A Agents
-                  </Text>
-                </Tab>
-                {/* <Tab className={styles.tab}>
-                  <Text fontSize="sm" fontWeight="500">
-                    Agent Selection
-                  </Text>
-                </Tab> */}
+                {TAB_CONFIG.map((tab) => (
+                  <Tab key={tab.id} className={styles.tab}>
+                    <Text fontSize="sm" fontWeight="500">
+                      {tab.name}
+                    </Text>
+                  </Tab>
+                ))}
               </TabList>
 
               <TabPanels h="full" className={styles.tabPanels}>

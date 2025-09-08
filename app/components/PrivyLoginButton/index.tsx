@@ -13,6 +13,7 @@ import {
 } from '@chakra-ui/react';
 import { usePrivy } from '@privy-io/react-auth';
 import { ChevronDown, LogIn, LogOut, Mail, User, Wallet } from 'lucide-react';
+import { useRouter } from 'next/router';
 import { FaXTwitter } from 'react-icons/fa6';
 import { useAccount } from 'wagmi';
 
@@ -26,6 +27,7 @@ export const PrivyLoginButton = ({
   size = 'md',
 }: PrivyLoginButtonProps) => {
   const { ready, authenticated, user, login, logout: privyLogout } = usePrivy();
+  const router = useRouter();
 
   const {
     loginWithGoogle,
@@ -38,6 +40,11 @@ export const PrivyLoginButton = ({
   } = usePrivyAuth();
 
   const { address } = useAccount();
+
+  // Handle navigation to account settings
+  const handleNavigateToAccountSettings = () => {
+    router.push('/settings?tab=account');
+  };
 
   // Handle loading state
   if (!ready) {
@@ -66,11 +73,18 @@ export const PrivyLoginButton = ({
         ? `${displayName.slice(0, 8)}...${displayName.slice(-4)}`
         : displayName;
 
-    // Sidebar variant - more compact display
+    // Sidebar variant - more compact display with clickable area
     if (variant === 'sidebar') {
       return (
         <VStack spacing={3} align="stretch">
-          <VStack spacing={2} align="stretch">
+          <VStack
+            spacing={2}
+            align="stretch"
+            cursor="pointer"
+            onClick={handleNavigateToAccountSettings}
+            _hover={{ opacity: 0.8 }}
+            transition="opacity 0.2s"
+          >
             <HStack spacing={2} justify="center">
               <User size={18} color="#59F886" />
               <Text
@@ -186,6 +200,16 @@ export const PrivyLoginButton = ({
                 )}
               </Text>
             </VStack>
+          </MenuItem>
+          <MenuItem
+            icon={<User size={16} />}
+            onClick={handleNavigateToAccountSettings}
+            bg="transparent"
+            color="rgba(255, 255, 255, 0.9)"
+            _hover={{ bg: 'rgba(89, 248, 134, 0.2)', color: '#59F886' }}
+            transition="all 0.2s"
+          >
+            Account Settings
           </MenuItem>
           <MenuItem
             icon={<LogOut size={16} />}

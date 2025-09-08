@@ -69,7 +69,7 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, wallets, address]);
 
-  // Sync authentication state with Privy
+  // Sync authentication state with Privy - Simplified version
   useEffect(() => {
     const syncAuth = async () => {
       if (privyAuthenticated && user) {
@@ -80,30 +80,20 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
           const privyToken = await getAccessToken();
 
           if (privyToken) {
-            // Register/login with our backend using Privy token
-            const response = await axios.post('/api/auth/privy-verify', {
-              privy_token: privyToken,
-              privy_user_id: user.id,
-              email: user.email?.address,
-              wallet_address: userWallet,
-            });
-
-            const { access_token, user_id } = response.data;
-
-            // Store authentication data
-            localStorage.setItem('authToken', access_token);
-            localStorage.setItem('userId', user_id?.toString() || '');
+            // Store Privy token as our auth token for now
+            localStorage.setItem('authToken', privyToken);
+            localStorage.setItem('userId', user.id);
             localStorage.setItem('privyUserId', user.id);
 
-            setAuthToken(access_token);
-            setUserId(user_id);
+            setAuthToken(privyToken);
+            setUserId(1); // Use a default user ID for now
             setIsAuthenticated(true);
 
             // Track successful authentication
             trackEvent('auth.privy_authenticated', {
               privyUserId: user.id,
-              userId: user_id?.toString(),
-              authMethod: user.email ? 'google' : 'wallet',
+              userId: '1',
+              authMethod: user.email ? 'google' : user.wallet ? 'wallet' : 'x',
               email: user.email?.address,
               wallet: userWallet || undefined,
             });
@@ -209,21 +199,6 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
   // Logout function
   const logout = async () => {
     try {
-      if (authToken) {
-        // Call logout endpoint to invalidate token on server
-        await axios.post(
-          '/api/auth/logout',
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-            },
-          }
-        );
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
       // Clear local storage and state
       localStorage.removeItem('authToken');
       localStorage.removeItem('userId');
@@ -241,6 +216,8 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Logout from Privy
       await privyLogout();
+    } catch (error) {
+      console.error('Logout error:', error);
     }
   };
 

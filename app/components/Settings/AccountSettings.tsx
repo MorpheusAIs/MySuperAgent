@@ -69,10 +69,10 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
   const messageLimit = 'Unlimited'; // All authenticated users get unlimited
   const messagesUsed = usageData?.messagesUsedToday || 0;
 
-  // Fetch usage data for free users
+  // Fetch usage data for authenticated users (optional, since they have unlimited)
   useEffect(() => {
     const fetchUsageData = async () => {
-      if (!isProUser && isAuthenticated) {
+      if (isAuthenticated) {
         try {
           const response = await fetch('/api/auth/usage', {
             headers: {
@@ -91,7 +91,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
     };
 
     fetchUsageData();
-  }, [isProUser, isAuthenticated]);
+  }, [isAuthenticated]);
 
   const handleCopyAddress = () => {
     if (address) {
