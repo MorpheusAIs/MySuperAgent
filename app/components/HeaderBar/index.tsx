@@ -1,16 +1,11 @@
 import {
   Box,
   HStack,
-  IconButton,
-  Select,
   Spacer,
-  Text,
-  Tooltip,
 } from '@chakra-ui/react';
-import { Settings } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
-import { FC, useState } from 'react';
+import { FC } from 'react';
 import { PrivyLoginButton } from '@/components/PrivyLoginButton';
 import styles from './index.module.css';
 
@@ -19,8 +14,6 @@ interface HeaderBarProps {
 }
 
 export const HeaderBar: FC<HeaderBarProps> = ({ onBackToJobs }) => {
-  const [selectedModel, setSelectedModel] = useState('llama3.3:70b');
-  const modelOptions = [{ value: 'llama3.3:70b', label: 'Llama 3.3 (70B)' }];
   const router = useRouter();
 
   const handleLogoClick = () => {
@@ -38,68 +31,20 @@ export const HeaderBar: FC<HeaderBarProps> = ({ onBackToJobs }) => {
       <HStack spacing={0} width="100%" px={4}>
         <Box className={styles.logo} flexShrink={0}>
           <Box onClick={handleLogoClick} cursor="pointer">
-            <Image src="/assets/logo.svg" alt="logo" width={60} height={30} />
+            <Image 
+              src="/assets/logo.svg" 
+              alt="logo" 
+              width={60} 
+              height={30}
+              style={{ width: 'auto', height: 'auto' }}
+            />
           </Box>
         </Box>
         <Spacer />
         <HStack spacing={4}>
-          <HStack spacing={2}>
-            <Text fontSize="sm" color="white" fontWeight="600">
-              Model:
-            </Text>
-            <Select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              size="sm"
-              bg="#27292c"
-              color="white"
-              borderColor="rgba(255, 255, 255, 0.1)"
-              _hover={{ borderColor: 'rgba(255, 255, 255, 0.2)' }}
-              _focus={{
-                borderColor: 'rgba(255, 255, 255, 0.2)',
-                boxShadow: 'none',
-              }}
-              borderRadius="8px"
-              fontSize="14px"
-              height="32px"
-              width="180px"
-              fontWeight="400"
-            >
-              {modelOptions.map((option) => (
-                <option
-                  key={option.value}
-                  value={option.value}
-                  style={{ background: '#27292c', color: 'white' }}
-                >
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-          </HStack>
-          <HStack spacing={2}>
-            <Tooltip label="Settings" placement="bottom">
-              <IconButton
-                aria-label="Settings"
-                icon={<Settings size={20} />}
-                size="md"
-                variant="ghost"
-                color="white"
-                bg="rgba(255, 255, 255, 0.1)"
-                _hover={{
-                  bg: 'rgba(255, 255, 255, 0.2)',
-                  transform: 'translateY(-1px)',
-                }}
-                _active={{
-                  bg: 'rgba(255, 255, 255, 0.15)',
-                }}
-                borderRadius="8px"
-                onClick={() => router.push('/settings?tab=1')}
-              />
-            </Tooltip>
-            <Box className={styles.connectButtonWrapper}>
-              <PrivyLoginButton />
-            </Box>
-          </HStack>
+          <Box className={styles.connectButtonWrapper}>
+            <PrivyLoginButton />
+          </Box>
         </HStack>
       </HStack>
     </Box>

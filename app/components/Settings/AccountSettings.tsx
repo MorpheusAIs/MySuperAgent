@@ -1,4 +1,5 @@
 import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import { useWalletAddress } from '@/services/wallet/utils';
 import {
   AlertDialog,
   AlertDialogBody,
@@ -56,14 +57,19 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
     loginWithX,
     loginWithWallet,
   } = usePrivyAuth();
+  const { getAddress } = useWalletAddress();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isDeleting, setIsDeleting] = useState(false);
   const [usageData, setUsageData] = useState<UsageData | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const toast = useToast();
 
-  // Determine user plan based on authentication - Privy users are all "Pro" now
-  const isProUser = isAuthenticated;
+  // Check both Privy authentication and wallet connection
+  const walletAddress = getAddress();
+  const hasSession = isAuthenticated || !!walletAddress;
+
+  // Determine user plan based on authentication - Users with sessions are all "Pro" now
+  const isProUser = hasSession;
   const authMethod = userWallet ? 'wallet' : userEmail ? 'email' : 'x';
   const planType = 'Pro'; // All authenticated users are Pro now
   const messageLimit = 'Unlimited'; // All authenticated users get unlimited
@@ -72,7 +78,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
   // Fetch usage data for authenticated users (optional, since they have unlimited)
   useEffect(() => {
     const fetchUsageData = async () => {
-      if (isAuthenticated) {
+      if (hasSession) {
         try {
           const response = await fetch('/api/auth/usage', {
             headers: {
@@ -91,12 +97,13 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
     };
 
     fetchUsageData();
-  }, [isAuthenticated]);
+  }, [hasSession]);
 
   const handleCopyAddress = () => {
-    if (address) {
+    const addressToCopy = userWallet || walletAddress || address;
+    if (addressToCopy) {
       navigator.clipboard
-        .writeText(address)
+        .writeText(addressToCopy)
         .then(() => {
           toast({
             title: 'Address copied',
@@ -194,23 +201,23 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                   </Box>
                   <VStack align="start" spacing={0}>
                     <Text color="white" fontWeight="600">
-                      {isAuthenticated ? 'Pro Plan' : 'Free Plan'}
+                      {hasSession ? 'Pro Plan' : 'Free Plan'}
                     </Text>
                     <Text color="rgba(255, 255, 255, 0.7)" fontSize="sm">
-                      {isAuthenticated
+                      {hasSession
                         ? 'Full access to all features'
                         : 'Sign in to access all features'}
                     </Text>
                   </VStack>
                 </HStack>
                 <Badge
-                  colorScheme={isAuthenticated ? 'green' : 'gray'}
+                  colorScheme={hasSession ? 'green' : 'gray'}
                   variant="solid"
                   px={3}
                   py={1}
                   borderRadius="full"
                 >
-                  {isAuthenticated ? 'Pro' : 'Free'}
+                  {hasSession ? 'Pro' : 'Free'}
                 </Badge>
               </Flex>
 
@@ -222,12 +229,12 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                     Message Usage
                   </Text>
                   <Text color="rgba(255, 255, 255, 0.7)" fontSize="sm">
-                    {isAuthenticated
+                    {hasSession
                       ? 'Unlimited messages'
                       : 'Sign in for unlimited access'}
                   </Text>
                 </VStack>
-                {isAuthenticated && (
+                {hasSession && (
                   <Text color="#59F886" fontSize="sm" fontWeight="500">
                     ∞ Unlimited
                   </Text>
@@ -242,9 +249,9 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                     Authentication Method
                   </Text>
                   <Text color="rgba(255, 255, 255, 0.7)" fontSize="sm">
-                    {!isAuthenticated
+                    {!hasSession
                       ? 'No Authentication'
-                      : userWallet
+                      : userWallet || walletAddress
                       ? 'Crypto Wallet Connected'
                       : userEmail
                       ? `Google Account (${userEmail})`
@@ -252,7 +259,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                   </Text>
                 </VStack>
                 <HStack spacing={2}>
-                  {!isAuthenticated ? (
+                  {!hasSession ? (
                     <>
                       <User size={16} color="rgba(255, 255, 255, 0.7)" />
                       <Text color="rgba(255, 255, 255, 0.7)" fontSize="sm">
@@ -289,7 +296,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
       </Box>
 
       {/* Account Management Section (only show for authenticated users) */}
-      {isAuthenticated && (
+      {hasSession && (
         <Box>
           <Heading size="md" color="white" mb={4}>
             Account Management
@@ -331,14 +338,16 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                     <Text
                       color="rgba(255, 255, 255, 0.7)"
                       fontSize="sm"
-                      fontFamily={userWallet ? 'mono' : 'inherit'}
+                      fontFamily={(userWallet || walletAddress) ? 'mono' : 'inherit'}
                     >
                       {userWallet
                         ? `${userWallet.slice(0, 6)}...${userWallet.slice(-4)}`
+                        : walletAddress
+                        ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
                         : userEmail || 'X Account'}
                     </Text>
                   </VStack>
-                  {userWallet && (
+                  {(userWallet || walletAddress) && (
                     <Button
                       onClick={handleCopyAddress}
                       size="sm"
@@ -380,7 +389,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
       )}
 
       {/* Sign In Section (only show for unauthenticated users) */}
-      {!isAuthenticated && (
+      {!hasSession && (
         <Box>
           <Heading size="md" color="white" mb={4}>
             Sign In to Get Started

@@ -19,6 +19,8 @@ import {
 } from '@chakra-ui/react';
 import { ChevronDown, ChevronRight, Eye, EyeOff, RefreshCw, Trash2, Plus } from 'lucide-react';
 import { useAccount, useSignMessage } from 'wagmi';
+import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import { useWalletAddress } from '@/services/wallet/utils';
 import Image from 'next/image';
 
 interface UserCredentialsProps {
@@ -107,23 +109,29 @@ export const UserCredentials: React.FC<UserCredentialsProps> = ({ onSave }) => {
   
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  const { isAuthenticated, userWallet } = usePrivyAuth();
+  const walletAddress = useWalletAddress();
   const toast = useToast();
+  
+  // Check if user has session (either Privy or direct wallet)
+  const userAddress = userWallet || walletAddress || address;
+  const hasSession = isAuthenticated || !!userAddress;
 
   // Load stored credentials on mount
   useEffect(() => {
-    if (address) {
+    if (hasSession && userAddress) {
       loadStoredCredentials();
     }
-  }, [address]);
+  }, [hasSession, userAddress]);
 
   const loadStoredCredentials = async () => {
-    if (!address) return;
+    if (!userAddress) return;
 
     try {
       const response = await fetch('/api/credentials/services', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: address })
+        body: JSON.stringify({ walletAddress: userAddress })
       });
 
       if (response.ok) {
@@ -146,7 +154,7 @@ export const UserCredentials: React.FC<UserCredentialsProps> = ({ onSave }) => {
   };
 
   const handleSaveCredentials = async (serviceName: string) => {
-    if (!address) {
+    if (!userAddress) {
       toast({
         title: 'Wallet Required',
         description: 'Please connect your wallet to save credentials',
@@ -193,7 +201,7 @@ export const UserCredentials: React.FC<UserCredentialsProps> = ({ onSave }) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              walletAddress: address,
+              walletAddress: userAddress,
               serviceName,
               credentialName,
               credentialValue: value,
@@ -232,7 +240,7 @@ export const UserCredentials: React.FC<UserCredentialsProps> = ({ onSave }) => {
   };
 
   const handleViewCredentials = async (serviceName: string) => {
-    if (!address) return;
+    if (!userAddress) return;
 
     const isCurrentlyShowing = showCredentials[serviceName];
     
@@ -254,7 +262,7 @@ export const UserCredentials: React.FC<UserCredentialsProps> = ({ onSave }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: address,
+          walletAddress: userAddress,
           masterKey: signature
         })
       });
@@ -287,7 +295,7 @@ export const UserCredentials: React.FC<UserCredentialsProps> = ({ onSave }) => {
   };
 
   const handleDeleteCredentials = async (serviceName: string) => {
-    if (!address) return;
+    if (!userAddress) return;
     
     if (!confirm(`Are you sure you want to delete all ${serviceName} credentials? This action cannot be undone.`)) {
       return;
@@ -303,7 +311,7 @@ export const UserCredentials: React.FC<UserCredentialsProps> = ({ onSave }) => {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            walletAddress: address,
+            walletAddress: userAddress,
             serviceName,
             credentialName
           })
@@ -333,7 +341,7 @@ export const UserCredentials: React.FC<UserCredentialsProps> = ({ onSave }) => {
     }
   };
 
-  if (!address) {
+  if (!hasSession) {
     return (
       <Box textAlign="center" py={8}>
         <Text color="rgba(255, 255, 255, 0.6)" fontSize="14px">

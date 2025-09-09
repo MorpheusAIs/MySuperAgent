@@ -58,12 +58,15 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   const { getAddress } = useWalletAddress();
   const toast = useToast();
 
+  const userAddress = getAddress();
+  const hasSession = isAuthenticated || !!userAddress;
+
   const fetchTeams = useCallback(async () => {
-    const userAddress = getAddress();
-    if (!userAddress) return;
+    const walletAddr = getAddress();
+    if (!walletAddr) return;
 
     try {
-      const response = await fetch(`/api/teams?wallet_address=${userAddress}`);
+      const response = await fetch(`/api/teams?wallet_address=${walletAddr}`);
       if (response.ok) {
         const data = await response.json();
         setTeams(data);
@@ -93,11 +96,11 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (hasSession) {
       fetchTeams();
       fetchAvailableAgents();
     }
-  }, [isAuthenticated, fetchTeams, fetchAvailableAgents]);
+  }, [hasSession, fetchTeams, fetchAvailableAgents]);
 
   const handleCreateTeam = async () => {
     const userAddress = getAddress();
@@ -248,7 +251,7 @@ export const TeamsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     }));
   };
 
-  if (!isAuthenticated) {
+  if (!hasSession) {
     return (
       <Box className={styles.container}>
         <VStack spacing={6} align="center" py={12}>

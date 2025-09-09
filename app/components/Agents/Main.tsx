@@ -79,9 +79,12 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   const { getAddress } = useWalletAddress();
   const toast = useToast();
 
+  const userAddress = getAddress();
+  const hasSession = isAuthenticated || !!userAddress;
+
   const loadUserAgentData = useCallback(async () => {
-    const userAddress = getAddress();
-    if (!userAddress) return;
+    const walletAddr = getAddress();
+    if (!walletAddr) return;
 
     try {
       await Promise.all([loadEnabledAgents(), loadUserConfig()]);
@@ -178,14 +181,14 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
 
   // Load user-specific data when authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (hasSession) {
       loadUserAgentData();
     } else {
       // Clear user data when not authenticated
       setEnabledAgents([]);
       setUserConfig({});
     }
-  }, [isAuthenticated, loadUserAgentData]);
+  }, [hasSession, loadUserAgentData]);
 
   const handleToggleAgent = async (agentName: string, enable: boolean) => {
     const userAddress = getAddress();
@@ -366,7 +369,7 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     );
   }
 
-  if (!isAuthenticated) {
+  if (!hasSession) {
     return (
       <Box className={styles.container}>
         <Box className={styles.emptyState}>
