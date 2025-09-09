@@ -31,7 +31,13 @@ export const HeaderBar: FC<HeaderBarProps> = ({ onBackToJobs }) => {
       <HStack spacing={0} width="100%" px={4}>
         <Box className={styles.logo} flexShrink={0}>
           <Box onClick={handleLogoClick} cursor="pointer">
-            <Image src="/assets/logo.svg" alt="logo" width={60} height={30} />
+            <Image 
+              src="/assets/logo.svg" 
+              alt="logo" 
+              width={60} 
+              height={30}
+              style={{ width: 'auto', height: 'auto' }}
+            />
           </Box>
         </Box>
         <Spacer />

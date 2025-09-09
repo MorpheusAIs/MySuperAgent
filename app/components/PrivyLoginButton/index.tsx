@@ -160,9 +160,9 @@ export const PrivyLoginButton = ({
         >
           <HStack spacing={2}>
             <User size={16} />
-            <Text fontSize="sm" fontWeight="500">
+            <Box fontSize="sm" fontWeight="500">
               {shortDisplay}
-            </Text>
+            </Box>
           </HStack>
         </MenuButton>
         <MenuList
@@ -177,28 +177,28 @@ export const PrivyLoginButton = ({
             isDisabled
           >
             <VStack align="start" spacing={0}>
-              <Text fontSize="xs" color="rgba(255, 255, 255, 0.6)">
+              <Box fontSize="xs" color="rgba(255, 255, 255, 0.6)">
                 Logged in as
-              </Text>
-              <Text fontSize="sm" fontWeight="500">
+              </Box>
+              <Box fontSize="sm" fontWeight="500">
                 {userEmail && (
                   <HStack spacing={1}>
                     <Mail size={12} />
-                    <Text>{userEmail}</Text>
+                    <Box>{userEmail}</Box>
                   </HStack>
                 )}
                 {userWallet && (
                   <HStack spacing={1}>
                     <Wallet size={12} />
-                    <Text>{`${userWallet.slice(0, 6)}...${userWallet.slice(
+                    <Box>{`${userWallet.slice(0, 6)}...${userWallet.slice(
                       -4
-                    )}`}</Text>
+                    )}`}</Box>
                   </HStack>
                 )}
                 {!userEmail && !userWallet && (
-                  <Text>User ID: {user.id.slice(0, 12)}...</Text>
+                  <Box>User ID: {user.id.slice(0, 12)}...</Box>
                 )}
-              </Text>
+              </Box>
             </VStack>
           </MenuItem>
           <MenuItem
@@ -331,9 +331,9 @@ export const PrivyLoginButton = ({
       >
         <HStack spacing={2}>
           <LogIn size={16} />
-          <Text color="#59F886" fontWeight="600">
+          <Box color="#59F886" fontWeight="600">
             Sign In
-          </Text>
+          </Box>
         </HStack>
       </MenuButton>
       <MenuList
