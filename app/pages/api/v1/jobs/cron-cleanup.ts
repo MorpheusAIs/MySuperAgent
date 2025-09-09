@@ -17,8 +17,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<CronCleanupResult>
 ) {
-  // Only allow POST requests
-  if (req.method !== 'POST') {
+  // Allow both GET (for Vercel cron) and POST requests
+  if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({
       success: false,
       timestamp: new Date().toISOString(),
