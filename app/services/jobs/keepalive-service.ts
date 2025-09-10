@@ -6,7 +6,7 @@
 export class KeepaliveService {
   private static instance: KeepaliveService;
   private keepaliveInterval: NodeJS.Timeout | null = null;
-  private readonly KEEPALIVE_INTERVAL_MS = 30 * 1000; // 30 seconds
+  private readonly KEEPALIVE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes - just checks if services are running
   
   private constructor() {}
   

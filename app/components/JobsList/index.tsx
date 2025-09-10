@@ -1,4 +1,3 @@
-import { ScheduledJobEditModal } from '@/components/ScheduledJobEditModal';
 import ShareJobModal from '@/components/ShareJobModal';
 import { useGlobalSearch } from '@/contexts/GlobalSearchProvider';
 import { trackEvent } from '@/services/analytics';
@@ -23,6 +22,7 @@ import {
   Badge,
   Box,
   Button,
+  Collapse,
   Divider,
   HStack,
   IconButton,
@@ -61,6 +61,11 @@ const getJobStatus = (
 };
 
 const isCurrentJob = (job: Job) => {
+  // Scheduled jobs should never appear in current jobs
+  if (job.is_scheduled) {
+    return false;
+  }
+
   const status = getJobStatus(job);
 
   // Current jobs are those in progress or completed within the last 24 hours
@@ -78,6 +83,11 @@ const isCurrentJob = (job: Job) => {
 };
 
 const isPreviousJob = (job: Job) => {
+  // Scheduled jobs should never appear in previous jobs
+  if (job.is_scheduled) {
+    return false;
+  }
+
   const status = getJobStatus(job);
 
   // Previous jobs are completed/failed jobs older than 24 hours
@@ -166,7 +176,75 @@ const ScheduledJobItem: FC<{
   onRun: (jobId: string) => void;
   onEdit?: (jobId: string) => void;
   onDelete?: (jobId: string) => void;
-}> = ({ job, onToggle, onRun, onEdit, onDelete }) => {
+  isEditing?: boolean;
+  onJobUpdated?: () => void;
+}> = ({ job, onToggle, onRun, onEdit, onDelete, isEditing = false, onJobUpdated }) => {
+  const [editJobName, setEditJobName] = useState('');
+  const [editScheduleType, setEditScheduleType] = useState<'once' | 'daily' | 'weekly' | 'custom'>('daily');
+  const [editScheduleTime, setEditScheduleTime] = useState('09:00');
+  const [editScheduleDate, setEditScheduleDate] = useState('');
+  const [editIntervalDays, setEditIntervalDays] = useState(1);
+  const [editMaxRuns, setEditMaxRuns] = useState<number | null>(null);
+  const [editSelectedDays, setEditSelectedDays] = useState<number[]>([1]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { getAddress } = useWalletAddress();
+  const toast = useToast();
+
+  const daysOfWeek = [
+    { id: 0, label: 'Mon', short: 'M' },
+    { id: 1, label: 'Tue', short: 'T' },
+    { id: 2, label: 'Wed', short: 'W' },
+    { id: 3, label: 'Thu', short: 'T' },
+    { id: 4, label: 'Fri', short: 'F' },
+    { id: 5, label: 'Sat', short: 'S' },
+    { id: 6, label: 'Sun', short: 'S' },
+  ];
+
+  // Load job data when editing starts
+  useEffect(() => {
+    if (isEditing && job) {
+      setEditJobName(job.name);
+      
+      // Set schedule type
+      if (job.schedule_type) {
+        if (job.schedule_type === 'hourly') {
+          setEditScheduleType('custom');
+          setEditIntervalDays(1);
+        } else {
+          setEditScheduleType(job.schedule_type as 'once' | 'daily' | 'weekly' | 'custom');
+        }
+      }
+      
+      // Parse schedule time
+      if (job.schedule_time) {
+        const scheduleDateTime = new Date(job.schedule_time);
+        const year = scheduleDateTime.getFullYear();
+        const month = String(scheduleDateTime.getMonth() + 1).padStart(2, '0');
+        const day = String(scheduleDateTime.getDate()).padStart(2, '0');
+        setEditScheduleDate(`${year}-${month}-${day}`);
+        
+        const hours = String(scheduleDateTime.getHours()).padStart(2, '0');
+        const minutes = String(scheduleDateTime.getMinutes()).padStart(2, '0');
+        setEditScheduleTime(`${hours}:${minutes}`);
+      }
+      
+      // Parse other fields
+      if (job.interval_days) {
+        setEditIntervalDays(job.interval_days);
+      }
+      
+      if (job.max_runs) {
+        setEditMaxRuns(job.max_runs);
+      }
+      
+      // Parse weekly days
+      if (job.weekly_days) {
+        const days = job.weekly_days.split(',').map(Number);
+        setEditSelectedDays(days);
+      }
+    }
+  }, [isEditing, job]);
+  
   const nextRun = job.next_run_time ? new Date(job.next_run_time) : null;
   const isOverdue = nextRun && nextRun < new Date() && job.is_active;
   const now = new Date();
@@ -203,6 +281,112 @@ const ScheduledJobItem: FC<{
     if (days > 0) return `in ${days}d ${hours}h`;
     if (hours > 0) return `in ${hours}h ${minutes}m`;
     return `in ${minutes}m`;
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editJobName.trim()) {
+      toast({
+        title: 'Job name required',
+        description: 'Please enter a name for this job',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    if (editScheduleType === 'once' && (!editScheduleDate || !editScheduleTime)) {
+      toast({
+        title: 'Date and time required',
+        description: 'Please select both date and time for one-time jobs',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const walletAddress = getAddress();
+      if (!walletAddress) {
+        throw new Error('Wallet address not found');
+      }
+
+      // Create schedule datetime
+      let scheduleDateTime;
+      if (editScheduleType === 'once') {
+        scheduleDateTime = new Date(`${editScheduleDate}T${editScheduleTime}`);
+      } else {
+        scheduleDateTime = new Date();
+        const [hours, minutes] = editScheduleTime.split(':');
+        scheduleDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        
+        // If time has passed today, schedule for tomorrow
+        const now = new Date();
+        if (scheduleDateTime <= now) {
+          scheduleDateTime.setDate(scheduleDateTime.getDate() + 1);
+        }
+      }
+
+      const nextRunTime = JobsAPI.calculateNextRunTime(
+        editScheduleType,
+        scheduleDateTime,
+        editScheduleType === 'custom' ? editIntervalDays : undefined
+      );
+
+      // Update the job
+      await JobsAPI.updateJob(job.id, {
+        wallet_address: walletAddress,
+        name: editJobName,
+        schedule_type: editScheduleType,
+        schedule_time: scheduleDateTime,
+        next_run_time: nextRunTime,
+        interval_days: editScheduleType === 'custom' ? editIntervalDays : null,
+        max_runs: editMaxRuns,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        weekly_days: editScheduleType === 'weekly' ? editSelectedDays.join(',') : null,
+        is_active: true,
+      });
+
+      toast({
+        title: 'Schedule updated! 🎉',
+        description: `"${editJobName}" has been updated successfully`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+
+      onJobUpdated?.();
+    } catch (error: any) {
+      console.error('Error updating scheduled job:', error);
+      toast({
+        title: 'Error updating job',
+        description: error.message || 'An error occurred',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleEditDay = (dayIndex: number) => {
+    setEditSelectedDays((prev) =>
+      prev.includes(dayIndex)
+        ? prev.filter((d) => d !== dayIndex)
+        : [...prev, dayIndex]
+    );
+  };
+
+  const getMinDateTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   return (
@@ -352,13 +536,14 @@ const ScheduledJobItem: FC<{
                     icon={<SettingsIcon w={3} h={3} />}
                     size="xs"
                     variant="ghost"
-                    colorScheme="blue"
+                    colorScheme={isEditing ? "green" : "blue"}
+                    bg={isEditing ? "rgba(34, 197, 94, 0.1)" : undefined}
                     _hover={{
-                      bg: 'rgba(59, 130, 246, 0.1)',
+                      bg: isEditing ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.1)',
                       transform: 'scale(1.1)',
                     }}
                     _active={{
-                      bg: 'rgba(59, 130, 246, 0.2)',
+                      bg: isEditing ? 'rgba(34, 197, 94, 0.3)' : 'rgba(59, 130, 246, 0.2)',
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -427,6 +612,229 @@ const ScheduledJobItem: FC<{
             </HStack>
           </HStack>
         </Box>
+
+        {/* Expandable Editing Interface */}
+        <Collapse in={isEditing}>
+          <Box
+            border="1px solid"
+            borderColor="rgba(255, 255, 255, 0.1)"
+            borderRadius="8px"
+            p={4}
+            mt={3}
+            bg="rgba(255, 255, 255, 0.03)"
+          >
+            <VStack spacing={4} align="stretch">
+              <Text fontSize="sm" fontWeight="600" color="white" mb={2}>
+                Edit Schedule
+              </Text>
+
+              {/* Job Name */}
+              <HStack spacing={3} align="center">
+                <Text fontSize="sm" fontWeight="500" color="white" minW="80px">
+                  Name
+                </Text>
+                <Input
+                  value={editJobName}
+                  onChange={(e) => setEditJobName(e.target.value)}
+                  placeholder="Job name"
+                  size="sm"
+                  bg="rgba(255, 255, 255, 0.05)"
+                  border="1px solid rgba(255, 255, 255, 0.1)"
+                  color="white"
+                  fontSize="12px"
+                  _focus={{
+                    borderColor: "rgba(255, 255, 255, 0.3)",
+                    boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                  }}
+                  flex={1}
+                />
+              </HStack>
+
+              {/* Schedule Type */}
+              <HStack spacing={3} align="center">
+                <Text fontSize="sm" fontWeight="500" color="white" minW="80px">
+                  Repeat
+                </Text>
+                <Select
+                  value={editScheduleType}
+                  onChange={(e) => setEditScheduleType(e.target.value as any)}
+                  size="sm"
+                  bg="rgba(255, 255, 255, 0.05)"
+                  border="1px solid rgba(255, 255, 255, 0.1)"
+                  color="white"
+                  fontSize="12px"
+                  _focus={{
+                    borderColor: "rgba(255, 255, 255, 0.3)",
+                    boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                  }}
+                  flex={1}
+                >
+                  <option value="once" style={{background: '#27292c', color: 'white'}}>Once</option>
+                  <option value="daily" style={{background: '#27292c', color: 'white'}}>Daily</option>
+                  <option value="weekly" style={{background: '#27292c', color: 'white'}}>Weekly</option>
+                  <option value="custom" style={{background: '#27292c', color: 'white'}}>Custom</option>
+                </Select>
+              </HStack>
+
+              {/* Time Input for daily, weekly, custom */}
+              {(editScheduleType === 'daily' || editScheduleType === 'weekly' || editScheduleType === 'custom') && (
+                <HStack spacing={3} align="center">
+                  <Text fontSize="sm" fontWeight="500" color="white" minW="80px">
+                    Time
+                  </Text>
+                  <Input
+                    type="time"
+                    value={editScheduleTime}
+                    onChange={(e) => setEditScheduleTime(e.target.value)}
+                    size="sm"
+                    bg="rgba(255, 255, 255, 0.05)"
+                    border="1px solid rgba(255, 255, 255, 0.1)"
+                    color="white"
+                    fontSize="12px"
+                    _focus={{
+                      borderColor: "rgba(255, 255, 255, 0.3)",
+                      boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                    }}
+                    flex={1}
+                  />
+                </HStack>
+              )}
+
+              {/* Date and Time for 'once' */}
+              {editScheduleType === 'once' && (
+                <HStack spacing={3} align="center">
+                  <Text fontSize="sm" fontWeight="500" color="white" minW="80px">
+                    When
+                  </Text>
+                  <HStack spacing={2} flex={1}>
+                    <Input
+                      type="date"
+                      value={editScheduleDate}
+                      onChange={(e) => setEditScheduleDate(e.target.value)}
+                      min={getMinDateTime()}
+                      size="sm"
+                      bg="rgba(255, 255, 255, 0.05)"
+                      border="1px solid rgba(255, 255, 255, 0.1)"
+                      color="white"
+                      fontSize="12px"
+                      _focus={{
+                        borderColor: "rgba(255, 255, 255, 0.3)",
+                        boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                      }}
+                      flex={1}
+                    />
+                    <Input
+                      type="time"
+                      value={editScheduleTime}
+                      onChange={(e) => setEditScheduleTime(e.target.value)}
+                      size="sm"
+                      bg="rgba(255, 255, 255, 0.05)"
+                      border="1px solid rgba(255, 255, 255, 0.1)"
+                      color="white"
+                      fontSize="12px"
+                      _focus={{
+                        borderColor: "rgba(255, 255, 255, 0.3)",
+                        boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                      }}
+                      flex={1}
+                    />
+                  </HStack>
+                </HStack>
+              )}
+
+              {/* Days for weekly */}
+              {editScheduleType === 'weekly' && (
+                <HStack spacing={3} align="center">
+                  <Text fontSize="sm" fontWeight="500" color="white" minW="80px">
+                    Days
+                  </Text>
+                  <HStack spacing={1} flex={1}>
+                    {daysOfWeek.map((day) => (
+                      <button
+                        key={day.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '6px',
+                          background: editSelectedDays.includes(day.id) ? '#48BB78' : 'rgba(255, 255, 255, 0.05)',
+                          border: `1px solid ${editSelectedDays.includes(day.id) ? '#48BB78' : 'rgba(255, 255, 255, 0.1)'}`,
+                          color: editSelectedDays.includes(day.id) ? 'white' : 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '11px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onClick={() => toggleEditDay(day.id)}
+                      >
+                        {day.short}
+                      </button>
+                    ))}
+                  </HStack>
+                </HStack>
+              )}
+
+              {/* Interval for custom */}
+              {editScheduleType === 'custom' && (
+                <HStack spacing={3} align="center">
+                  <Text fontSize="sm" fontWeight="500" color="white" minW="80px">
+                    Every
+                  </Text>
+                  <HStack spacing={2} flex={1}>
+                    <Input
+                      type="number"
+                      value={editIntervalDays}
+                      onChange={(e) => setEditIntervalDays(parseInt(e.target.value) || 1)}
+                      min={1}
+                      max={365}
+                      size="sm"
+                      bg="rgba(255, 255, 255, 0.05)"
+                      border="1px solid rgba(255, 255, 255, 0.1)"
+                      color="white"
+                      fontSize="12px"
+                      _focus={{
+                        borderColor: "rgba(255, 255, 255, 0.3)",
+                        boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                      }}
+                      w="80px"
+                    />
+                    <Text fontSize="sm" color="rgba(255, 255, 255, 0.7)">
+                      days
+                    </Text>
+                  </HStack>
+                </HStack>
+              )}
+
+              {/* Action Buttons */}
+              <HStack spacing={2} justify="flex-end" pt={2}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEdit?.(job.id)}
+                  color="rgba(255, 255, 255, 0.7)"
+                  _hover={{ bg: 'rgba(255, 255, 255, 0.1)' }}
+                  fontSize="12px"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSaveEdit}
+                  isLoading={isLoading}
+                  bg="#48BB78"
+                  color="white"
+                  _hover={{ bg: '#38A169' }}
+                  _active={{ bg: '#2F855A' }}
+                  fontSize="12px"
+                >
+                  Save Changes
+                </Button>
+              </HStack>
+            </VStack>
+          </Box>
+        </Collapse>
       </VStack>
     </Box>
   );
@@ -683,8 +1091,7 @@ export const JobsList: FC<JobsListProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [scheduledPage, setScheduledPage] = useState(1);
   const [previousPage, setPreviousPage] = useState(1);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [jobToEdit, setJobToEdit] = useState<Job | null>(null);
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [jobToShare, setJobToShare] = useState<Job | null>(null);
   const { getAddress } = useWalletAddress();
@@ -999,24 +1406,10 @@ export const JobsList: FC<JobsListProps> = ({
 
   const handleEditSchedule = useCallback(
     async (jobId: string) => {
-      // Find the job to edit
-      const job = scheduledJobs.find((j) => j.id === jobId);
-      if (!job) {
-        toast({
-          title: 'Job not found',
-          description: 'Could not find the scheduled job to edit',
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-        });
-        return;
-      }
-
-      // Open the edit modal with the selected job
-      setJobToEdit(job);
-      setIsEditModalOpen(true);
+      // Toggle dropdown for this job (or close others and open this one)
+      setEditingJobId(editingJobId === jobId ? null : jobId);
     },
-    [scheduledJobs, toast]
+    [editingJobId]
   );
 
   const handleDeleteJob = useCallback(
@@ -1379,6 +1772,11 @@ export const JobsList: FC<JobsListProps> = ({
                         onRun={handleRunJob}
                         onEdit={handleEditSchedule}
                         onDelete={handleDeleteJob}
+                        isEditing={editingJobId === job.id}
+                        onJobUpdated={() => {
+                          setEditingJobId(null);
+                          loadAllData(); // Reload jobs after update
+                        }}
                       />
                     ))}
                   </VStack>
@@ -1485,20 +1883,6 @@ export const JobsList: FC<JobsListProps> = ({
         </TabPanels>
       </Tabs>
 
-      {/* Schedule Edit Modal */}
-      <ScheduledJobEditModal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setJobToEdit(null);
-        }}
-        job={jobToEdit}
-        onJobUpdated={() => {
-          setIsEditModalOpen(false);
-          setJobToEdit(null);
-          loadAllData(); // Reload jobs after update
-        }}
-      />
 
       {/* Share Job Modal */}
       {jobToShare && (
