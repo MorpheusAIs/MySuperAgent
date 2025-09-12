@@ -26,8 +26,8 @@ export class JobSchedulerService {
   private lastRun: Date | null = null;
   
   // Configuration
-  private readonly SCHEDULER_INTERVAL_MS = 60 * 1000; // Check every minute
-  private readonly MIN_INTERVAL_BETWEEN_RUNS_MS = 30 * 1000; // At least 30 seconds between runs
+  private readonly SCHEDULER_INTERVAL_MS = 5 * 60 * 1000; // Check every 5 minutes
+  private readonly MIN_INTERVAL_BETWEEN_RUNS_MS = 60 * 1000; // At least 1 minute between runs
   private readonly MAX_JOBS_PER_RUN = 10; // Process max 10 jobs per run to avoid overload
 
   private constructor() {
@@ -184,9 +184,12 @@ export class JobSchedulerService {
       const JobsAPI = await import('@/services/api-clients/jobs');
       
       // Create a new job instance based on the scheduled job
+      const runCount = (job.run_count || 0) + 1;
+      const jobSuffix = runCount === 1 ? ' (First Run)' : ` (Run ${runCount})`;
+      
       const newJob = await JobDB.createJob({
         wallet_address: job.wallet_address,
-        name: job.name,
+        name: job.name + jobSuffix,
         description: job.description,
         initial_message: job.initial_message,
         status: 'pending',
@@ -227,6 +230,18 @@ export class JobSchedulerService {
                    job.is_active
       });
 
+      // Trigger job processor to immediately process the new job
+      try {
+        const { jobProcessor } = await import('./job-processor-service');
+        console.log(`[JOB SCHEDULER] Triggering job processor for new job ${newJob.id}`);
+        // Process the specific job asynchronously (don't wait for it)
+        jobProcessor.processPendingJobs().catch(error => {
+          console.error(`[JOB SCHEDULER] Failed to trigger job processor for job ${newJob.id}:`, error);
+        });
+      } catch (processingError) {
+        console.error(`[JOB SCHEDULER] Failed to import job processor:`, processingError);
+      }
+
       execution.success = true;
       execution.newJobId = newJob.id;
       
@@ -234,6 +249,7 @@ export class JobSchedulerService {
       console.log(`  - Created new job instance: ${newJob.id}`);
       console.log(`  - Run count: ${job.run_count || 0} → ${(job.run_count || 0) + 1}`);
       console.log(`  - Next run time: ${nextRunTime ? nextRunTime.toISOString() : 'none (job completed)'}`);
+      console.log(`  - Triggered job processor for immediate execution`);
       
     } catch (error) {
       execution.success = false;

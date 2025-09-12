@@ -19,8 +19,8 @@ export class JobProcessorService {
   private lastProcessing: Date | null = null;
   
   // Configuration
-  private readonly PROCESSOR_INTERVAL_MS = 30 * 1000; // Process every 30 seconds
-  private readonly MIN_INTERVAL_BETWEEN_PROCESSING_MS = 10 * 1000; // At least 10 seconds between runs
+  private readonly PROCESSOR_INTERVAL_MS = 2 * 60 * 1000; // Process every 2 minutes
+  private readonly MIN_INTERVAL_BETWEEN_PROCESSING_MS = 60 * 1000; // At least 1 minute between runs
   private readonly MAX_JOBS_PER_RUN = 5; // Process max 5 jobs per run
 
   private constructor() {}
@@ -99,14 +99,20 @@ export class JobProcessorService {
         SELECT * FROM jobs 
         WHERE status = 'pending' 
           AND is_scheduled = false 
-          AND created_at > NOW() - INTERVAL '1 hour'
         ORDER BY created_at ASC
         LIMIT ${this.MAX_JOBS_PER_RUN};
       `;
       
-      const { pool } = await import('@/services/database/db');
-      const pendingJobsResult = await pool.query(pendingJobsQuery);
-      const pendingJobs = pendingJobsResult.rows;
+      let pendingJobs = [];
+      try {
+        const { pool } = await import('@/services/database/db');
+        const pendingJobsResult = await pool.query(pendingJobsQuery);
+        pendingJobs = pendingJobsResult.rows;
+      } catch (dbError) {
+        console.error('[JOB PROCESSOR] Database query failed:', dbError);
+        result.errors.push(`Database query failed: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`);
+        return result;
+      }
       
       result.processedJobs = pendingJobs.length;
       

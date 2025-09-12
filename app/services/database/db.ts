@@ -7,9 +7,10 @@ try {
   const config = env.getConfig();
   pool = new Pool({
     connectionString: config.DATABASE_URL,
-    max: 20,
+    max: 10, // Reduce max connections to avoid overwhelming the database
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 10000, // Increase timeout to 10 seconds
+    query_timeout: 30000, // Add query timeout of 30 seconds
   });
 
   // Handle pool errors
