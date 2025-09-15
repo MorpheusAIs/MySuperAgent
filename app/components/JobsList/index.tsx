@@ -42,6 +42,7 @@ import {
 } from '@chakra-ui/react';
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import styles from './index.module.css';
+import { JobHoverPreview } from './JobHoverPreview';
 
 interface JobsListProps {
   onJobClick: (jobId: string) => void;
@@ -178,9 +179,23 @@ const ScheduledJobItem: FC<{
   onDelete?: (jobId: string) => void;
   isEditing?: boolean;
   onJobUpdated?: () => void;
-}> = ({ job, onToggle, onRun, onEdit, onDelete, isEditing = false, onJobUpdated }) => {
+  onHover?: (jobId: string, position: { x: number; y: number }) => void;
+  onHoverEnd?: () => void;
+}> = ({
+  job,
+  onToggle,
+  onRun,
+  onEdit,
+  onDelete,
+  isEditing = false,
+  onJobUpdated,
+  onHover,
+  onHoverEnd,
+}) => {
   const [editJobName, setEditJobName] = useState('');
-  const [editScheduleType, setEditScheduleType] = useState<'once' | 'daily' | 'weekly' | 'custom'>('daily');
+  const [editScheduleType, setEditScheduleType] = useState<
+    'once' | 'daily' | 'weekly' | 'custom'
+  >('daily');
   const [editScheduleTime, setEditScheduleTime] = useState('09:00');
   const [editScheduleDate, setEditScheduleDate] = useState('');
   const [editIntervalDays, setEditIntervalDays] = useState(1);
@@ -204,17 +219,19 @@ const ScheduledJobItem: FC<{
   useEffect(() => {
     if (isEditing && job) {
       setEditJobName(job.name);
-      
+
       // Set schedule type
       if (job.schedule_type) {
         if (job.schedule_type === 'hourly') {
           setEditScheduleType('custom');
           setEditIntervalDays(1);
         } else {
-          setEditScheduleType(job.schedule_type as 'once' | 'daily' | 'weekly' | 'custom');
+          setEditScheduleType(
+            job.schedule_type as 'once' | 'daily' | 'weekly' | 'custom'
+          );
         }
       }
-      
+
       // Parse schedule time
       if (job.schedule_time) {
         const scheduleDateTime = new Date(job.schedule_time);
@@ -222,21 +239,21 @@ const ScheduledJobItem: FC<{
         const month = String(scheduleDateTime.getMonth() + 1).padStart(2, '0');
         const day = String(scheduleDateTime.getDate()).padStart(2, '0');
         setEditScheduleDate(`${year}-${month}-${day}`);
-        
+
         const hours = String(scheduleDateTime.getHours()).padStart(2, '0');
         const minutes = String(scheduleDateTime.getMinutes()).padStart(2, '0');
         setEditScheduleTime(`${hours}:${minutes}`);
       }
-      
+
       // Parse other fields
       if (job.interval_days) {
         setEditIntervalDays(job.interval_days);
       }
-      
+
       if (job.max_runs) {
         setEditMaxRuns(job.max_runs);
       }
-      
+
       // Parse weekly days
       if (job.weekly_days) {
         const days = job.weekly_days.split(',').map(Number);
@@ -244,7 +261,7 @@ const ScheduledJobItem: FC<{
       }
     }
   }, [isEditing, job]);
-  
+
   const nextRun = job.next_run_time ? new Date(job.next_run_time) : null;
   const isOverdue = nextRun && nextRun < new Date() && job.is_active;
   const now = new Date();
@@ -295,7 +312,10 @@ const ScheduledJobItem: FC<{
       return;
     }
 
-    if (editScheduleType === 'once' && (!editScheduleDate || !editScheduleTime)) {
+    if (
+      editScheduleType === 'once' &&
+      (!editScheduleDate || !editScheduleTime)
+    ) {
       toast({
         title: 'Date and time required',
         description: 'Please select both date and time for one-time jobs',
@@ -322,7 +342,7 @@ const ScheduledJobItem: FC<{
         scheduleDateTime = new Date();
         const [hours, minutes] = editScheduleTime.split(':');
         scheduleDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        
+
         // If time has passed today, schedule for tomorrow
         const now = new Date();
         if (scheduleDateTime <= now) {
@@ -346,7 +366,8 @@ const ScheduledJobItem: FC<{
         interval_days: editScheduleType === 'custom' ? editIntervalDays : null,
         max_runs: editMaxRuns,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        weekly_days: editScheduleType === 'weekly' ? editSelectedDays.join(',') : null,
+        weekly_days:
+          editScheduleType === 'weekly' ? editSelectedDays.join(',') : null,
         is_active: true,
       });
 
@@ -401,6 +422,16 @@ const ScheduledJobItem: FC<{
       bg="rgba(255, 255, 255, 0.02)"
       _hover={{ bg: 'rgba(255, 255, 255, 0.04)' }}
       transition="all 0.2s ease"
+      onMouseEnter={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        onHover?.(job.id, {
+          x: rect.right,
+          y: rect.top,
+        });
+      }}
+      onMouseLeave={() => {
+        onHoverEnd?.();
+      }}
     >
       <VStack align="stretch" spacing={3} width="100%">
         {/* Header Row */}
@@ -536,14 +567,18 @@ const ScheduledJobItem: FC<{
                     icon={<SettingsIcon w={3} h={3} />}
                     size="xs"
                     variant="ghost"
-                    colorScheme={isEditing ? "green" : "blue"}
-                    bg={isEditing ? "rgba(34, 197, 94, 0.1)" : undefined}
+                    colorScheme={isEditing ? 'green' : 'blue'}
+                    bg={isEditing ? 'rgba(34, 197, 94, 0.1)' : undefined}
                     _hover={{
-                      bg: isEditing ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.1)',
+                      bg: isEditing
+                        ? 'rgba(34, 197, 94, 0.2)'
+                        : 'rgba(59, 130, 246, 0.1)',
                       transform: 'scale(1.1)',
                     }}
                     _active={{
-                      bg: isEditing ? 'rgba(34, 197, 94, 0.3)' : 'rgba(59, 130, 246, 0.2)',
+                      bg: isEditing
+                        ? 'rgba(34, 197, 94, 0.3)'
+                        : 'rgba(59, 130, 246, 0.2)',
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -643,8 +678,8 @@ const ScheduledJobItem: FC<{
                   color="white"
                   fontSize="12px"
                   _focus={{
-                    borderColor: "rgba(255, 255, 255, 0.3)",
-                    boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.3)',
                   }}
                   flex={1}
                 />
@@ -664,22 +699,49 @@ const ScheduledJobItem: FC<{
                   color="white"
                   fontSize="12px"
                   _focus={{
-                    borderColor: "rgba(255, 255, 255, 0.3)",
-                    boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.3)',
                   }}
                   flex={1}
                 >
-                  <option value="once" style={{background: '#27292c', color: 'white'}}>Once</option>
-                  <option value="daily" style={{background: '#27292c', color: 'white'}}>Daily</option>
-                  <option value="weekly" style={{background: '#27292c', color: 'white'}}>Weekly</option>
-                  <option value="custom" style={{background: '#27292c', color: 'white'}}>Custom</option>
+                  <option
+                    value="once"
+                    style={{ background: '#27292c', color: 'white' }}
+                  >
+                    Once
+                  </option>
+                  <option
+                    value="daily"
+                    style={{ background: '#27292c', color: 'white' }}
+                  >
+                    Daily
+                  </option>
+                  <option
+                    value="weekly"
+                    style={{ background: '#27292c', color: 'white' }}
+                  >
+                    Weekly
+                  </option>
+                  <option
+                    value="custom"
+                    style={{ background: '#27292c', color: 'white' }}
+                  >
+                    Custom
+                  </option>
                 </Select>
               </HStack>
 
               {/* Time Input for daily, weekly, custom */}
-              {(editScheduleType === 'daily' || editScheduleType === 'weekly' || editScheduleType === 'custom') && (
+              {(editScheduleType === 'daily' ||
+                editScheduleType === 'weekly' ||
+                editScheduleType === 'custom') && (
                 <HStack spacing={3} align="center">
-                  <Text fontSize="sm" fontWeight="500" color="white" minW="80px">
+                  <Text
+                    fontSize="sm"
+                    fontWeight="500"
+                    color="white"
+                    minW="80px"
+                  >
                     Time
                   </Text>
                   <Input
@@ -692,8 +754,8 @@ const ScheduledJobItem: FC<{
                     color="white"
                     fontSize="12px"
                     _focus={{
-                      borderColor: "rgba(255, 255, 255, 0.3)",
-                      boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                      borderColor: 'rgba(255, 255, 255, 0.3)',
+                      boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.3)',
                     }}
                     flex={1}
                   />
@@ -703,7 +765,12 @@ const ScheduledJobItem: FC<{
               {/* Date and Time for 'once' */}
               {editScheduleType === 'once' && (
                 <HStack spacing={3} align="center">
-                  <Text fontSize="sm" fontWeight="500" color="white" minW="80px">
+                  <Text
+                    fontSize="sm"
+                    fontWeight="500"
+                    color="white"
+                    minW="80px"
+                  >
                     When
                   </Text>
                   <HStack spacing={2} flex={1}>
@@ -718,8 +785,8 @@ const ScheduledJobItem: FC<{
                       color="white"
                       fontSize="12px"
                       _focus={{
-                        borderColor: "rgba(255, 255, 255, 0.3)",
-                        boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                        boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.3)',
                       }}
                       flex={1}
                     />
@@ -733,8 +800,8 @@ const ScheduledJobItem: FC<{
                       color="white"
                       fontSize="12px"
                       _focus={{
-                        borderColor: "rgba(255, 255, 255, 0.3)",
-                        boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                        boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.3)',
                       }}
                       flex={1}
                     />
@@ -745,7 +812,12 @@ const ScheduledJobItem: FC<{
               {/* Days for weekly */}
               {editScheduleType === 'weekly' && (
                 <HStack spacing={3} align="center">
-                  <Text fontSize="sm" fontWeight="500" color="white" minW="80px">
+                  <Text
+                    fontSize="sm"
+                    fontWeight="500"
+                    color="white"
+                    minW="80px"
+                  >
                     Days
                   </Text>
                   <HStack spacing={1} flex={1}>
@@ -759,13 +831,21 @@ const ScheduledJobItem: FC<{
                           width: '28px',
                           height: '28px',
                           borderRadius: '6px',
-                          background: editSelectedDays.includes(day.id) ? '#48BB78' : 'rgba(255, 255, 255, 0.05)',
-                          border: `1px solid ${editSelectedDays.includes(day.id) ? '#48BB78' : 'rgba(255, 255, 255, 0.1)'}`,
-                          color: editSelectedDays.includes(day.id) ? 'white' : 'rgba(255, 255, 255, 0.7)',
+                          background: editSelectedDays.includes(day.id)
+                            ? '#48BB78'
+                            : 'rgba(255, 255, 255, 0.05)',
+                          border: `1px solid ${
+                            editSelectedDays.includes(day.id)
+                              ? '#48BB78'
+                              : 'rgba(255, 255, 255, 0.1)'
+                          }`,
+                          color: editSelectedDays.includes(day.id)
+                            ? 'white'
+                            : 'rgba(255, 255, 255, 0.7)',
                           fontSize: '11px',
                           fontWeight: '500',
                           cursor: 'pointer',
-                          transition: 'all 0.15s ease'
+                          transition: 'all 0.15s ease',
                         }}
                         onClick={() => toggleEditDay(day.id)}
                       >
@@ -779,14 +859,21 @@ const ScheduledJobItem: FC<{
               {/* Interval for custom */}
               {editScheduleType === 'custom' && (
                 <HStack spacing={3} align="center">
-                  <Text fontSize="sm" fontWeight="500" color="white" minW="80px">
+                  <Text
+                    fontSize="sm"
+                    fontWeight="500"
+                    color="white"
+                    minW="80px"
+                  >
                     Every
                   </Text>
                   <HStack spacing={2} flex={1}>
                     <Input
                       type="number"
                       value={editIntervalDays}
-                      onChange={(e) => setEditIntervalDays(parseInt(e.target.value) || 1)}
+                      onChange={(e) =>
+                        setEditIntervalDays(parseInt(e.target.value) || 1)
+                      }
                       min={1}
                       max={365}
                       size="sm"
@@ -795,8 +882,8 @@ const ScheduledJobItem: FC<{
                       color="white"
                       fontSize="12px"
                       _focus={{
-                        borderColor: "rgba(255, 255, 255, 0.3)",
-                        boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                        boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.3)',
                       }}
                       w="80px"
                     />
@@ -847,7 +934,18 @@ const JobItem: FC<{
   onDelete?: (jobId: string) => void;
   onEdit?: (jobId: string) => void;
   onShare?: (jobId: string) => void;
-}> = ({ job, onClick, messageCount = 0, onDelete, onEdit, onShare }) => {
+  onHover?: (jobId: string, position: { x: number; y: number }) => void;
+  onHoverEnd?: () => void;
+}> = ({
+  job,
+  onClick,
+  messageCount = 0,
+  onDelete,
+  onEdit,
+  onShare,
+  onHover,
+  onHoverEnd,
+}) => {
   const status = getJobStatus(job);
 
   // Get title and description from job
@@ -896,6 +994,16 @@ const JobItem: FC<{
             isScheduled: !!job.schedule_type,
           });
           onClick(job.id);
+        }}
+        onMouseEnter={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          onHover?.(job.id, {
+            x: rect.right,
+            y: rect.top,
+          });
+        }}
+        onMouseLeave={() => {
+          onHoverEnd?.();
         }}
         role="button"
         tabIndex={0}
@@ -1094,6 +1202,8 @@ export const JobsList: FC<JobsListProps> = ({
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [jobToShare, setJobToShare] = useState<Job | null>(null);
+  const [hoveredJobId, setHoveredJobId] = useState<string | null>(null);
+  const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
   const { getAddress } = useWalletAddress();
   const { openSearch } = useGlobalSearch();
   const toast = useToast();
@@ -1259,12 +1369,12 @@ export const JobsList: FC<JobsListProps> = ({
   );
   const allActiveScheduledJobs = useMemo(
     () =>
-      filterJobs(scheduledJobs.filter((job) => job.is_active)).sort(
-        (a, b) => {
-          // Sort by created_at to show most recently created scheduled jobs first
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        }
-      ),
+      filterJobs(scheduledJobs.filter((job) => job.is_active)).sort((a, b) => {
+        // Sort by created_at to show most recently created scheduled jobs first
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+      }),
     [scheduledJobs, filterJobs]
   );
 
@@ -1599,6 +1709,18 @@ export const JobsList: FC<JobsListProps> = ({
     [jobs, getAddress, toast]
   );
 
+  const handleJobHover = useCallback(
+    (jobId: string, position: { x: number; y: number }) => {
+      setHoveredJobId(jobId);
+      setHoverPosition(position);
+    },
+    []
+  );
+
+  const handleJobHoverEnd = useCallback(() => {
+    setHoveredJobId(null);
+  }, []);
+
   if (
     jobs.length === 0 &&
     activeScheduledJobs.length === 0 &&
@@ -1692,7 +1814,7 @@ export const JobsList: FC<JobsListProps> = ({
       <Tabs
         index={activeTab}
         onChange={(index) => {
-          const tabNames = ['scheduled', 'current', 'previous'];
+          const tabNames = ['current', 'scheduled', 'previous'];
           trackEvent('job.tab_changed', {
             fromTab: tabNames[activeTab],
             toTab: tabNames[index],
@@ -1715,7 +1837,7 @@ export const JobsList: FC<JobsListProps> = ({
             fontSize="sm"
             fontWeight="medium"
           >
-            Scheduled Jobs ({allActiveScheduledJobs.length})
+            Current Jobs ({allCurrentJobs.length})
           </Tab>
           <Tab
             className={styles.tab}
@@ -1727,7 +1849,7 @@ export const JobsList: FC<JobsListProps> = ({
             fontSize="sm"
             fontWeight="medium"
           >
-            Current Jobs ({allCurrentJobs.length})
+            Scheduled Jobs ({allActiveScheduledJobs.length})
           </Tab>
           <Tab
             className={styles.tab}
@@ -1744,7 +1866,51 @@ export const JobsList: FC<JobsListProps> = ({
         </TabList>
 
         <TabPanels className={styles.tabPanelsContainer}>
-          {/* First TabPanel: Scheduled Jobs */}
+          {/* First TabPanel: Current Jobs */}
+          <TabPanel p={0} h="100%">
+            <Box className={styles.scrollableContent}>
+              {allCurrentJobs.length === 0 ? (
+                <Box className={styles.emptyTabState}>
+                  <Text fontSize="sm" color="gray.600" textAlign="center">
+                    {searchQuery || statusFilter !== 'all'
+                      ? 'No jobs match your search criteria'
+                      : 'No current jobs'}
+                  </Text>
+                </Box>
+              ) : (
+                <>
+                  <VStack spacing={2} width="100%" align="stretch" pb={2}>
+                    {currentJobs.map((job) => (
+                      <JobItem
+                        key={job.id}
+                        job={job}
+                        onClick={onJobClick}
+                        onDelete={handleDeleteJob}
+                        onEdit={handleEditJob}
+                        onShare={handleShareJob}
+                        onHover={handleJobHover}
+                        onHoverEnd={handleJobHoverEnd}
+                      />
+                    ))}
+                  </VStack>
+                  <PaginationControls
+                    currentPage={currentPage}
+                    totalPages={currentTotalPages}
+                    onPageChange={(page) => {
+                      trackEvent('job.pagination', {
+                        fromPage: currentPage,
+                        toPage: page,
+                        section: 'current',
+                      });
+                      setCurrentPage(page);
+                    }}
+                  />
+                </>
+              )}
+            </Box>
+          </TabPanel>
+
+          {/* Second TabPanel: Scheduled Jobs */}
           <TabPanel p={0} pt={4} h="100%">
             <Box className={styles.scrollableContent}>
               {scheduledJobsLoading ? (
@@ -1777,6 +1943,8 @@ export const JobsList: FC<JobsListProps> = ({
                           setEditingJobId(null);
                           loadAllData(); // Reload jobs after update
                         }}
+                        onHover={handleJobHover}
+                        onHoverEnd={handleJobHoverEnd}
                       />
                     ))}
                   </VStack>
@@ -1790,48 +1958,6 @@ export const JobsList: FC<JobsListProps> = ({
                         section: 'scheduled',
                       });
                       setScheduledPage(page);
-                    }}
-                  />
-                </>
-              )}
-            </Box>
-          </TabPanel>
-
-          {/* Second TabPanel: Current Jobs */}
-          <TabPanel p={0} h="100%">
-            <Box className={styles.scrollableContent}>
-              {allCurrentJobs.length === 0 ? (
-                <Box className={styles.emptyTabState}>
-                  <Text fontSize="sm" color="gray.600" textAlign="center">
-                    {searchQuery || statusFilter !== 'all'
-                      ? 'No jobs match your search criteria'
-                      : 'No current jobs'}
-                  </Text>
-                </Box>
-              ) : (
-                <>
-                  <VStack spacing={2} width="100%" align="stretch" pb={2}>
-                    {currentJobs.map((job) => (
-                      <JobItem
-                        key={job.id}
-                        job={job}
-                        onClick={onJobClick}
-                        onDelete={handleDeleteJob}
-                        onEdit={handleEditJob}
-                        onShare={handleShareJob}
-                      />
-                    ))}
-                  </VStack>
-                  <PaginationControls
-                    currentPage={currentPage}
-                    totalPages={currentTotalPages}
-                    onPageChange={(page) => {
-                      trackEvent('job.pagination', {
-                        fromPage: currentPage,
-                        toPage: page,
-                        section: 'current',
-                      });
-                      setCurrentPage(page);
                     }}
                   />
                 </>
@@ -1861,6 +1987,8 @@ export const JobsList: FC<JobsListProps> = ({
                         onDelete={handleDeleteJob}
                         onEdit={handleEditJob}
                         onShare={handleShareJob}
+                        onHover={handleJobHover}
+                        onHoverEnd={handleJobHoverEnd}
                       />
                     ))}
                   </VStack>
@@ -1883,7 +2011,6 @@ export const JobsList: FC<JobsListProps> = ({
         </TabPanels>
       </Tabs>
 
-
       {/* Share Job Modal */}
       {jobToShare && (
         <ShareJobModal
@@ -1896,6 +2023,13 @@ export const JobsList: FC<JobsListProps> = ({
           walletAddress={getAddress() || ''}
         />
       )}
+
+      {/* Job Hover Preview */}
+      <JobHoverPreview
+        jobId={hoveredJobId || ''}
+        isVisible={!!hoveredJobId}
+        position={hoverPosition}
+      />
     </Box>
   );
 };
