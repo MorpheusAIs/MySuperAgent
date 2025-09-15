@@ -7,10 +7,9 @@ try {
   const config = env.getConfig();
   pool = new Pool({
     connectionString: config.DATABASE_URL,
-    max: 10, // Reduce max connections to avoid overwhelming the database
+    max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000, // Increase timeout to 10 seconds
-    query_timeout: 30000, // Add query timeout of 30 seconds
+    connectionTimeoutMillis: 2000,
   });
 
   // Handle pool errors
@@ -179,7 +178,7 @@ export interface UserMemory {
 
 // Database service classes
 export class UserDB {
-  static async createOrUpdateUser(identifier: string): Promise<User> {
+  static async createOrUpdateUser(walletAddress: string): Promise<User> {
     const query = `
       INSERT INTO users (wallet_address, last_active)
       VALUES ($1, CURRENT_TIMESTAMP)
@@ -188,14 +187,14 @@ export class UserDB {
       RETURNING *;
     `;
 
-    const result = await pool.query(query, [identifier]);
+    const result = await pool.query(query, [walletAddress]);
     return result.rows[0];
   }
 
-  static async getUser(identifier: string): Promise<User | null> {
+  static async getUser(walletAddress: string): Promise<User | null> {
     const query =
       'SELECT * FROM users WHERE wallet_address = $1 AND deleted_at IS NULL;';
-    const result = await pool.query(query, [identifier]);
+    const result = await pool.query(query, [walletAddress]);
     return result.rows[0] || null;
   }
 
@@ -227,7 +226,9 @@ export class UserDB {
     return result.rows[0] || null;
   }
 
-  static async getUserByWalletAddress(identifier: string): Promise<User | null> {
+  static async getUserByWalletAddress(
+    identifier: string
+  ): Promise<User | null> {
     return this.getUser(identifier);
   }
 
@@ -243,7 +244,7 @@ export class UserDB {
       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
       RETURNING *;
     `;
-    
+
     const result = await pool.query(query, [
       userData.wallet_address || null,
       userData.email ? userData.email.toLowerCase() : null,
@@ -254,12 +255,15 @@ export class UserDB {
     return result.rows[0];
   }
 
-  static async updateUser(identifier: string, userData: {
-    wallet_address?: string | null;
-    email?: string | null;
-    privy_user_id?: string;
-    updated_at?: Date;
-  }): Promise<User> {
+  static async updateUser(
+    identifier: string,
+    userData: {
+      wallet_address?: string | null;
+      email?: string | null;
+      privy_user_id?: string;
+      updated_at?: Date;
+    }
+  ): Promise<User> {
     const updateFields = [];
     const values = [];
     let paramCount = 1;
@@ -276,13 +280,13 @@ export class UserDB {
       updateFields.push(`privy_user_id = $${paramCount++}`);
       values.push(userData.privy_user_id);
     }
-    
+
     updateFields.push(`updated_at = $${paramCount++}`);
     values.push(userData.updated_at || new Date());
-    
+
     updateFields.push(`last_active = $${paramCount++}`);
     values.push(new Date());
-    
+
     values.push(identifier);
 
     const query = `
@@ -320,6 +324,8 @@ export class UserPreferencesDB {
       'default_schedule_type',
       'default_schedule_time',
       'timezone',
+      'ai_personality',
+      'user_bio',
     ];
     const updateFields = Object.keys(preferences)
       .filter((key) => allowedFields.includes(key))
@@ -350,8 +356,8 @@ export class UserPreferencesDB {
     const insertQuery = `
       INSERT INTO user_preferences (
         wallet_address, auto_schedule_jobs, default_schedule_type, 
-        default_schedule_time, timezone
-      ) VALUES ($1, $2, $3, $4, $5)
+        default_schedule_time, timezone, ai_personality, user_bio
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *;
     `;
 
@@ -361,6 +367,8 @@ export class UserPreferencesDB {
       preferences.default_schedule_type || 'daily',
       preferences.default_schedule_time || '09:00:00',
       preferences.timezone || 'UTC',
+      preferences.ai_personality || '',
+      preferences.user_bio || '',
     ];
 
     const insertResult = await pool.query(insertQuery, insertValues);
@@ -377,8 +385,8 @@ export class UserPreferencesDB {
     const query = `
       INSERT INTO user_preferences (
         wallet_address, auto_schedule_jobs, default_schedule_type, 
-        default_schedule_time, timezone
-      ) VALUES ($1, $2, $3, $4, $5)
+        default_schedule_time, timezone, ai_personality, user_bio
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *;
     `;
 
@@ -388,6 +396,8 @@ export class UserPreferencesDB {
       preferences.default_schedule_type || 'daily',
       preferences.default_schedule_time || '09:00:00',
       preferences.timezone || 'UTC',
+      preferences.ai_personality || '',
+      preferences.user_bio || '',
     ];
 
     const result = await pool.query(query, values);
@@ -499,7 +509,7 @@ export class JobDB {
     const query = `
       SELECT * FROM jobs 
       WHERE wallet_address = $1 AND is_scheduled = TRUE 
-      ORDER BY next_run_time ASC;
+      ORDER BY created_at DESC;
     `;
 
     const result = await pool.query(query, [walletAddress]);
@@ -586,7 +596,7 @@ export class JobDB {
     // Estimate time saved based on completed jobs
     // Assuming each job saves on average 30 minutes
     const totalCompleted = await this.getTotalCompletedJobsCount();
-    return Math.round((totalCompleted * 0.5) * 100) / 100; // 0.5 hours per job, rounded to 2 decimals
+    return Math.round(totalCompleted * 0.5 * 100) / 100; // 0.5 hours per job, rounded to 2 decimals
   }
 }
 
@@ -1291,7 +1301,7 @@ export class SharedJobDB {
     // Generate cryptographically secure token
     const crypto = await import('crypto');
     const share_token = crypto.randomBytes(32).toString('hex');
-    
+
     const query = `
       INSERT INTO shared_jobs (
         job_id, wallet_address, share_token, title, description, 
@@ -1390,7 +1400,9 @@ export class SharedJobDB {
   static async updateShare(
     job_id: string,
     wallet_address: string,
-    updates: Partial<Pick<SharedJob, 'title' | 'description' | 'is_public' | 'expires_at'>>
+    updates: Partial<
+      Pick<SharedJob, 'title' | 'description' | 'is_public' | 'expires_at'>
+    >
   ): Promise<SharedJob> {
     const fields = [];
     const values = [];
@@ -1427,7 +1439,10 @@ export class SharedJobDB {
     return result.rows[0];
   }
 
-  static async deleteShare(job_id: string, wallet_address: string): Promise<void> {
+  static async deleteShare(
+    job_id: string,
+    wallet_address: string
+  ): Promise<void> {
     const query = `
       DELETE FROM shared_jobs 
       WHERE job_id = $1 AND wallet_address = $2;
@@ -1446,7 +1461,10 @@ export class SharedJobDB {
     await pool.query(query, [token]);
   }
 
-  static async getShareByJobId(job_id: string, wallet_address: string): Promise<SharedJob | null> {
+  static async getShareByJobId(
+    job_id: string,
+    wallet_address: string
+  ): Promise<SharedJob | null> {
     const query = `
       SELECT * FROM shared_jobs 
       WHERE job_id = $1 AND wallet_address = $2;
@@ -1509,9 +1527,10 @@ export class UserAvailableToolDB {
     return result.rows.map((row) => ({
       ...row,
       mcp_server_id: row.server_name, // Map server_name to mcp_server_id for interface compatibility
-      tool_schema: typeof row.tool_schema === 'string' 
-        ? JSON.parse(row.tool_schema) 
-        : row.tool_schema || {}
+      tool_schema:
+        typeof row.tool_schema === 'string'
+          ? JSON.parse(row.tool_schema)
+          : row.tool_schema || {},
     }));
   }
 

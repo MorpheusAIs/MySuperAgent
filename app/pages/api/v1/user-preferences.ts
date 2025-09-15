@@ -26,8 +26,9 @@ export default async function handler(
     switch (req.method) {
       case 'GET':
         // Get user preferences, create defaults if none exist
-        let preferences =
-          await DB.UserPreferencesDB.getPreferences(walletAddress);
+        let preferences = await DB.UserPreferencesDB.getPreferences(
+          walletAddress
+        );
         if (!preferences) {
           // Create default preferences for new user
           preferences = await DB.UserPreferencesDB.updatePreferences(

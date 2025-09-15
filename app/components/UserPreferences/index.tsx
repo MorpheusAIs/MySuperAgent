@@ -29,6 +29,8 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({
     default_schedule_type: 'daily',
     default_schedule_time: '09:00:00',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    ai_personality: '',
+    user_bio: '',
     created_at: new Date(),
     updated_at: new Date(),
   });
@@ -48,8 +50,9 @@ export const UserPreferencesComponent: FC<UserPreferencesProps> = ({
           setIsLoading(false);
           return;
         }
-        const userPrefs =
-          await UserPreferencesAPI.getUserPreferences(walletAddress);
+        const userPrefs = await UserPreferencesAPI.getUserPreferences(
+          walletAddress
+        );
         if (userPrefs) {
           setPreferences(userPrefs);
         } else {
