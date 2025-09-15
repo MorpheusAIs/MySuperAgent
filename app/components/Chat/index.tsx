@@ -1,8 +1,8 @@
 import { ChatInput } from '@/components/ChatInput';
 import PrefilledOptions from '@/components/ChatInput/PrefilledOptions';
 import { JobsList } from '@/components/JobsList';
-import { StatsCarousel } from '@/components/StatsCarousel';
 import { MessageList } from '@/components/MessageList';
+import { StatsCarousel } from '@/components/StatsCarousel';
 import { useChatContext } from '@/contexts/chat/useChatContext';
 import { trackEvent } from '@/services/analytics';
 import JobsAPI from '@/services/api-clients/jobs';
@@ -278,7 +278,7 @@ export const Chat: FC<{
       >
         {/* Header */}
         <VStack spacing={6} pt={20} pb={4}>
-          <Box maxWidth="600px" width="100%">
+          <Box width="100%">
             <StatsCarousel />
           </Box>
           <Text
@@ -302,7 +302,7 @@ export const Chat: FC<{
         >
           {/* Centered Job Input */}
           <VStack spacing={4} width="100%" align="center">
-            <Box maxWidth="600px" width="100%">
+            <Box width="100%">
               <ChatInput
                 onSubmit={handleSubmit}
                 disabled={isSubmitting || showLoading}
@@ -322,7 +322,7 @@ export const Chat: FC<{
 
             {/* Prefilled Options */}
             {showPrefilledOptions && (
-              <Box maxWidth="600px" width="100%">
+              <Box width="100%">
                 <PrefilledOptions
                   onSelect={handlePrefilledSelect}
                   isSidebarOpen={isSidebarOpen}
@@ -331,7 +331,7 @@ export const Chat: FC<{
             )}
 
             {/* Jobs List - directly under input/options */}
-            <Box width="100%" maxWidth="600px">
+            <Box width="100%">
               <JobsList
                 onJobClick={handleJobClick}
                 onRunScheduledJob={handleRunScheduledJob}
