@@ -1,16 +1,16 @@
+import { useWalletAddress } from '@/services/wallet/utils';
 import {
   Button,
   FormControl,
   FormLabel,
+  Spinner,
+  Text,
   Textarea,
   VStack,
   useToast,
-  Spinner,
-  Text,
-} from "@chakra-ui/react";
-import { useState, useEffect } from "react";
-import { useWalletAddress } from "@/services/wallet/utils";
-import styles from "./GeneralSettings.module.css";
+} from '@chakra-ui/react';
+import { useEffect, useState } from 'react';
+import styles from './GeneralSettings.module.css';
 
 interface GeneralSettingsProps {
   onSave: () => void;
@@ -18,8 +18,8 @@ interface GeneralSettingsProps {
 
 export const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSave }) => {
   const [settings, setSettings] = useState({
-    aiPersonality: "",
-    bio: "",
+    aiPersonality: '',
+    bio: '',
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -36,25 +36,25 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSave }) => {
       }
 
       try {
-        const response = await fetch('/api/v1/user-settings', {
+        const response = await fetch('/api/v1/user-preferences', {
           headers: {
             'x-wallet-address': walletAddress,
           },
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           setSettings({
-            aiPersonality: data.aiPersonality || "",
-            bio: data.bio || "",
+            aiPersonality: data.ai_personality || '',
+            bio: data.user_bio || '',
           });
         }
       } catch (error) {
         console.error('Failed to load settings:', error);
         toast({
-          title: "Error",
-          description: "Failed to load your settings",
-          status: "error",
+          title: 'Error',
+          description: 'Failed to load your settings',
+          status: 'error',
           duration: 3000,
           isClosable: true,
         });
@@ -70,9 +70,9 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSave }) => {
     const walletAddress = getAddress();
     if (!walletAddress) {
       toast({
-        title: "Wallet Required",
-        description: "Please connect your wallet to save settings",
-        status: "warning",
+        title: 'Wallet Required',
+        description: 'Please connect your wallet to save settings',
+        status: 'warning',
         duration: 3000,
         isClosable: true,
       });
@@ -81,36 +81,36 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSave }) => {
 
     setIsSaving(true);
     try {
-      const response = await fetch('/api/v1/user-settings', {
+      const response = await fetch('/api/v1/user-preferences', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'x-wallet-address': walletAddress,
         },
-        body: JSON.stringify(settings),
+        body: JSON.stringify({
+          ai_personality: settings.aiPersonality,
+          user_bio: settings.bio,
+        }),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          toast({
-            title: "Settings Saved",
-            description: "Your settings have been successfully saved",
-            status: "success",
-            duration: 3000,
-            isClosable: true,
-          });
-          onSave();
-        }
+        toast({
+          title: 'Settings Saved',
+          description: 'Your settings have been successfully saved',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        onSave();
       } else {
         throw new Error('Failed to save settings');
       }
     } catch (error) {
       console.error('Failed to save settings:', error);
       toast({
-        title: "Error",
-        description: "Failed to save your settings. Please try again.",
-        status: "error",
+        title: 'Error',
+        description: 'Failed to save your settings. Please try again.',
+        status: 'error',
         duration: 3000,
         isClosable: true,
       });
@@ -160,8 +160,8 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({ onSave }) => {
         />
       </FormControl>
 
-      <Button 
-        onClick={handleSave} 
+      <Button
+        onClick={handleSave}
         className={styles.saveButton}
         isLoading={isSaving}
         loadingText="Saving..."
