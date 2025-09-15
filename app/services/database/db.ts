@@ -23,7 +23,10 @@ try {
 
 // Types
 export interface User {
+  id?: number;
   wallet_address: string;
+  email?: string | null;
+  privy_user_id?: string | null;
   created_at: Date;
   updated_at: Date;
   last_active: Date;
@@ -36,8 +39,8 @@ export interface UserPreferences {
   default_schedule_type: 'once' | 'daily' | 'weekly' | 'custom';
   default_schedule_time: string;
   timezone: string;
-  ai_personality: string;
-  user_bio: string;
+  ai_personality?: string;
+  user_bio?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -1707,6 +1710,18 @@ export class UserMemoriesDB {
   }
 }
 
+// Export pool for direct database access
+export { pool };
+
+// Export Database class with common methods
+export class Database {
+  static query = pool.query.bind(pool);
+  static JobDB = JobDB;
+  static MessageDB = MessageDB;
+  static UserDB = UserDB;
+  static SharedJobDB = SharedJobDB;
+}
+
 export default {
   UserDB,
   UserPreferencesDB,
@@ -1720,4 +1735,5 @@ export default {
   UserAvailableToolDB,
   UserRulesDB,
   UserMemoriesDB,
+  SharedJobDB,
 };
