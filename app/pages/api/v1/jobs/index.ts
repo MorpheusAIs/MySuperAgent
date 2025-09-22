@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { JobDB, MessageDB } from '@/services/database/db';
+import { withRateLimit, rateLimitErrorResponse } from '@/middleware/rate-limiting';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   
@@ -27,6 +28,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(200).json({ jobs });
 
       case 'POST':
+        // Check rate limits for job creation
+        const { allowed: jobAllowed, result: jobResult } = await withRateLimit(req, res, 'jobs');
+        if (!jobAllowed) {
+          console.log(`[JOBS API] Job creation rate limit exceeded for ${jobResult.userType} user`);
+          return rateLimitErrorResponse(res, jobResult);
+        }
+
         const { 
           name, 
           description, 
@@ -53,6 +61,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           is_active: true,
           run_count: 0
         });
+
+        // Trigger immediate job processing for non-scheduled jobs
+        if (!is_scheduled) {
+          try {
+            const { jobProcessor } = await import('@/services/jobs/job-processor-service');
+            // Trigger processing asynchronously (don't wait for completion)
+            setImmediate(() => {
+              jobProcessor.processPendingJobs().catch(error => {
+                console.error('Failed to trigger immediate job processing:', error);
+              });
+            });
+          } catch (processingError) {
+            console.error('Failed to import job processor:', processingError);
+          }
+        }
 
         return res.status(201).json({ job: newJob });
 

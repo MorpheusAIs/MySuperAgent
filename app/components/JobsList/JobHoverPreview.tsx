@@ -124,7 +124,7 @@ export const JobHoverPreview: FC<JobHoverPreviewProps> = ({
                 <HStack spacing={2} fontSize="xs" color="gray.400">
                   <Text fontWeight="medium" textTransform="capitalize">
                     {message.role === 'assistant'
-                      ? 'MySuperAgent'
+                      ? 'FreeAI'
                       : message.role}
                   </Text>
                   {message.agent_name && message.agent_name !== 'default' && (

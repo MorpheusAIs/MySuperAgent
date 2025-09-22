@@ -19,9 +19,9 @@ export class JobProcessorService {
   private lastProcessing: Date | null = null;
   
   // Configuration
-  private readonly PROCESSOR_INTERVAL_MS = 2 * 60 * 1000; // Process every 2 minutes
-  private readonly MIN_INTERVAL_BETWEEN_PROCESSING_MS = 60 * 1000; // At least 1 minute between runs
-  private readonly MAX_JOBS_PER_RUN = 5; // Process max 5 jobs per run
+  private readonly PROCESSOR_INTERVAL_MS = 15 * 1000; // Process every 15 seconds for faster response
+  private readonly MIN_INTERVAL_BETWEEN_PROCESSING_MS = 5 * 1000; // At least 5 seconds between runs
+  private readonly MAX_JOBS_PER_RUN = 10; // Process max 10 jobs per run
 
   private constructor() {}
 
@@ -44,7 +44,7 @@ export class JobProcessorService {
     console.log('[JOB PROCESSOR] Starting automatic job processor');
     
     // Run initial processing after a short delay
-    setTimeout(() => this.processPendingJobs(), 10000); // 10 seconds
+    setTimeout(() => this.processPendingJobs(), 2000); // 2 seconds
     
     // Set up recurring processing
     this.processorInterval = setInterval(() => {
@@ -145,26 +145,55 @@ export class JobProcessorService {
             status: 'running'
           });
           
-          // Call orchestration via HTTP (internal request)
+          // Call orchestration via HTTP (internal request) with retry logic
           const baseUrl = process.env.NEXT_PUBLIC_API_URL || `http://localhost:${process.env.PORT || 3000}`;
-          const response = await fetch(`${baseUrl}/api/v1/chat/orchestrate`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              prompt: {
-                role: 'user',
-                content: job.initial_message,
-              },
-              chatHistory: [],
-              conversationId: job.id,
-              useResearch: true,
-              walletAddress: job.wallet_address,
-            })
-          });
+          let response;
+          let retryCount = 0;
+          const maxRetries = 3;
           
-          if (response.ok) {
+          while (retryCount <= maxRetries) {
+            try {
+              response = await fetch(`${baseUrl}/api/v1/chat/orchestrate`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  prompt: {
+                    role: 'user',
+                    content: job.initial_message,
+                  },
+                  chatHistory: [],
+                  conversationId: job.id,
+                  useResearch: true,
+                  walletAddress: job.wallet_address,
+                }),
+              });
+              
+              // If successful, break the retry loop
+              if (response.ok) {
+                break;
+              } else if (retryCount < maxRetries) {
+                console.log(`[JOB PROCESSOR] Retry ${retryCount + 1}/${maxRetries} for job ${job.id}, status: ${response.status}`);
+                retryCount++;
+                // Wait before retrying (exponential backoff)
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+                continue;
+              }
+            } catch (fetchError) {
+              if (retryCount < maxRetries) {
+                console.log(`[JOB PROCESSOR] Retry ${retryCount + 1}/${maxRetries} for job ${job.id}, error: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`);
+                retryCount++;
+                // Wait before retrying (exponential backoff)
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+                continue;
+              } else {
+                throw fetchError;
+              }
+            }
+          }
+          
+          if (response && response.ok) {
             const responseData = await response.json();
             const { response: agentResponse, current_agent } = responseData;
             
@@ -190,7 +219,7 @@ export class JobProcessorService {
             console.log(`[JOB PROCESSOR] Job ${job.id} completed successfully`);
             
           } else {
-            throw new Error(`Orchestration API returned ${response.status}: ${response.statusText}`);
+            throw new Error(`Orchestration API returned ${response?.status || 'unknown'}: ${response?.statusText || 'unknown error'}`);
           }
           
         } catch (jobError) {

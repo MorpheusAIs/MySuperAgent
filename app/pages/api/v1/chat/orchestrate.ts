@@ -8,6 +8,7 @@ import {
 } from '@/services/utils/errors';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { v4 as uuidv4 } from 'uuid';
+import { withRateLimit, rateLimitErrorResponse } from '@/middleware/rate-limiting';
 
 // Timeout configuration
 const ORCHESTRATION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -32,6 +33,13 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Check rate limits first
+  const { allowed, result } = await withRateLimit(req, res, 'orchestration');
+  if (!allowed) {
+    console.log(`[ORCHESTRATION] Rate limit exceeded for ${result.userType} user`);
+    return rateLimitErrorResponse(res, result);
   }
 
   const startTime = Date.now();
