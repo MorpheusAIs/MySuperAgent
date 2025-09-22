@@ -17,7 +17,8 @@ export default async function handler(
     } catch (importError) {
       console.error('Database module not available:', importError);
       return res.status(503).json({
-        error: 'Database service unavailable. Please install dependencies and initialize the database.',
+        error:
+          'Database service unavailable. Please install dependencies and initialize the database.',
       });
     }
 
@@ -27,19 +28,19 @@ export default async function handler(
       recurringJobs,
       activeScheduledJobs,
       completedToday,
-      avgTimesSaved
+      avgTimesSaved,
     ] = await Promise.all([
       DB.JobDB.getTotalCompletedJobsCount(),
       DB.JobDB.getRecurringJobsCount(),
       DB.JobDB.getActiveScheduledJobsCount(),
       DB.JobDB.getCompletedJobsToday(),
-      DB.JobDB.calculateTimeSaved()
+      DB.JobDB.calculateTimeSaved(),
     ]);
 
     // Calculate additional metrics
     const humanEquivalentHours = Math.round(avgTimesSaved || 0);
     const totalIncomeEarned = Math.round(humanEquivalentHours * 15); // $15/hour multiplier
-    
+
     const stats = {
       totalJobs,
       recurringJobs,
@@ -52,9 +53,10 @@ export default async function handler(
     // Create carousel messages with similar lengths (WITHOUT "Neo" prefix - that's handled by the frontend)
     const carouselMessages = [
       `has completed ${stats.totalJobs.toLocaleString()} total jobs to date`,
-      `handles ${stats.recurringJobs} recurring jobs actively`,
       `has worked ${stats.humanEquivalentHours} human equivalent hours`,
-      stats.totalIncomeEarned > 0 ? `has earned $${stats.totalIncomeEarned.toLocaleString()} for humans so far` : null,
+      stats.totalIncomeEarned > 0
+        ? `has earned $${stats.totalIncomeEarned.toLocaleString()} for humans so far`
+        : null,
     ].filter(Boolean); // Remove null messages
 
     return res.status(200).json({
