@@ -205,8 +205,15 @@
 
 .paginationControls {
   margin-top: 16px;
-  padding-top: 12px;
+  padding: 12px 0 20px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  flex-wrap: nowrap !important;
+  width: 100% !important;
 }
 
 .paginationButton {
@@ -218,6 +225,9 @@
   font-weight: 500 !important;
   padding: 6px 12px !important;
   height: auto !important;
+  min-width: 60px !important;
+  flex-shrink: 0 !important;
+  display: inline-block !important;
   transition: all 0.15s ease;
 }
 
@@ -240,6 +250,9 @@
   font-weight: 500;
   min-width: 60px;
   text-align: center;
+  flex-shrink: 0;
+  white-space: nowrap;
+  display: inline-block !important;
 }
 
 .scheduledJobItem {
