@@ -12,6 +12,15 @@ export interface ChatRequest {
   requestId?: string;
   useResearch?: boolean;
   selectedAgents?: string[];
+  similarityContext?: string;
+  similarPrompts?: Array<{
+    messageId: string;
+    prompt: string;
+    response: string;
+    similarity: number;
+    jobId: string;
+    createdAt: Date;
+  }>;
 }
 
 export enum ResponseType {
