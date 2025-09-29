@@ -359,9 +359,7 @@ export const Chat: FC<{
               {process.env.NODE_ENV === 'development' && (
                 <div
                   style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}
-                >
-                  Debug: {optimisticJobs.length} optimistic jobs
-                </div>
+                ></div>
               )}
             </Box>
           </VStack>
