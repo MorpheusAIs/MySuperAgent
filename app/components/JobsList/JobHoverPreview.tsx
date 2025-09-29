@@ -1,7 +1,7 @@
 import JobsAPI from '@/services/api-clients/jobs';
 import { Message } from '@/services/database/db';
 import { useWalletAddress } from '@/services/wallet/utils';
-import { Avatar, Box, HStack, Spinner, Text, VStack } from '@chakra-ui/react';
+import { Box, HStack, Spinner, Text, VStack } from '@chakra-ui/react';
 import { FC, useEffect, useState } from 'react';
 
 interface JobHoverPreviewProps {
@@ -39,8 +39,9 @@ export const JobHoverPreview: FC<JobHoverPreviewProps> = ({
         const sortedMessages = fetchedMessages.sort(
           (a, b) => a.order_index - b.order_index
         );
-        // Take only the last 5 messages for preview
-        setMessages(sortedMessages.slice(-5));
+        // Show only the first user message (the initial prompt)
+        const userMessages = sortedMessages.filter((m) => m.role === 'user');
+        setMessages(userMessages.slice(0, 1));
       } catch (err) {
         console.error('Error fetching messages:', err);
         setError('Failed to load messages');
@@ -69,7 +70,7 @@ export const JobHoverPreview: FC<JobHoverPreviewProps> = ({
 
   const truncateContent = (
     content: string,
-    maxLength: number = 150
+    maxLength: number = 200
   ): string => {
     if (content.length <= maxLength) return content;
     return content.substring(0, maxLength) + '...';
@@ -106,50 +107,23 @@ export const JobHoverPreview: FC<JobHoverPreviewProps> = ({
           </Text>
         ) : messages.length === 0 ? (
           <Text fontSize="sm" color="gray.400" textAlign="center" py={2}>
-            No messages yet
+            No initial prompt found
           </Text>
         ) : (
-          messages.map((message, index) => (
-            <HStack key={message.id} align="flex-start" spacing={3}>
-              <Avatar
-                size="xs"
-                bg={message.role === 'user' ? 'blue.500' : 'green.500'}
-                color="white"
-                name={message.role === 'user' ? 'U' : 'M'}
-                fontSize="10px"
-                flexShrink={0}
-                mt={1}
-              />
-              <VStack align="flex-start" spacing={1} flex={1} minW={0}>
-                <HStack spacing={2} fontSize="xs" color="gray.400">
-                  <Text fontWeight="medium" textTransform="capitalize">
-                    {message.role === 'assistant'
-                      ? 'FreeAI'
-                      : message.role}
-                  </Text>
-                  {message.agent_name && message.agent_name !== 'default' && (
-                    <>
-                      <Text>•</Text>
-                      <Text>{message.agent_name}</Text>
-                    </>
-                  )}
-                </HStack>
-                <Text
-                  fontSize="sm"
-                  color="gray.200"
-                  lineHeight="1.4"
-                  wordBreak="break-word"
-                >
-                  {truncateContent(formatMessageContent(message.content))}
-                </Text>
-                {message.error_message && (
-                  <Text fontSize="xs" color="red.400" fontStyle="italic">
-                    Error: {message.error_message}
-                  </Text>
-                )}
-              </VStack>
+          <VStack align="flex-start" spacing={2} width="100%">
+            <HStack spacing={2} fontSize="xs" color="gray.400" width="100%">
+              <Text fontWeight="medium">Initial Prompt</Text>
             </HStack>
-          ))
+            <Text
+              fontSize="sm"
+              color="gray.200"
+              lineHeight="1.4"
+              wordBreak="break-word"
+              width="100%"
+            >
+              {truncateContent(formatMessageContent(messages[0].content))}
+            </Text>
+          </VStack>
         )}
       </VStack>
     </Box>

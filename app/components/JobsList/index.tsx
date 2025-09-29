@@ -185,6 +185,9 @@ const ScheduledJobItem: FC<{
   onJobUpdated?: () => void;
   onHover?: (jobId: string, position: { x: number; y: number }) => void;
   onHoverEnd?: () => void;
+  jobOutputs?: string;
+  outputsLoading?: boolean;
+  isLoading?: boolean;
 }> = ({
   job,
   onToggle,
@@ -195,6 +198,9 @@ const ScheduledJobItem: FC<{
   onJobUpdated,
   onHover,
   onHoverEnd,
+  jobOutputs,
+  outputsLoading = false,
+  isLoading = false,
 }) => {
   const [editJobName, setEditJobName] = useState('');
   const [editScheduleType, setEditScheduleType] = useState<
@@ -205,7 +211,7 @@ const ScheduledJobItem: FC<{
   const [editIntervalDays, setEditIntervalDays] = useState(1);
   const [editMaxRuns, setEditMaxRuns] = useState<number | null>(null);
   const [editSelectedDays, setEditSelectedDays] = useState<number[]>([1]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { getAddress } = useWalletAddress();
   const toast = useToast();
 
@@ -330,7 +336,7 @@ const ScheduledJobItem: FC<{
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     try {
       const walletAddress = getAddress();
@@ -394,7 +400,7 @@ const ScheduledJobItem: FC<{
         isClosable: true,
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -465,7 +471,12 @@ const ScheduledJobItem: FC<{
               noOfLines={2}
               w="100%"
             >
-              {job.description || job.initial_message.substring(0, 120) + '...'}
+              {jobOutputs
+                ? jobOutputs
+                : isLoading
+                ? 'Loading job output...'
+                : job.description ||
+                  job.initial_message.substring(0, 120) + '...'}
             </Text>
           </VStack>
 
@@ -913,7 +924,7 @@ const ScheduledJobItem: FC<{
                 <Button
                   size="sm"
                   onClick={handleSaveEdit}
-                  isLoading={isLoading}
+                  isLoading={isSubmitting}
                   bg="#48BB78"
                   color="white"
                   _hover={{ bg: '#38A169' }}
@@ -940,6 +951,9 @@ const JobItem: FC<{
   onShare?: (jobId: string) => void;
   onHover?: (jobId: string, position: { x: number; y: number }) => void;
   onHoverEnd?: () => void;
+  jobOutputs?: string;
+  outputsLoading?: boolean;
+  isLoading?: boolean;
 }> = ({
   job,
   onClick,
@@ -949,6 +963,9 @@ const JobItem: FC<{
   onShare,
   onHover,
   onHoverEnd,
+  jobOutputs,
+  outputsLoading = false,
+  isLoading = false,
 }) => {
   const status = getJobStatus(job);
   const [jobResult, setJobResult] = useState<string>('');
@@ -1005,8 +1022,13 @@ const JobItem: FC<{
       ? job.initial_message.substring(0, 50) +
         (job.initial_message.length > 50 ? '...' : '')
       : 'Untitled Job';
-  const description =
-    job.description || job.initial_message || 'No description';
+
+  // Show job outputs as main content, fallback to description or initial message
+  const description = jobOutputs
+    ? jobOutputs
+    : isLoading
+    ? 'Loading job output...'
+    : job.description || job.initial_message || 'No description';
 
   // Function to truncate job result for display
   const truncateResult = (result: string, maxLength: number = 200): string => {
@@ -1164,19 +1186,6 @@ const JobItem: FC<{
               </HStack>
             </HStack>
           </HStack>
-
-          {job.status === 'completed' && (
-            <Text
-              fontSize="xs"
-              color="gray.600"
-              textAlign="left"
-              noOfLines={1}
-              fontStyle="italic"
-              w="100%"
-            >
-              &quot;Job completed successfully&quot;
-            </Text>
-          )}
         </VStack>
       </Box>
 
@@ -1294,11 +1303,129 @@ export const JobsList: FC<JobsListProps> = ({
   const [jobToShare, setJobToShare] = useState<Job | null>(null);
   const [hoveredJobId, setHoveredJobId] = useState<string | null>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
+  const [jobOutputs, setJobOutputs] = useState<Record<string, string>>({});
+  const [outputsLoading, setOutputsLoading] = useState(false);
+  const [loadingJobs, setLoadingJobs] = useState<Set<string>>(new Set());
   const { getAddress } = useWalletAddress();
   const { openSearch } = useGlobalSearch();
   const toast = useToast();
 
   const ITEMS_PER_PAGE = 10;
+
+  // Fetch job outputs for display
+  const fetchJobOutputs = useCallback(
+    async (jobs: Job[], immediateCount: number = 5) => {
+      const walletAddress = getAddress();
+      if (!walletAddress) return;
+
+      setOutputsLoading(true);
+      const outputs: Record<string, string> = {};
+
+      // First, load the first few jobs immediately for better UX
+      const immediateJobs = jobs.slice(0, immediateCount);
+      const remainingJobs = jobs.slice(immediateCount);
+
+      // Load immediate jobs first
+      for (const job of immediateJobs) {
+        setLoadingJobs((prev) => new Set(prev).add(job.id));
+        try {
+          const messages = await JobsAPI.getMessages(walletAddress, job.id);
+          const sortedMessages = messages.sort(
+            (a, b) => a.order_index - b.order_index
+          );
+          const assistantMessages = sortedMessages.filter(
+            (m) => m.role === 'assistant'
+          );
+
+          if (assistantMessages.length > 0) {
+            const lastAssistantMessage =
+              assistantMessages[assistantMessages.length - 1];
+            const content = lastAssistantMessage.content;
+            let outputText = '';
+
+            if (typeof content === 'string') {
+              outputText = content;
+            } else if (typeof content === 'object' && content.text) {
+              outputText = content.text;
+            } else if (typeof content === 'object' && content.content) {
+              outputText = content.content;
+            } else {
+              outputText = JSON.stringify(content);
+            }
+
+            // Truncate to reasonable length for display
+            outputs[job.id] =
+              outputText.length > 200
+                ? outputText.substring(0, 200) + '...'
+                : outputText;
+          }
+        } catch (error) {
+          console.error(`Error fetching outputs for job ${job.id}:`, error);
+        } finally {
+          setLoadingJobs((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(job.id);
+            return newSet;
+          });
+        }
+      }
+
+      // Update outputs with immediate results
+      setJobOutputs({ ...outputs });
+      setOutputsLoading(false);
+
+      // Then load remaining jobs progressively
+      if (remainingJobs.length > 0) {
+        for (const job of remainingJobs) {
+          setLoadingJobs((prev) => new Set(prev).add(job.id));
+          try {
+            const messages = await JobsAPI.getMessages(walletAddress, job.id);
+            const sortedMessages = messages.sort(
+              (a, b) => a.order_index - b.order_index
+            );
+            const assistantMessages = sortedMessages.filter(
+              (m) => m.role === 'assistant'
+            );
+
+            if (assistantMessages.length > 0) {
+              const lastAssistantMessage =
+                assistantMessages[assistantMessages.length - 1];
+              const content = lastAssistantMessage.content;
+              let outputText = '';
+
+              if (typeof content === 'string') {
+                outputText = content;
+              } else if (typeof content === 'object' && content.text) {
+                outputText = content.text;
+              } else if (typeof content === 'object' && content.content) {
+                outputText = content.content;
+              } else {
+                outputText = JSON.stringify(content);
+              }
+
+              // Truncate to reasonable length for display
+              const jobOutput =
+                outputText.length > 200
+                  ? outputText.substring(0, 200) + '...'
+                  : outputText;
+
+              // Update outputs progressively
+              setJobOutputs((prev) => ({ ...prev, [job.id]: jobOutput }));
+            }
+          } catch (error) {
+            console.error(`Error fetching outputs for job ${job.id}:`, error);
+          } finally {
+            setLoadingJobs((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(job.id);
+              return newSet;
+            });
+          }
+        }
+      }
+    },
+    [getAddress]
+  );
 
   // Load localStorage conversations when no wallet is connected
   const loadLocalStorageConversations = useCallback(async () => {
@@ -1363,6 +1490,8 @@ export const JobsList: FC<JobsListProps> = ({
     try {
       const jobsList = await JobsAPI.getJobs(walletAddress);
       setJobs(jobsList);
+      // Fetch outputs for completed jobs
+      await fetchJobOutputs(jobsList);
     } catch (error: any) {
       console.error('Error loading jobs:', error);
       setJobs([]);
@@ -1381,7 +1510,7 @@ export const JobsList: FC<JobsListProps> = ({
     } finally {
       setScheduledJobsLoading(false);
     }
-  }, [getAddress, loadLocalStorageConversations]);
+  }, [getAddress, loadLocalStorageConversations, fetchJobOutputs]);
 
   useEffect(() => {
     loadAllData();
@@ -1980,6 +2109,9 @@ export const JobsList: FC<JobsListProps> = ({
                         onShare={handleShareJob}
                         onHover={handleJobHover}
                         onHoverEnd={handleJobHoverEnd}
+                        jobOutputs={jobOutputs[job.id]}
+                        outputsLoading={outputsLoading}
+                        isLoading={loadingJobs.has(job.id)}
                       />
                     ))}
                   </VStack>
@@ -2035,6 +2167,9 @@ export const JobsList: FC<JobsListProps> = ({
                         }}
                         onHover={handleJobHover}
                         onHoverEnd={handleJobHoverEnd}
+                        jobOutputs={jobOutputs[job.id]}
+                        outputsLoading={outputsLoading}
+                        isLoading={loadingJobs.has(job.id)}
                       />
                     ))}
                   </VStack>
@@ -2079,6 +2214,9 @@ export const JobsList: FC<JobsListProps> = ({
                         onShare={handleShareJob}
                         onHover={handleJobHover}
                         onHoverEnd={handleJobHoverEnd}
+                        jobOutputs={jobOutputs[job.id]}
+                        outputsLoading={outputsLoading}
+                        isLoading={loadingJobs.has(job.id)}
                       />
                     ))}
                   </VStack>
