@@ -149,7 +149,7 @@ export class JobProcessorService {
           // Job is already set to 'running' by the atomic claim query
           
           // For scheduled jobs, load context from previous job executions
-          let chatHistory = [];
+          let chatHistory: Array<{ role: string; content: string }> = [];
           let promptContent = job.initial_message;
           
           if (job.is_scheduled && job.original_job_id) {
