@@ -36,6 +36,10 @@
   flex-shrink: 0;
 }
 
+.rateLimitWrapper {
+  flex-shrink: 0;
+}
+
 /* Mobile Responsiveness */
 @media screen and (max-width: 480px) {
   .headerBar {

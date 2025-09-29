@@ -4,6 +4,7 @@ import { StyledTooltip } from '@/components/Common/StyledTooltip';
 import { DashboardButton } from '@/components/Dashboard/Button';
 import { ModelSelectionButton } from '@/components/ModelSelection';
 import { PrivyLoginButton } from '@/components/PrivyLoginButton';
+import { ReferralsButton } from '@/components/Referrals/Button';
 import { SettingsButton } from '@/components/Settings';
 import { TeamsButton } from '@/components/Teams/Button';
 import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
@@ -139,6 +140,20 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
                         opacity={hasAccess ? 1 : 0.5}
                       >
                         <DashboardButton />
+                      </Box>
+                    </div>
+                  </Tooltip>
+                  <Tooltip
+                    isDisabled={hasAccess}
+                    label="Sign in to access referral system and earn bonus jobs."
+                    placement="right"
+                  >
+                    <div className={styles.menuItem}>
+                      <Box
+                        pointerEvents={hasAccess ? 'auto' : 'none'}
+                        opacity={hasAccess ? 1 : 0.5}
+                      >
+                        <ReferralsButton />
                       </Box>
                     </div>
                   </Tooltip>

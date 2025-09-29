@@ -461,6 +461,29 @@ export class JobDB {
     return result.rows;
   }
 
+  static async getJobsByWalletSince(walletAddress: string, since: Date): Promise<Job[]> {
+    const query = `
+      SELECT * FROM jobs 
+      WHERE wallet_address = $1 AND created_at >= $2 
+      ORDER BY created_at DESC;
+    `;
+
+    const result = await pool.query(query, [walletAddress, since]);
+    return result.rows;
+  }
+
+  static async getMessageCountByWalletSince(walletAddress: string, since: Date): Promise<number> {
+    const query = `
+      SELECT COUNT(m.id) as count 
+      FROM messages m 
+      JOIN jobs j ON m.job_id = j.id 
+      WHERE j.wallet_address = $1 AND m.created_at >= $2;
+    `;
+
+    const result = await pool.query(query, [walletAddress, since]);
+    return parseInt(result.rows[0]?.count || '0', 10);
+  }
+
   static async getJob(jobId: string): Promise<Job | null> {
     const query = 'SELECT * FROM jobs WHERE id = $1;';
     const result = await pool.query(query, [jobId]);
@@ -1710,6 +1733,335 @@ export class UserMemoriesDB {
   }
 }
 
+// Referral System Types
+export interface ReferralCode {
+  id: number;
+  code: string;
+  referrer_wallet_address: string;
+  created_at: Date;
+  expires_at: Date | null;
+  max_uses: number | null;
+  current_uses: number;
+  is_active: boolean;
+  code_type: string;
+  description: string | null;
+}
+
+export interface UserReferral {
+  id: number;
+  referred_wallet_address: string;
+  referrer_wallet_address: string;
+  referral_code: string;
+  referred_at: Date;
+  referrer_jobs_granted: number;
+  referred_jobs_granted: number;
+  status: string;
+}
+
+export interface ReferralStats {
+  wallet_address: string;
+  total_referrals: number;
+  active_referrals: number;
+  total_jobs_earned_from_referrals: number;
+  referred_by_wallet: string | null;
+  jobs_earned_from_being_referred: number;
+  first_referral_at: Date | null;
+  last_referral_at: Date | null;
+}
+
+export interface ReferralDashboard {
+  wallet_address: string;
+  total_referrals: number;
+  active_referrals: number;
+  jobs_earned_as_referrer: number;
+  jobs_earned_as_referred: number;
+  current_bonus_jobs: number;
+  referred_by_wallet: string | null;
+  first_referral_at: Date | null;
+  last_referral_at: Date | null;
+  active_referral_codes: number;
+}
+
+export class ReferralDB {
+  static async getReferralDashboard(walletAddress: string): Promise<ReferralDashboard> {
+    const query = `
+      SELECT * FROM referral_dashboard 
+      WHERE wallet_address = $1;
+    `;
+
+    const result = await pool.query(query, [walletAddress]);
+    if (result.rows.length === 0) {
+      // Return default dashboard for new users
+      return {
+        wallet_address: walletAddress,
+        total_referrals: 0,
+        active_referrals: 0,
+        jobs_earned_as_referrer: 0,
+        jobs_earned_as_referred: 0,
+        current_bonus_jobs: 0,
+        referred_by_wallet: null,
+        first_referral_at: null,
+        last_referral_at: null,
+        active_referral_codes: 0,
+      };
+    }
+
+    return result.rows[0];
+  }
+
+  static async generateReferralCode(walletAddress: string, options: {
+    description?: string;
+    maxUses?: number;
+    expiresAt?: Date;
+  } = {}): Promise<ReferralCode> {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+
+      // Generate unique code
+      const codeResult = await client.query('SELECT generate_referral_code() as code');
+      const code = codeResult.rows[0].code;
+
+      // Insert referral code
+      const insertQuery = `
+        INSERT INTO referral_codes (
+          code, referrer_wallet_address, description, max_uses, expires_at
+        ) VALUES ($1, $2, $3, $4, $5)
+        RETURNING *;
+      `;
+
+      const result = await client.query(insertQuery, [
+        code,
+        walletAddress,
+        options.description || null,
+        options.maxUses || null,
+        options.expiresAt || null
+      ]);
+
+      await client.query('COMMIT');
+      return result.rows[0];
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  static async useReferralCode(walletAddress: string, referralCode: string): Promise<{
+    referrer: string;
+    referrerJobsGranted: number;
+    referredJobsGranted: number;
+  }> {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+
+      // Check if code exists and is valid
+      const codeQuery = `
+        SELECT * FROM referral_codes 
+        WHERE code = $1 AND is_active = true 
+        AND (expires_at IS NULL OR expires_at > NOW())
+        AND (max_uses IS NULL OR current_uses < max_uses);
+      `;
+      
+      const codeResult = await client.query(codeQuery, [referralCode]);
+      if (codeResult.rows.length === 0) {
+        throw new Error('Referral code not found, expired, or inactive');
+      }
+
+      const code = codeResult.rows[0];
+
+      // Check if user is trying to use their own code
+      if (code.referrer_wallet_address === walletAddress) {
+        throw new Error('Cannot use your own referral code');
+      }
+
+      // Check if user has already been referred
+      const existingReferralQuery = `
+        SELECT id FROM user_referrals WHERE referred_wallet_address = $1;
+      `;
+      
+      const existingResult = await client.query(existingReferralQuery, [walletAddress]);
+      if (existingResult.rows.length > 0) {
+        throw new Error('User has already been referred');
+      }
+
+      // Define reward amounts
+      const REFERRER_BONUS = 10; // Jobs granted to referrer
+      const REFERRED_BONUS = 5;  // Jobs granted to referred user
+
+      // Create referral record
+      const referralQuery = `
+        INSERT INTO user_referrals (
+          referred_wallet_address, referrer_wallet_address, referral_code,
+          referrer_jobs_granted, referred_jobs_granted
+        ) VALUES ($1, $2, $3, $4, $5)
+        RETURNING id;
+      `;
+
+      const referralResult = await client.query(referralQuery, [
+        walletAddress,
+        code.referrer_wallet_address,
+        referralCode,
+        REFERRER_BONUS,
+        REFERRED_BONUS
+      ]);
+
+      const referralId = referralResult.rows[0].id;
+
+      // Update referral code usage count
+      await client.query(`
+        UPDATE referral_codes 
+        SET current_uses = current_uses + 1 
+        WHERE id = $1;
+      `, [code.id]);
+
+      // Grant bonus jobs to referrer
+      await client.query(`
+        UPDATE users 
+        SET bonus_jobs_from_referrals = COALESCE(bonus_jobs_from_referrals, 0) + $2
+        WHERE wallet_address = $1;
+      `, [code.referrer_wallet_address, REFERRER_BONUS]);
+
+      // Grant bonus jobs to referred user
+      await client.query(`
+        UPDATE users 
+        SET bonus_jobs_from_referrals = COALESCE(bonus_jobs_from_referrals, 0) + $2
+        WHERE wallet_address = $1;
+      `, [walletAddress, REFERRED_BONUS]);
+
+      // Create reward records
+      await client.query(`
+        INSERT INTO referral_rewards (
+          recipient_wallet_address, referral_id, reward_type, jobs_granted, reason
+        ) VALUES 
+        ($1, $2, 'referrer_bonus', $3, 'new_referral'),
+        ($4, $2, 'referred_bonus', $5, 'new_referral');
+      `, [
+        code.referrer_wallet_address, referralId, REFERRER_BONUS,
+        walletAddress, REFERRED_BONUS
+      ]);
+
+      await client.query('COMMIT');
+
+      return {
+        referrer: code.referrer_wallet_address,
+        referrerJobsGranted: REFERRER_BONUS,
+        referredJobsGranted: REFERRED_BONUS
+      };
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  static async getUserReferralCodes(walletAddress: string): Promise<ReferralCode[]> {
+    const query = `
+      SELECT * FROM referral_codes 
+      WHERE referrer_wallet_address = $1 
+      ORDER BY created_at DESC;
+    `;
+
+    const result = await pool.query(query, [walletAddress]);
+    return result.rows;
+  }
+
+  static async updateReferralCode(walletAddress: string, codeId: number, updates: {
+    isActive?: boolean;
+    description?: string;
+    maxUses?: number;
+  }): Promise<ReferralCode> {
+    const setClause = [];
+    const values: any[] = [codeId, walletAddress];
+    let paramCount = 2;
+
+    if (updates.isActive !== undefined) {
+      setClause.push(`is_active = $${++paramCount}`);
+      values.push(updates.isActive);
+    }
+
+    if (updates.description !== undefined) {
+      setClause.push(`description = $${++paramCount}`);
+      values.push(updates.description);
+    }
+
+    if (updates.maxUses !== undefined) {
+      setClause.push(`max_uses = $${++paramCount}`);
+      values.push(updates.maxUses);
+    }
+
+    if (setClause.length === 0) {
+      throw new Error('No updates provided');
+    }
+
+    const query = `
+      UPDATE referral_codes 
+      SET ${setClause.join(', ')}
+      WHERE id = $1 AND referrer_wallet_address = $2
+      RETURNING *;
+    `;
+
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      throw new Error('Referral code not found or not owned by user');
+    }
+
+    return result.rows[0];
+  }
+
+  static async deleteReferralCode(walletAddress: string, codeId: number): Promise<void> {
+    const query = `
+      DELETE FROM referral_codes 
+      WHERE id = $1 AND referrer_wallet_address = $2;
+    `;
+
+    const result = await pool.query(query, [codeId, walletAddress]);
+    if (result.rowCount === 0) {
+      throw new Error('Referral code not found or not owned by user');
+    }
+  }
+
+  static async getReferralStats(walletAddress: string): Promise<ReferralStats | null> {
+    const query = `
+      SELECT * FROM user_referral_stats 
+      WHERE wallet_address = $1;
+    `;
+
+    const result = await pool.query(query, [walletAddress]);
+    return result.rows[0] || null;
+  }
+
+  static async getReferralHistory(walletAddress: string): Promise<UserReferral[]> {
+    const query = `
+      SELECT * FROM user_referrals 
+      WHERE referrer_wallet_address = $1 
+      ORDER BY referred_at DESC;
+    `;
+
+    const result = await pool.query(query, [walletAddress]);
+    return result.rows;
+  }
+
+  static async getRecentReferrals(walletAddress: string, limit: number = 10): Promise<UserReferral[]> {
+    const query = `
+      SELECT * FROM user_referrals 
+      WHERE referrer_wallet_address = $1 
+      ORDER BY referred_at DESC 
+      LIMIT $2;
+    `;
+
+    const result = await pool.query(query, [walletAddress, limit]);
+    return result.rows;
+  }
+}
+
 // Export pool for direct database access
 export { pool };
 
@@ -1720,6 +2072,7 @@ export class Database {
   static MessageDB = MessageDB;
   static UserDB = UserDB;
   static SharedJobDB = SharedJobDB;
+  static ReferralDB = ReferralDB;
 }
 
 export default {
@@ -1736,4 +2089,5 @@ export default {
   UserRulesDB,
   UserMemoriesDB,
   SharedJobDB,
+  ReferralDB,
 };

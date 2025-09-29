@@ -1,6 +1,78 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { rateLimiter, RateLimitResult } from '@/services/rate-limiting/rate-limiter';
 
+// Cache for rate limit logging to prevent spam
+interface LogEntry {
+  lastLogged: Date;
+  count: number;
+}
+
+class RateLimitLogger {
+  private static instance: RateLimitLogger;
+  private logCache = new Map<string, LogEntry>();
+  private readonly LOG_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+  private readonly MAX_LOGS_PER_WINDOW = 3; // Max logs per identifier per window
+
+  private constructor() {}
+
+  static getInstance(): RateLimitLogger {
+    if (!RateLimitLogger.instance) {
+      RateLimitLogger.instance = new RateLimitLogger();
+    }
+    return RateLimitLogger.instance;
+  }
+
+  shouldLog(identifier: string, action: string): boolean {
+    const cacheKey = `${identifier}:${action}`;
+    const now = new Date();
+    
+    let entry = this.logCache.get(cacheKey);
+    
+    // Clean up old entries periodically
+    this.cleanupExpiredEntries();
+    
+    if (!entry) {
+      // First time logging for this identifier/action
+      this.logCache.set(cacheKey, { lastLogged: now, count: 1 });
+      return true;
+    }
+    
+    const timeSinceLastLog = now.getTime() - entry.lastLogged.getTime();
+    
+    if (timeSinceLastLog >= this.LOG_WINDOW_MS) {
+      // Reset the window
+      this.logCache.set(cacheKey, { lastLogged: now, count: 1 });
+      return true;
+    }
+    
+    if (entry.count < this.MAX_LOGS_PER_WINDOW) {
+      // Still within allowed logs for this window
+      entry.count++;
+      entry.lastLogged = now;
+      this.logCache.set(cacheKey, entry);
+      return true;
+    }
+    
+    // Exceeded log limit for this window
+    return false;
+  }
+
+  private cleanupExpiredEntries(): void {
+    const now = new Date();
+    const keysToDelete: string[] = [];
+    
+    this.logCache.forEach((entry, key) => {
+      if ((now.getTime() - entry.lastLogged.getTime()) >= this.LOG_WINDOW_MS) {
+        keysToDelete.push(key);
+      }
+    });
+    
+    keysToDelete.forEach(key => this.logCache.delete(key));
+  }
+}
+
+const rateLimitLogger = RateLimitLogger.getInstance();
+
 /**
  * Rate limiting middleware for API routes
  */
@@ -38,8 +110,10 @@ export async function withRateLimit(
   res.setHeader('X-RateLimit-UserType', result.userType);
 
   if (!result.allowed) {
-    // Log rate limit hit for monitoring
-    console.log(`[RATE LIMIT] ${action} blocked for ${result.userType} user ${identifier}: ${result.reason}`);
+    // Log rate limit hit for monitoring (with spam prevention)
+    if (rateLimitLogger.shouldLog(identifier, action)) {
+      console.log(`[RATE LIMIT] ${action} blocked for ${result.userType} user ${identifier}: ${result.reason}`);
+    }
   }
 
   return { allowed: result.allowed, result };

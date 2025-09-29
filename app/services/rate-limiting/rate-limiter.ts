@@ -166,9 +166,51 @@ export class RateLimiterService {
     const userType = this.determineUserType(identifier);
     const limits = RATE_LIMITS[userType];
     const actionLimit = limits[action];
-    
-    const cacheKey = this.getCacheKey(identifier, action);
     const now = new Date();
+    
+    // For wallet addresses, use database-backed rate limiting
+    if (this.isWalletAddress(identifier)) {
+      try {
+        const windowStart = new Date(now.getTime() - actionLimit.windowMs);
+        let currentCount = 0;
+
+        if (action === 'jobs') {
+          const { JobDB } = await import('@/services/database/db');
+          const jobs = await JobDB.getJobsByWalletSince(identifier, windowStart);
+          currentCount = jobs.length;
+        } else if (action === 'messages') {
+          const { JobDB } = await import('@/services/database/db');
+          currentCount = await JobDB.getMessageCountByWalletSince(identifier, windowStart);
+        }
+
+        const remaining = Math.max(0, actionLimit.maxRequests - currentCount);
+        const resetTime = new Date(windowStart.getTime() + actionLimit.windowMs);
+
+        // Check if request would exceed limit
+        if (currentCount >= actionLimit.maxRequests) {
+          return {
+            allowed: false,
+            remaining: 0,
+            resetTime,
+            userType,
+            reason: `Rate limit exceeded: ${actionLimit.description}. Limit: ${actionLimit.maxRequests} requests per ${Math.floor(actionLimit.windowMs / 1000 / 60)} minutes.`
+          };
+        }
+
+        return {
+          allowed: true,
+          remaining,
+          resetTime,
+          userType
+        };
+      } catch (error) {
+        console.error('Database rate limit check failed, falling back to in-memory:', error);
+        // Fall through to in-memory cache
+      }
+    }
+
+    // For IP addresses or fallback, use in-memory cache
+    const cacheKey = this.getCacheKey(identifier, action);
     
     // Get current usage
     let usage = this.usageMap.get(cacheKey);
@@ -216,11 +258,50 @@ export class RateLimiterService {
   }
 
   /**
-   * Get current usage for an identifier and action
+   * Get current usage for an identifier and action from database
    */
   async getUsage(identifier: string, action: keyof UserLimits): Promise<RateLimitUsage | null> {
-    const cacheKey = this.getCacheKey(identifier, action);
-    return this.usageMap.get(cacheKey) || null;
+    try {
+      // For wallet addresses, get actual usage from database
+      if (this.isWalletAddress(identifier)) {
+        const userType = this.determineUserType(identifier);
+        const limits = RATE_LIMITS[userType];
+        const actionLimit = limits[action];
+        const now = new Date();
+        const windowStart = new Date(now.getTime() - actionLimit.windowMs);
+
+        if (action === 'jobs') {
+          // Get jobs count from database
+          const { JobDB } = await import('@/services/database/db');
+          const jobs = await JobDB.getJobsByWalletSince(identifier, windowStart);
+          return {
+            count: jobs.length,
+            windowStart,
+            userType,
+            identifier
+          };
+        } else if (action === 'messages') {
+          // Get messages count from database via jobs
+          const { JobDB } = await import('@/services/database/db');
+          const messageCount = await JobDB.getMessageCountByWalletSince(identifier, windowStart);
+          return {
+            count: messageCount,
+            windowStart,
+            userType,
+            identifier
+          };
+        }
+      }
+
+      // Fallback to in-memory cache for IP addresses or other cases
+      const cacheKey = this.getCacheKey(identifier, action);
+      return this.usageMap.get(cacheKey) || null;
+    } catch (error) {
+      console.error('Error getting usage from database:', error);
+      // Fallback to in-memory cache
+      const cacheKey = this.getCacheKey(identifier, action);
+      return this.usageMap.get(cacheKey) || null;
+    }
   }
 
   /**
@@ -246,11 +327,31 @@ export class RateLimiterService {
     const keysToDelete: string[] = [];
     
     this.usageMap.forEach((usage, key) => {
-      const userType = this.determineUserType(usage.identifier);
-      const action = key.split(':')[2] as keyof UserLimits;
-      const actionLimit = RATE_LIMITS[userType][action];
-      
-      if ((now.getTime() - usage.windowStart.getTime()) >= actionLimit.windowMs) {
+      try {
+        const userType = this.determineUserType(usage.identifier);
+        const keyParts = key.split(':');
+        
+        // Validate cache key format: rate_limit:identifier:action
+        if (keyParts.length !== 3 || keyParts[0] !== 'rate_limit') {
+          keysToDelete.push(key);
+          return;
+        }
+        
+        const action = keyParts[2] as keyof UserLimits;
+        const actionLimit = RATE_LIMITS[userType]?.[action];
+        
+        // If action is invalid or not found, delete the entry
+        if (!actionLimit) {
+          keysToDelete.push(key);
+          return;
+        }
+        
+        if ((now.getTime() - usage.windowStart.getTime()) >= actionLimit.windowMs) {
+          keysToDelete.push(key);
+        }
+      } catch (error) {
+        // If any error occurs parsing the cache entry, delete it
+        console.warn('Invalid rate limit cache entry, removing:', key, error);
         keysToDelete.push(key);
       }
     });

@@ -1,0 +1,119 @@
+.mainContainer {
+  width: 100%;
+  min-height: 100vh;
+  padding: 32px 40px;
+  background: #0A0A0A;
+  overflow-y: visible;
+}
+
+.header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 24px;
+  margin-bottom: 32px;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.statCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s ease;
+}
+
+.statCard:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.sectionCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 24px;
+  transition: all 0.2s ease;
+}
+
+.sectionCard:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.codeCard {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s ease;
+}
+
+.codeCard:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.input {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  border-radius: 8px !important;
+}
+
+.input:focus {
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 1px #667eea !important;
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.primaryButton {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.primaryButton:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+}
+
+.primaryButton:active {
+  transform: translateY(0) !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .mainContainer {
+    padding: 20px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mainContainer {
+    padding: 16px 12px;
+  }
+  
+  .statCard {
+    padding: 16px;
+  }
+  
+  .sectionCard {
+    padding: 20px;
+  }
+  
+  .codeCard {
+    padding: 16px;
+  }
+}

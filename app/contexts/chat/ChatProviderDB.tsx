@@ -355,7 +355,7 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
         dispatch({ type: "SET_ERROR", payload: error.message || "Failed to send message" });
       }
     },
-    [state.currentConversationId, state.messages, getAddress, chainId]
+    [state.currentConversationId, getAddress, chainId]
   );
 
   // Send message using localStorage (no wallet)

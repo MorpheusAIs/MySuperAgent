@@ -38,7 +38,6 @@ export default async function handler(
   // Check rate limits first
   const { allowed, result } = await withRateLimit(req, res, 'orchestration');
   if (!allowed) {
-    console.log(`[ORCHESTRATION] Rate limit exceeded for ${result.userType} user`);
     return rateLimitErrorResponse(res, result);
   }
 

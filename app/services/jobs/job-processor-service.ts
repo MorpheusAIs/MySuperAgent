@@ -92,22 +92,28 @@ export class JobProcessorService {
     };
 
     try {
-      // Get pending jobs
+      // Get pending jobs with atomic claim (prevents double processing)
       const { JobDB, MessageDB } = await import('@/services/database/db');
       
-      const pendingJobsQuery = `
-        SELECT * FROM jobs 
-        WHERE status = 'pending' 
-          AND is_scheduled = false 
-        ORDER BY created_at ASC
-        LIMIT ${this.MAX_JOBS_PER_RUN};
+      const claimJobsQuery = `
+        UPDATE jobs 
+        SET status = 'running', updated_at = NOW()
+        WHERE id IN (
+          SELECT id FROM jobs 
+          WHERE status = 'pending' 
+            AND is_scheduled = false 
+          ORDER BY created_at ASC
+          LIMIT ${this.MAX_JOBS_PER_RUN}
+          FOR UPDATE SKIP LOCKED
+        )
+        RETURNING *;
       `;
       
       let pendingJobs = [];
       try {
         const { pool } = await import('@/services/database/db');
-        const pendingJobsResult = await pool.query(pendingJobsQuery);
-        pendingJobs = pendingJobsResult.rows;
+        const claimedJobsResult = await pool.query(claimJobsQuery);
+        pendingJobs = claimedJobsResult.rows;
       } catch (dbError) {
         console.error('[JOB PROCESSOR] Database query failed:', dbError);
         result.errors.push(`Database query failed: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`);
@@ -140,11 +146,69 @@ export class JobProcessorService {
             is_streaming: false
           });
           
-          // Update job status to running
-          await JobDB.updateJob(job.id, {
-            status: 'running'
-          });
+          // Job is already set to 'running' by the atomic claim query
           
+          // For scheduled jobs, load context from previous job executions
+          let chatHistory = [];
+          let promptContent = job.initial_message;
+          
+          if (job.is_scheduled && job.original_job_id) {
+            try {
+              // Get previous jobs with the same original_job_id (previous executions of this scheduled job)
+              const { pool } = await import('@/services/database/db');
+              const previousJobsQuery = `
+                SELECT j.*, m.content as response_content, m.created_at as response_time
+                FROM jobs j
+                LEFT JOIN messages m ON j.id = m.job_id AND m.role = 'assistant'
+                WHERE j.original_job_id = $1 
+                  AND j.id != $2
+                  AND j.status = 'completed'
+                ORDER BY j.created_at DESC
+                LIMIT 3
+              `;
+              
+              const previousJobsResult = await pool.query(previousJobsQuery, [job.original_job_id, job.id]);
+              const previousJobs = previousJobsResult.rows;
+              
+              if (previousJobs.length > 0) {
+                // Build context from previous job executions
+                const lastJob = previousJobs[0];
+                const timeSinceLastRun = new Date().getTime() - new Date(lastJob.created_at).getTime();
+                const hoursSince = Math.floor(timeSinceLastRun / (1000 * 60 * 60));
+                
+                // Create chat history from previous executions
+                chatHistory = previousJobs.reverse().flatMap(prevJob => [
+                  {
+                    role: 'user',
+                    content: prevJob.initial_message,
+                    timestamp: new Date(prevJob.created_at).getTime()
+                  },
+                  ...(prevJob.response_content ? [{
+                    role: 'assistant',
+                    content: prevJob.response_content,
+                    timestamp: new Date(prevJob.response_time).getTime()
+                  }] : [])
+                ]);
+                
+                // Modify prompt for scheduled job follow-up
+                promptContent = `This is a scheduled follow-up to: "${job.initial_message}"
+
+Previous context: This scheduled job last ran ${hoursSince > 0 ? `${hoursSince} hours ago` : 'recently'} (${previousJobs.length} previous execution${previousJobs.length > 1 ? 's' : ''}).
+
+Please provide an updated response that:
+1. Acknowledges what was covered in previous executions
+2. Focuses on NEW developments or information since the last run
+3. Builds upon previous responses rather than repeating them
+4. Maintains continuity while providing fresh value
+
+Original request: ${job.initial_message}`;
+              }
+            } catch (contextError) {
+              console.warn(`[JOB PROCESSOR] Could not load context for scheduled job ${job.id}:`, contextError);
+              // Continue with empty history if context loading fails
+            }
+          }
+
           // Call orchestration via HTTP (internal request) with retry logic
           const baseUrl = process.env.NEXT_PUBLIC_API_URL || `http://localhost:${process.env.PORT || 3000}`;
           let response;
@@ -161,9 +225,9 @@ export class JobProcessorService {
                 body: JSON.stringify({
                   prompt: {
                     role: 'user',
-                    content: job.initial_message,
+                    content: promptContent,
                   },
-                  chatHistory: [],
+                  chatHistory: chatHistory,
                   conversationId: job.id,
                   useResearch: true,
                   walletAddress: job.wallet_address,

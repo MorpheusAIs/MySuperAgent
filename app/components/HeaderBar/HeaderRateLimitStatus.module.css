@@ -1,0 +1,71 @@
+.container {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.container:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.userTypeBadge {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  min-width: auto !important;
+}
+
+.usageItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.usageLabel {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.usageBar {
+  width: 32px;
+  height: 3px;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.usageText {
+  font-size: 11px !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace !important;
+}
+
+/* Hide on smaller screens */
+@media screen and (max-width: 1024px) {
+  .usageLabel {
+    display: none;
+  }
+  
+  .usageItem {
+    gap: 1px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .container {
+    display: none;
+  }
+}
