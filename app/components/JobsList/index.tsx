@@ -153,7 +153,7 @@ const PaginationControls: FC<{
   if (totalPages <= 1) return null;
 
   return (
-    <HStack spacing={3} justify="center" className={styles.paginationControls}>
+    <div className={styles.paginationControls}>
       <Button
         onClick={() => onPageChange(currentPage - 1)}
         isDisabled={currentPage === 1}
@@ -171,7 +171,7 @@ const PaginationControls: FC<{
       >
         Next
       </Button>
-    </HStack>
+    </div>
   );
 };
 
