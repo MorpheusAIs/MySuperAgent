@@ -194,12 +194,12 @@ describe('TFIDFSimilarityService', () => {
 
       const context = service.generateSimilarityContext(similarPrompts);
 
-      expect(context).toContain('SIMILAR PREVIOUS INTERACTIONS DETECTED');
+      expect(context).toContain('🚨🚨🚨 CRITICAL ANTI-REPETITION ALERT 🚨🚨🚨');
       expect(context).toContain('Similar prompt 1');
       expect(context).toContain('Similar prompt 2');
       expect(context).toContain('85% similar');
       expect(context).toContain('78% similar');
-      expect(context).toContain('DO NOT REPEAT WHAT WAS SAID IN THE PAST');
+      expect(context).toContain('DO NOT REPEAT ANYTHING FROM THOSE RESPONSES');
     });
 
     it('should return empty string for empty similar prompts', () => {

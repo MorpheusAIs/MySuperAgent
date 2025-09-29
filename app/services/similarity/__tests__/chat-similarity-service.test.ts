@@ -96,8 +96,7 @@ describe('ChatSimilarityService', () => {
 
       const chatRequest = {
         prompt: { role: 'user', content: 'How do I build a React component?' },
-        conversationId: 'test-conversation',
-        jobId: 'current-job',
+        conversationId: 'current-job',
       };
 
       const result = await service.processChatRequest(
