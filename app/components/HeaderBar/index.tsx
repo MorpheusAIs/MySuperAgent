@@ -7,6 +7,9 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { FC } from 'react';
 import { PrivyLoginButton } from '@/components/PrivyLoginButton';
+import { HeaderRateLimitStatus } from './HeaderRateLimitStatus';
+import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import { useWalletAddress } from '@/services/wallet/utils';
 import styles from './index.module.css';
 
 interface HeaderBarProps {
@@ -15,6 +18,8 @@ interface HeaderBarProps {
 
 export const HeaderBar: FC<HeaderBarProps> = ({ onBackToJobs }) => {
   const router = useRouter();
+  const { isAuthenticated } = usePrivyAuth();
+  const { getAddress } = useWalletAddress();
 
   const handleLogoClick = () => {
     if (onBackToJobs) {
@@ -25,6 +30,9 @@ export const HeaderBar: FC<HeaderBarProps> = ({ onBackToJobs }) => {
       router.push('/');
     }
   };
+
+  // Show rate limit status if user is authenticated or has wallet connected
+  const showRateLimit = isAuthenticated || !!getAddress();
 
   return (
     <Box className={styles.headerBar}>
@@ -41,7 +49,12 @@ export const HeaderBar: FC<HeaderBarProps> = ({ onBackToJobs }) => {
           </Box>
         </Box>
         <Spacer />
-        <HStack spacing={4}>
+        <HStack spacing={4} align="center">
+          {showRateLimit && (
+            <Box className={styles.rateLimitWrapper}>
+              <HeaderRateLimitStatus />
+            </Box>
+          )}
           <Box className={styles.connectButtonWrapper}>
             <PrivyLoginButton />
           </Box>

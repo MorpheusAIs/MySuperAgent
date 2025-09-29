@@ -241,10 +241,6 @@ const CrewResponseMessage: React.FC<CrewResponseMessageProps> = ({
   content,
   metadata,
 }) => {
-  // DEBUG: Log all metadata for debugging
-  console.log('[CrewResponseMessage DEBUG] Full metadata received:', metadata);
-  console.log('[CrewResponseMessage DEBUG] Metadata keys:', metadata ? Object.keys(metadata) : 'No metadata');
-  console.log('[CrewResponseMessage DEBUG] Full metadata object:', JSON.stringify(metadata, null, 2));
   
   // Initialize all tasks as collapsed (empty set)
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());

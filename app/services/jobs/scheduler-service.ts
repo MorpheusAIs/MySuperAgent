@@ -26,9 +26,9 @@ export class JobSchedulerService {
   private lastRun: Date | null = null;
   
   // Configuration
-  private readonly SCHEDULER_INTERVAL_MS = 5 * 60 * 1000; // Check every 5 minutes
-  private readonly MIN_INTERVAL_BETWEEN_RUNS_MS = 60 * 1000; // At least 1 minute between runs
-  private readonly MAX_JOBS_PER_RUN = 10; // Process max 10 jobs per run to avoid overload
+  private readonly SCHEDULER_INTERVAL_MS = 2 * 60 * 1000; // Check every 2 minutes for faster scheduling
+  private readonly MIN_INTERVAL_BETWEEN_RUNS_MS = 30 * 1000; // At least 30 seconds between runs
+  private readonly MAX_JOBS_PER_RUN = 15; // Process max 15 jobs per run
 
   private constructor() {
     // Private constructor for singleton

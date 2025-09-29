@@ -40,6 +40,8 @@ export type AnalyticsEvent =
   | 'job.tab_changed'
   | 'job.pagination'
   | 'job.share_modal_opened'
+  | 'job.suggestions_loaded'
+  | 'job.created_from_suggestion'
 
   // Shared job events
   | 'shared_job.created'

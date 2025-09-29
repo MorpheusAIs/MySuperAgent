@@ -10,6 +10,7 @@ import {
   MenuList,
   Text,
   VStack,
+  useToast,
 } from '@chakra-ui/react';
 import { usePrivy } from '@privy-io/react-auth';
 import { ChevronDown, LogIn, LogOut, Mail, User, Wallet } from 'lucide-react';
@@ -28,6 +29,7 @@ export const PrivyLoginButton = ({
 }: PrivyLoginButtonProps) => {
   const { ready, authenticated, user, login, logout: privyLogout } = usePrivy();
   const router = useRouter();
+  const toast = useToast();
 
   const {
     loginWithGoogle,
@@ -44,6 +46,28 @@ export const PrivyLoginButton = ({
   // Handle navigation to account settings
   const handleNavigateToAccountSettings = () => {
     router.push('/settings?tab=account');
+  };
+
+  // Handle wallet address copy
+  const copyWalletAddress = async (address: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      toast({
+        title: 'Copied!',
+        description: 'Wallet address copied to clipboard',
+        status: 'success',
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Copy failed',
+        description: 'Could not copy to clipboard',
+        status: 'error',
+        duration: 2000,
+        isClosable: true,
+      });
+    }
   };
 
   // Handle loading state
@@ -80,10 +104,6 @@ export const PrivyLoginButton = ({
           <VStack
             spacing={2}
             align="stretch"
-            cursor="pointer"
-            onClick={handleNavigateToAccountSettings}
-            _hover={{ opacity: 0.8 }}
-            transition="opacity 0.2s"
           >
             <HStack spacing={2} justify="center">
               <User size={18} color="#59F886" />
@@ -96,15 +116,50 @@ export const PrivyLoginButton = ({
                 Signed In
               </Text>
             </HStack>
-            <Text
-              fontSize="xs"
-              fontWeight="400"
-              color="rgba(255, 255, 255, 0.7)"
-              textAlign="center"
-              fontFamily={userWallet ? 'mono' : 'inherit'}
-            >
-              {shortDisplay}
-            </Text>
+            {userWallet ? (
+              <HStack
+                spacing={1}
+                justify="center"
+                cursor="pointer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  copyWalletAddress(userWallet);
+                }}
+                _hover={{ color: '#59F886' }}
+                transition="color 0.2s"
+                title="Click to copy full address"
+                bg="rgba(89, 248, 134, 0.1)"
+                borderRadius="4px"
+                px={2}
+                py={1}
+                mx={2}
+              >
+                <Wallet size={12} />
+                <Text
+                  fontSize="xs"
+                  fontWeight="400"
+                  color="rgba(255, 255, 255, 0.7)"
+                  textAlign="center"
+                  fontFamily="mono"
+                >
+                  {shortDisplay}
+                </Text>
+              </HStack>
+            ) : (
+              <Text
+                fontSize="xs"
+                fontWeight="400"
+                color="rgba(255, 255, 255, 0.7)"
+                textAlign="center"
+                cursor="pointer"
+                onClick={handleNavigateToAccountSettings}
+                _hover={{ opacity: 0.8 }}
+                transition="opacity 0.2s"
+              >
+                {shortDisplay}
+              </Text>
+            )}
             <Box
               height="1px"
               bg="rgba(255, 255, 255, 0.1)"
@@ -188,9 +243,24 @@ export const PrivyLoginButton = ({
                   </HStack>
                 )}
                 {userWallet && (
-                  <HStack spacing={1}>
+                  <HStack 
+                    spacing={1}
+                    cursor="pointer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      copyWalletAddress(userWallet);
+                    }}
+                    _hover={{ color: '#59F886' }}
+                    transition="color 0.2s"
+                    title="Click to copy full address"
+                    bg="rgba(89, 248, 134, 0.1)"
+                    borderRadius="4px"
+                    px={2}
+                    py={1}
+                  >
                     <Wallet size={12} />
-                    <Box>{`${userWallet.slice(0, 6)}...${userWallet.slice(
+                    <Box fontFamily="mono">{`${userWallet.slice(0, 6)}...${userWallet.slice(
                       -4
                     )}`}</Box>
                   </HStack>

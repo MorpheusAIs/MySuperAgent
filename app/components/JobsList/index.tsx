@@ -30,6 +30,7 @@ import {
   InputGroup,
   InputLeftElement,
   Select,
+  Spinner,
   Tab,
   TabList,
   TabPanel,
@@ -70,15 +71,15 @@ const isCurrentJob = (job: Job) => {
 
   const status = getJobStatus(job);
 
-  // Current jobs are those in progress or completed within the last 24 hours
+  // Current jobs are those in progress or completed/failed within the last 24 hours
   if (status === 'pending' || status === 'running') {
     return true;
   }
 
-  if (status === 'completed') {
-    const oneDayAgo = new Date();
-    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-    return new Date(job.created_at) > oneDayAgo;
+  if (status === 'completed' || status === 'failed') {
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+    return new Date(job.created_at) > twentyFourHoursAgo;
   }
 
   return false;
@@ -93,8 +94,11 @@ const isPreviousJob = (job: Job) => {
   const status = getJobStatus(job);
 
   // Previous jobs are completed/failed jobs older than 24 hours
+  // Failed jobs should also respect the 24-hour window
   if (status === 'failed') {
-    return true;
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+    return new Date(job.created_at) <= twentyFourHoursAgo;
   }
 
   if (status === 'completed') {
@@ -981,6 +985,51 @@ const JobItem: FC<{
   isLoading = false,
 }) => {
   const status = getJobStatus(job);
+  const [jobResult, setJobResult] = useState<string>('');
+  const [resultLoading, setResultLoading] = useState(false);
+  const { getAddress } = useWalletAddress();
+
+  // Fetch job result on mount for completed jobs
+  useEffect(() => {
+    const fetchJobResult = async () => {
+      if (status !== 'completed' && status !== 'failed') return;
+      
+      setResultLoading(true);
+      try {
+        const walletAddress = getAddress();
+        if (!walletAddress) return;
+
+        const messages = await JobsAPI.getMessages(walletAddress, job.id);
+        // Find the latest assistant message
+        const assistantMessages = messages
+          .filter(m => m.role === 'assistant')
+          .sort((a, b) => b.order_index - a.order_index);
+        
+        if (assistantMessages.length > 0) {
+          const latestMessage = assistantMessages[0];
+          let content = '';
+          
+          if (typeof latestMessage.content === 'string') {
+            content = latestMessage.content;
+          } else if (typeof latestMessage.content === 'object' && latestMessage.content.text) {
+            content = latestMessage.content.text;
+          } else if (typeof latestMessage.content === 'object' && latestMessage.content.content) {
+            content = latestMessage.content.content;
+          } else {
+            content = JSON.stringify(latestMessage.content);
+          }
+          
+          setJobResult(content);
+        }
+      } catch (error) {
+        console.error('Error fetching job result:', error);
+      } finally {
+        setResultLoading(false);
+      }
+    };
+
+    fetchJobResult();
+  }, [job.id, status, getAddress]);
 
   // Get title and description from job
   const title =
@@ -997,6 +1046,12 @@ const JobItem: FC<{
     : isLoading
     ? 'Loading job output...'
     : job.description || job.initial_message || 'No description';
+
+  // Function to truncate job result for display
+  const truncateResult = (result: string, maxLength: number = 200): string => {
+    if (result.length <= maxLength) return result;
+    return result.substring(0, maxLength) + '...';
+  };
 
   return (
     <Box
@@ -1061,28 +1116,63 @@ const JobItem: FC<{
         }}
       >
         <VStack align="stretch" spacing={3} width="100%">
-          {/* Header with title and status */}
+          {/* Result-First Layout */}
           <HStack justify="space-between" align="flex-start" spacing={3}>
-            <VStack align="flex-start" spacing={1} flex={1} minW={0}>
-              <Text
-                fontSize="md"
-                fontWeight="semibold"
-                color="gray.200"
-                textAlign="left"
-                noOfLines={1}
-                w="100%"
-              >
-                {title}
-              </Text>
-              <Text
-                fontSize="sm"
-                color="gray.500"
-                textAlign="left"
-                noOfLines={2}
-                w="100%"
-              >
-                {description}
-              </Text>
+            <VStack align="flex-start" spacing={2} flex={1} minW={0}>
+              {/* Job Result - Primary Content */}
+              {(status === 'completed' || status === 'failed') && jobResult ? (
+                <Box w="100%">
+                  <Text
+                    fontSize="md"
+                    fontWeight="medium"
+                    color="gray.100"
+                    textAlign="left"
+                    lineHeight="1.5"
+                    noOfLines={3}
+                    w="100%"
+                  >
+                    {truncateResult(jobResult)}
+                  </Text>
+                  <Text
+                    fontSize="xs"
+                    color="gray.600"
+                    textAlign="left"
+                    mt={1}
+                    noOfLines={1}
+                    w="100%"
+                  >
+                    {title}
+                  </Text>
+                </Box>
+              ) : resultLoading ? (
+                <HStack spacing={2} w="100%">
+                  <Spinner size="xs" color="blue.400" />
+                  <Text fontSize="sm" color="gray.400">Loading result...</Text>
+                </HStack>
+              ) : (
+                /* Fallback to traditional layout for pending/running jobs */
+                <Box w="100%">
+                  <Text
+                    fontSize="md"
+                    fontWeight="semibold"
+                    color="gray.200"
+                    textAlign="left"
+                    noOfLines={1}
+                    w="100%"
+                  >
+                    {title}
+                  </Text>
+                  <Text
+                    fontSize="sm"
+                    color="gray.500"
+                    textAlign="left"
+                    noOfLines={2}
+                    w="100%"
+                  >
+                    {description}
+                  </Text>
+                </Box>
+              )}
             </VStack>
 
             <Badge
