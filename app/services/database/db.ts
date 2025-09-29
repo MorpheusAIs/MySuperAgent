@@ -41,6 +41,10 @@ export interface UserPreferences {
   timezone: string;
   ai_personality?: string;
   user_bio?: string;
+  similarity_enabled?: boolean;
+  similarity_threshold?: number;
+  max_similar_prompts?: number;
+  similarity_context_enabled?: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -326,6 +330,10 @@ export class UserPreferencesDB {
       'timezone',
       'ai_personality',
       'user_bio',
+      'similarity_enabled',
+      'similarity_threshold',
+      'max_similar_prompts',
+      'similarity_context_enabled',
     ];
     const updateFields = Object.keys(preferences)
       .filter((key) => allowedFields.includes(key))
@@ -356,8 +364,9 @@ export class UserPreferencesDB {
     const insertQuery = `
       INSERT INTO user_preferences (
         wallet_address, auto_schedule_jobs, default_schedule_type, 
-        default_schedule_time, timezone, ai_personality, user_bio
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        default_schedule_time, timezone, ai_personality, user_bio,
+        similarity_enabled, similarity_threshold, max_similar_prompts, similarity_context_enabled
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *;
     `;
 
@@ -369,6 +378,10 @@ export class UserPreferencesDB {
       preferences.timezone || 'UTC',
       preferences.ai_personality || '',
       preferences.user_bio || '',
+      preferences.similarity_enabled ?? true,
+      preferences.similarity_threshold ?? 0.7,
+      preferences.max_similar_prompts ?? 3,
+      preferences.similarity_context_enabled ?? true,
     ];
 
     const insertResult = await pool.query(insertQuery, insertValues);
@@ -385,8 +398,9 @@ export class UserPreferencesDB {
     const query = `
       INSERT INTO user_preferences (
         wallet_address, auto_schedule_jobs, default_schedule_type, 
-        default_schedule_time, timezone, ai_personality, user_bio
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        default_schedule_time, timezone, ai_personality, user_bio,
+        similarity_enabled, similarity_threshold, max_similar_prompts, similarity_context_enabled
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *;
     `;
 
@@ -398,6 +412,10 @@ export class UserPreferencesDB {
       preferences.timezone || 'UTC',
       preferences.ai_personality || '',
       preferences.user_bio || '',
+      preferences.similarity_enabled ?? true,
+      preferences.similarity_threshold ?? 0.7,
+      preferences.max_similar_prompts ?? 3,
+      preferences.similarity_context_enabled ?? true,
     ];
 
     const result = await pool.query(query, values);
@@ -795,6 +813,176 @@ export class MessageDB {
       endOfDay,
     ]);
     return parseInt(result.rows[0].total, 10);
+  }
+
+  /**
+   * Get all messages for a user across all their jobs for similarity checking
+   */
+  static async getAllMessagesForUser(
+    walletAddress: string,
+    limit: number = 1000
+  ): Promise<Message[]> {
+    const query = `
+      SELECT m.* 
+      FROM messages m
+      INNER JOIN jobs j ON m.job_id = j.id
+      WHERE j.wallet_address = $1 
+      ORDER BY m.created_at DESC
+      LIMIT $2;
+    `;
+
+    const result = await pool.query(query, [walletAddress, limit]);
+    return result.rows.map((row) => {
+      let content, metadata;
+
+      try {
+        content =
+          typeof row.content === 'string'
+            ? JSON.parse(row.content)
+            : row.content;
+      } catch (e) {
+        // If parsing fails, treat as plain string
+        content = row.content;
+      }
+
+      try {
+        metadata =
+          typeof row.metadata === 'string'
+            ? JSON.parse(row.metadata)
+            : row.metadata;
+      } catch (e) {
+        // If parsing fails, use empty object
+        metadata = {};
+      }
+
+      return {
+        ...row,
+        content,
+        metadata,
+      };
+    });
+  }
+
+  /**
+   * Get recent messages for a user (last N days) for similarity checking
+   */
+  static async getRecentMessagesForUser(
+    walletAddress: string,
+    daysBack: number = 30,
+    limit: number = 500
+  ): Promise<Message[]> {
+    const query = `
+      SELECT m.* 
+      FROM messages m
+      INNER JOIN jobs j ON m.job_id = j.id
+      WHERE j.wallet_address = $1 
+      AND m.created_at >= NOW() - INTERVAL '${daysBack} days'
+      ORDER BY m.created_at DESC
+      LIMIT $2;
+    `;
+
+    const result = await pool.query(query, [walletAddress, limit]);
+    return result.rows.map((row) => {
+      let content, metadata;
+
+      try {
+        content =
+          typeof row.content === 'string'
+            ? JSON.parse(row.content)
+            : row.content;
+      } catch (e) {
+        // If parsing fails, treat as plain string
+        content = row.content;
+      }
+
+      try {
+        metadata =
+          typeof row.metadata === 'string'
+            ? JSON.parse(row.metadata)
+            : row.metadata;
+      } catch (e) {
+        // If parsing fails, use empty object
+        metadata = {};
+      }
+
+      return {
+        ...row,
+        content,
+        metadata,
+      };
+    });
+  }
+
+  /**
+   * Get messages for similarity checking with specific filters
+   */
+  static async getMessagesForSimilarity(
+    walletAddress: string,
+    options: {
+      excludeJobId?: string;
+      minPromptLength?: number;
+      daysBack?: number;
+      limit?: number;
+    } = {}
+  ): Promise<Message[]> {
+    const {
+      excludeJobId,
+      minPromptLength = 10,
+      daysBack = 30,
+      limit = 500,
+    } = options;
+
+    let query = `
+      SELECT m.* 
+      FROM messages m
+      INNER JOIN jobs j ON m.job_id = j.id
+      WHERE j.wallet_address = $1 
+      AND m.created_at >= NOW() - INTERVAL '${daysBack} days'
+      AND m.role = 'user'
+    `;
+
+    const params: any[] = [walletAddress];
+    let paramIndex = 2;
+
+    if (excludeJobId) {
+      query += ` AND m.job_id != $${paramIndex}`;
+      params.push(excludeJobId);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY m.created_at DESC LIMIT $${paramIndex};`;
+    params.push(limit);
+
+    const result = await pool.query(query, params);
+    return result.rows.map((row) => {
+      let content, metadata;
+
+      try {
+        content =
+          typeof row.content === 'string'
+            ? JSON.parse(row.content)
+            : row.content;
+      } catch (e) {
+        // If parsing fails, treat as plain string
+        content = row.content;
+      }
+
+      try {
+        metadata =
+          typeof row.metadata === 'string'
+            ? JSON.parse(row.metadata)
+            : row.metadata;
+      } catch (e) {
+        // If parsing fails, use empty object
+        metadata = {};
+      }
+
+      return {
+        ...row,
+        content,
+        metadata,
+      };
+    });
   }
 }
 

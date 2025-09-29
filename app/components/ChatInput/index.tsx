@@ -19,7 +19,8 @@ type ChatInputProps = {
   onSubmit: (
     message: string,
     files: File[],
-    useResearch: boolean
+    useResearch: boolean,
+    bypassScheduling?: boolean
   ) => Promise<void>;
   disabled: boolean;
   isSidebarOpen: boolean;
@@ -48,6 +49,7 @@ export const ChatInput: FC<ChatInputProps> = ({
   const [showSchedule, setShowSchedule] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isScheduleReady, setIsScheduleReady] = useState(false);
+  const [runNonScheduled, setRunNonScheduled] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -227,7 +229,7 @@ export const ChatInput: FC<ChatInputProps> = ({
       setShowSchedule(false);
 
       // Submit the message with research always enabled
-      await onSubmit(messageToSend, filesToSend, true);
+      await onSubmit(messageToSend, filesToSend, true, runNonScheduled);
     } catch (error) {
       console.error('Error submitting message:', error);
     } finally {
@@ -254,6 +256,32 @@ export const ChatInput: FC<ChatInputProps> = ({
 
   const handleScheduleReadyChange = (ready: boolean) => {
     setIsScheduleReady(ready);
+  };
+
+  const handleRunNonScheduled = async () => {
+    if ((!message && attachedFiles.length === 0) || isSubmitting || disabled)
+      return;
+
+    try {
+      setIsSubmitting(true);
+      setRunNonScheduled(true);
+
+      const messageToSend = message;
+      const filesToSend = [...attachedFiles];
+
+      // Clear input immediately to improve UX
+      setMessage('');
+      setAttachedFiles([]);
+      setShowSchedule(false);
+
+      // Submit the message with research always enabled and bypass scheduling
+      await onSubmit(messageToSend, filesToSend, true, true);
+    } catch (error) {
+      console.error('Error submitting message:', error);
+    } finally {
+      setIsSubmitting(false);
+      setRunNonScheduled(false);
+    }
   };
 
   return (
@@ -426,6 +454,17 @@ export const ChatInput: FC<ChatInputProps> = ({
                 isExpanded={showSchedule}
                 onToggle={handleToggleSchedule}
               />
+              <Button
+                size="sm"
+                className={`${styles.actionButton} ${
+                  runNonScheduled ? styles.activeButton : ''
+                }`}
+                onClick={handleRunNonScheduled}
+                disabled={isSubmitting || disabled || !message.trim()}
+                leftIcon={<TimeIcon />}
+              >
+                Run Non-Scheduled
+              </Button>
             </div>
 
           </div>
