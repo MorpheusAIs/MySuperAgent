@@ -53,6 +53,7 @@ interface JobsListProps {
   ) => void;
   isLoading?: boolean;
   refreshKey?: number;
+  optimisticJobs?: Job[]; // Jobs that are being created but not yet in the database
 }
 
 const getJobStatus = (
@@ -467,7 +468,9 @@ const ScheduledJobItem: FC<{
               noOfLines={2}
               w="100%"
             >
-              {jobOutputs
+              {job.id.startsWith('temp-')
+                ? 'Creating job...'
+                : jobOutputs
                 ? jobOutputs
                 : isLoading
                 ? 'Loading job output...'
@@ -478,12 +481,26 @@ const ScheduledJobItem: FC<{
 
           {/* Status Badge */}
           <Badge
-            colorScheme={job.is_active ? (isOverdue ? 'red' : 'blue') : 'gray'}
+            colorScheme={
+              job.id.startsWith('temp-')
+                ? 'yellow'
+                : job.is_active
+                ? isOverdue
+                  ? 'red'
+                  : 'blue'
+                : 'gray'
+            }
             variant="subtle"
             size="sm"
             flexShrink={0}
           >
-            {!job.is_active ? 'inactive' : isOverdue ? 'overdue' : 'active'}
+            {job.id.startsWith('temp-')
+              ? 'creating'
+              : !job.is_active
+              ? 'inactive'
+              : isOverdue
+              ? 'overdue'
+              : 'active'}
           </Badge>
         </HStack>
 
@@ -1196,6 +1213,7 @@ export const JobsList: FC<JobsListProps> = ({
   onRunScheduledJob,
   isLoading,
   refreshKey = 0,
+  optimisticJobs = [],
 }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -1231,9 +1249,12 @@ export const JobsList: FC<JobsListProps> = ({
       setOutputsLoading(true);
       const outputs: Record<string, string> = {};
 
+      // Filter out optimistic jobs (they don't exist in database yet)
+      const realJobs = jobs.filter((job) => !job.id.startsWith('temp-'));
+
       // First, load the first few jobs immediately for better UX
-      const immediateJobs = jobs.slice(0, immediateCount);
-      const remainingJobs = jobs.slice(immediateCount);
+      const immediateJobs = realJobs.slice(0, immediateCount);
+      const remainingJobs = realJobs.slice(immediateCount);
 
       // Load immediate jobs first
       for (const job of immediateJobs) {
@@ -1398,7 +1419,9 @@ export const JobsList: FC<JobsListProps> = ({
     // Load regular jobs
     setJobsLoading(true);
     try {
+      console.log('[JobsList] Fetching jobs for wallet:', walletAddress);
       const jobsList = await JobsAPI.getJobs(walletAddress);
+      console.log('[JobsList] Fetched jobs:', jobsList.length);
       setJobs(jobsList);
       // Fetch outputs for completed jobs
       await fetchJobOutputs(jobsList);
@@ -1423,6 +1446,7 @@ export const JobsList: FC<JobsListProps> = ({
   }, [getAddress, loadLocalStorageConversations, fetchJobOutputs]);
 
   useEffect(() => {
+    console.log('[JobsList] Loading data, refreshKey:', refreshKey);
     loadAllData();
   }, [loadAllData, refreshKey]); // Add refreshKey to trigger reload when jobs are created
 
@@ -1480,14 +1504,25 @@ export const JobsList: FC<JobsListProps> = ({
   );
 
   // Apply filters and pagination with sorting by created_at DESC (newest first)
-  const allCurrentJobs = useMemo(
-    () =>
-      filterJobs(jobs.filter(isCurrentJob)).sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      ),
-    [jobs, filterJobs]
-  );
+  // Include optimistic jobs in current jobs
+  const allCurrentJobs = useMemo(() => {
+    const currentJobs = jobs.filter(isCurrentJob);
+    const optimisticCurrentJobs = optimisticJobs.filter(isCurrentJob);
+    const combinedJobs = [...optimisticCurrentJobs, ...currentJobs];
+
+    console.log('[JobsList] Current jobs:', currentJobs.length);
+    console.log('[JobsList] Optimistic jobs:', optimisticJobs.length);
+    console.log('[JobsList] Combined jobs:', combinedJobs.length);
+    console.log(
+      '[JobsList] Optimistic job IDs:',
+      optimisticJobs.map((j) => j.id)
+    );
+
+    return filterJobs(combinedJobs).sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }, [jobs, optimisticJobs, filterJobs]);
   const allPreviousJobs = useMemo(
     () =>
       filterJobs(jobs.filter(isPreviousJob)).sort(

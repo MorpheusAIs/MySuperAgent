@@ -1,6 +1,7 @@
 import { initializeAgents } from '@/services/agents/initialize';
 import { createOrchestrator } from '@/services/agents/orchestrator';
 import { ChatRequest } from '@/services/agents/types';
+import { defaultChatSimilarityService } from '@/services/similarity/chat-similarity-service';
 import {
   ValidationError,
   createSafeErrorResponse,
@@ -19,6 +20,8 @@ export default async function handler(
 
   try {
     const chatRequest: ChatRequest = req.body;
+    const walletAddress = req.body.walletAddress; // Extract wallet address from request
+
     // Generate request ID if not provided
     if (!chatRequest.requestId) {
       chatRequest.requestId = uuidv4();
@@ -39,6 +42,34 @@ export default async function handler(
     // Ensure agents are initialized
     await initializeAgents();
 
+    // Process chat request with similarity checking (with timeout protection)
+    let enhancedChatRequest = chatRequest;
+    try {
+      const similarityPromise = defaultChatSimilarityService.processChatRequest(
+        chatRequest,
+        walletAddress
+      );
+
+      // Add timeout to prevent blocking
+      enhancedChatRequest = await Promise.race([
+        similarityPromise,
+        new Promise<ChatRequest>((resolve) => {
+          setTimeout(() => {
+            console.log(
+              '[ChatStreamAPI] Similarity processing timeout, using original request'
+            );
+            resolve(chatRequest);
+          }, 2000); // 2 second timeout
+        }),
+      ]);
+    } catch (error) {
+      console.error(
+        '[ChatStreamAPI] Error in similarity processing, using original request:',
+        error
+      );
+      enhancedChatRequest = chatRequest;
+    }
+
     // Create a new orchestrator instance for this request to avoid state conflicts
     const requestOrchestrator = createOrchestrator(chatRequest.requestId);
 
@@ -51,39 +82,60 @@ export default async function handler(
 
     // Send initial connection event
     res.write(
-      `event: connected\ndata: ${JSON.stringify({ type: 'connected', requestId: chatRequest.requestId })}\n\n`
+      `event: connected\ndata: ${JSON.stringify({
+        type: 'connected',
+        requestId: chatRequest.requestId,
+      })}\n\n`
     );
 
     // Set up event listeners for orchestration events (matching Python implementation)
     const eventHandlers = {
       'flow-start': (data: any) => {
         res.write(
-          `event: flow_start\ndata: ${JSON.stringify({ type: 'flow_start', data })}\n\n`
+          `event: flow_start\ndata: ${JSON.stringify({
+            type: 'flow_start',
+            data,
+          })}\n\n`
         );
       },
       'subtask-dispatch': (data: any) => {
         res.write(
-          `event: subtask_dispatch\ndata: ${JSON.stringify({ type: 'subtask_dispatch', data })}\n\n`
+          `event: subtask_dispatch\ndata: ${JSON.stringify({
+            type: 'subtask_dispatch',
+            data,
+          })}\n\n`
         );
       },
       'subtask-result': (data: any) => {
         res.write(
-          `event: subtask_result\ndata: ${JSON.stringify({ type: 'subtask_result', data })}\n\n`
+          `event: subtask_result\ndata: ${JSON.stringify({
+            type: 'subtask_result',
+            data,
+          })}\n\n`
         );
       },
       'synthesis-start': (data: any) => {
         res.write(
-          `event: synthesis_start\ndata: ${JSON.stringify({ type: 'synthesis_start', data })}\n\n`
+          `event: synthesis_start\ndata: ${JSON.stringify({
+            type: 'synthesis_start',
+            data,
+          })}\n\n`
         );
       },
       'synthesis-complete': (data: any) => {
         res.write(
-          `event: synthesis_complete\ndata: ${JSON.stringify({ type: 'synthesis_complete', data })}\n\n`
+          `event: synthesis_complete\ndata: ${JSON.stringify({
+            type: 'synthesis_complete',
+            data,
+          })}\n\n`
         );
       },
       'flow-end': (data: any) => {
         res.write(
-          `event: flow_end\ndata: ${JSON.stringify({ type: 'flow_end', data })}\n\n`
+          `event: flow_end\ndata: ${JSON.stringify({
+            type: 'flow_end',
+            data,
+          })}\n\n`
         );
       },
     };
@@ -95,7 +147,7 @@ export default async function handler(
 
     // Start streaming processing
     requestOrchestrator
-      .streamOrchestration(chatRequest, res)
+      .streamOrchestration(enhancedChatRequest, res)
       .catch((error) => {
         res.write(
           `data: ${JSON.stringify({

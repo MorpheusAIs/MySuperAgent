@@ -50,7 +50,6 @@ export default async function handler(
       totalIncomeEarned,
     };
 
-    // Create carousel messages with similar lengths (WITHOUT "Neo" prefix - that's handled by the frontend)
     const carouselMessages = [
       `has completed ${stats.totalJobs.toLocaleString()} total jobs to date`,
       `has worked ${stats.humanEquivalentHours.toLocaleString()} human equivalent hours`,

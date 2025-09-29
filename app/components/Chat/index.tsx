@@ -7,7 +7,7 @@ import { useChatContext } from '@/contexts/chat/useChatContext';
 import { trackEvent } from '@/services/analytics';
 import JobsAPI from '@/services/api-clients/jobs';
 import UserPreferencesAPI from '@/services/api-clients/userPreferences';
-import { UserPreferences } from '@/services/database/db';
+import { Job, UserPreferences } from '@/services/database/db';
 import { useWalletAddress } from '@/services/wallet/utils';
 import { Box, Text, useBreakpointValue, VStack } from '@chakra-ui/react';
 import { FC, useEffect, useState } from 'react';
@@ -26,6 +26,8 @@ export const Chat: FC<{
   const [userPreferences, setUserPreferences] =
     useState<UserPreferences | null>(null);
   const [jobsRefreshKey, setJobsRefreshKey] = useState(0);
+  const [optimisticJobs, setOptimisticJobs] = useState<Job[]>([]);
+  const [localJobs, setLocalJobs] = useState<Job[]>([]);
   const { address, getAddress } = useWalletAddress();
 
   // Load user preferences only (jobs come from ChatProviderDB)
@@ -63,84 +65,92 @@ export const Chat: FC<{
   const handleSubmit = async (
     message: string,
     files: File[],
-    useResearch: boolean = true
+    useResearch: boolean = true,
+    bypassScheduling: boolean = false
   ) => {
     if (currentView === 'jobs') {
       // Create a new job but stay in jobs view
-      try {
-        const walletAddress = getAddress();
-        if (!walletAddress) {
-          // No wallet connected, create a localStorage-based conversation
-          console.log('No wallet connected - creating local conversation');
-          return await handleLocalStorageJob(message, files, useResearch);
-        }
-        const shouldAutoSchedule = userPreferences?.auto_schedule_jobs || false;
+      const walletAddress = getAddress();
+      if (!walletAddress) {
+        // No wallet connected, create a localStorage-based conversation
+        console.log('No wallet connected - creating local conversation');
+        return await handleLocalStorageJob(message, files, useResearch);
+      }
+      const shouldAutoSchedule = bypassScheduling
+        ? false
+        : userPreferences?.auto_schedule_jobs || false;
 
+      // Create optimistic job immediately for instant UI feedback
+      const tempJobId = `temp-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+      const optimisticJob: Job = {
+        id: tempJobId,
+        wallet_address: walletAddress,
+        name: JobsAPI.generateJobName(message),
+        description: null,
+        initial_message: message,
+        status: 'pending',
+        created_at: new Date(),
+        updated_at: new Date(),
+        completed_at: null,
+        has_uploaded_file: files.length > 0,
+        is_scheduled: shouldAutoSchedule,
+        schedule_type: null,
+        schedule_time: null,
+        next_run_time: null,
+        interval_days: null,
+        is_active: true,
+        last_run_at: null,
+        run_count: 0,
+        max_runs: null,
+        timezone: 'UTC',
+      };
+
+      // Add optimistic job to UI immediately
+      console.log('[Chat] Adding optimistic job:', tempJobId);
+      console.log('[Chat] Optimistic job data:', optimisticJob);
+      setOptimisticJobs((prev) => {
+        const newJobs = [optimisticJob, ...prev];
+        console.log('[Chat] Updated optimistic jobs:', newJobs.length);
+        return newJobs;
+      });
+
+      // Switch to this optimistic job immediately
+      console.log(
+        '[Chat] Setting current conversation to optimistic job:',
+        tempJobId
+      );
+      await setCurrentConversation(tempJobId);
+
+      // Refresh the jobs list to show the optimistic job
+      console.log('[Chat] Refreshing jobs list');
+      refreshJobsList();
+
+      try {
+        // Create real job in background
+        console.log('[Chat] Creating real job with message:', message);
         const newJob = await JobsAPI.createJob(walletAddress, {
           name: JobsAPI.generateJobName(message),
           initial_message: message,
           is_scheduled: shouldAutoSchedule,
           has_uploaded_file: files.length > 0,
         });
+        console.log('[Chat] Real job created successfully:', newJob.id);
 
-        // If auto-scheduling is enabled, update the job with scheduling fields
-        if (shouldAutoSchedule && userPreferences) {
-          try {
-            // Create schedule time based on user preferences
-            const now = new Date();
-            const [hours, minutes] =
-              userPreferences.default_schedule_time.split(':');
-            const scheduleDateTime = new Date();
-            scheduleDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        // Remove optimistic job and add real job
+        setOptimisticJobs((prev) => prev.filter((job) => job.id !== tempJobId));
+        setLocalJobs((prev) => [newJob, ...prev]);
 
-            // If the time has already passed today, schedule for tomorrow
-            if (scheduleDateTime <= now) {
-              scheduleDateTime.setDate(scheduleDateTime.getDate() + 1);
-            }
-
-            // Calculate next run time
-            const nextRunTime = JobsAPI.calculateNextRunTime(
-              userPreferences.default_schedule_type as
-                | 'once'
-                | 'daily'
-                | 'weekly'
-                | 'custom',
-              scheduleDateTime,
-              userPreferences.default_schedule_type === 'custom' ? 1 : undefined
-            );
-
-            // Update the job with scheduling information
-            await JobsAPI.updateJob(newJob.id, {
-              wallet_address: walletAddress,
-              is_scheduled: true,
-              schedule_type: userPreferences.default_schedule_type as
-                | 'once'
-                | 'daily'
-                | 'weekly'
-                | 'custom',
-              schedule_time: scheduleDateTime,
-              next_run_time: nextRunTime,
-              interval_days:
-                userPreferences.default_schedule_type === 'custom' ? 1 : null,
-              timezone: userPreferences.timezone,
-            });
-
-            console.log(
-              `Job auto-scheduled for ${scheduleDateTime.toLocaleString()}`
-            );
-          } catch (scheduleError) {
-            console.error('Error auto-scheduling job:', scheduleError);
-            // Continue with regular job creation even if scheduling fails
-          }
-        }
-
-        // Switch to this new job but keep jobs view
+        // Switch to the real job
+        console.log(
+          '[Chat] Setting current conversation to real job:',
+          newJob.id
+        );
         await setCurrentConversation(newJob.id);
 
-        // Refresh the jobs list to show the new job
-        refreshJobsList();
-
         // Send the message in the background (non-blocking)
+        console.log('[Chat] Sending message for job:', newJob.id);
         sendMessage(message, files[0] || null, useResearch, newJob.id)
           .then(() => {
             console.log('Message sent successfully for job:', newJob.id);
@@ -157,6 +167,12 @@ export const Chat: FC<{
         return Promise.resolve();
       } catch (error) {
         console.error('Error creating new job:', error);
+
+        // Remove optimistic job on error
+        setOptimisticJobs((prev) => prev.filter((job) => job.id !== tempJobId));
+
+        // Show error to user
+        // You might want to add a toast notification here
         throw error;
       }
     } else {
@@ -258,7 +274,7 @@ export const Chat: FC<{
     if (isSubmitting || showLoading) return;
     try {
       setIsSubmitting(true);
-      await handleSubmit(selectedMessage, [], true);
+      await handleSubmit(selectedMessage, [], true, false);
     } catch (error) {
       console.error('Error submitting prefilled message:', error);
     } finally {
@@ -337,7 +353,16 @@ export const Chat: FC<{
                 onRunScheduledJob={handleRunScheduledJob}
                 isLoading={showLoading}
                 refreshKey={jobsRefreshKey}
+                optimisticJobs={optimisticJobs}
               />
+              {/* Debug info */}
+              {process.env.NODE_ENV === 'development' && (
+                <div
+                  style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}
+                >
+                  Debug: {optimisticJobs.length} optimistic jobs
+                </div>
+              )}
             </Box>
           </VStack>
         </Box>
