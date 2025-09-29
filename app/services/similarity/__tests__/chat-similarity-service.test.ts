@@ -3,6 +3,7 @@
  */
 
 import { MessageDB } from '@/services/database/db';
+import { ResponseType } from '@/services/agents/types';
 import {
   ChatSimilarityConfig,
   ChatSimilarityService,
@@ -230,7 +231,7 @@ describe('ChatSimilarityService', () => {
   describe('enhanceAgentResponse', () => {
     it('should enhance response with similarity metadata', () => {
       const mockResponse = {
-        responseType: 'success' as const,
+        responseType: ResponseType.SUCCESS,
         content: 'Here is your response',
         metadata: { existing: 'data' },
       };
@@ -271,7 +272,7 @@ describe('ChatSimilarityService', () => {
 
     it('should handle empty similar prompts', () => {
       const mockResponse = {
-        responseType: 'success' as const,
+        responseType: ResponseType.SUCCESS,
         content: 'Here is your response',
         metadata: { existing: 'data' },
       };

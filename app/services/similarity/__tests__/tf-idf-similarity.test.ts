@@ -14,6 +14,9 @@ describe('TFIDFSimilarityService', () => {
       job_id: 'job1',
       created_at: new Date('2024-01-01'),
       order_index: 1,
+      metadata: {},
+      requires_action: false,
+      is_streaming: false,
     },
     {
       id: '2',
@@ -23,6 +26,9 @@ describe('TFIDFSimilarityService', () => {
       job_id: 'job1',
       created_at: new Date('2024-01-01'),
       order_index: 2,
+      metadata: {},
+      requires_action: false,
+      is_streaming: false,
     },
     {
       id: '3',
@@ -31,6 +37,9 @@ describe('TFIDFSimilarityService', () => {
       job_id: 'job2',
       created_at: new Date('2024-01-02'),
       order_index: 1,
+      metadata: {},
+      requires_action: false,
+      is_streaming: false,
     },
     {
       id: '4',
@@ -40,6 +49,9 @@ describe('TFIDFSimilarityService', () => {
       job_id: 'job2',
       created_at: new Date('2024-01-02'),
       order_index: 2,
+      metadata: {},
+      requires_action: false,
+      is_streaming: false,
     },
     {
       id: '5',
@@ -48,6 +60,9 @@ describe('TFIDFSimilarityService', () => {
       job_id: 'job3',
       created_at: new Date('2024-01-03'),
       order_index: 1,
+      metadata: {},
+      requires_action: false,
+      is_streaming: false,
     },
     {
       id: '6',
@@ -56,6 +71,9 @@ describe('TFIDFSimilarityService', () => {
       job_id: 'job3',
       created_at: new Date('2024-01-03'),
       order_index: 2,
+      metadata: {},
+      requires_action: false,
+      is_streaming: false,
     },
   ];
 

@@ -88,7 +88,7 @@ export class ChatSimilarityService {
       const similarityPromise = this.processSimilarityWithTimeout(
         promptText,
         walletAddress,
-        chatRequest.jobId
+        chatRequest.conversationId
       );
 
       const result = await Promise.race([
@@ -416,7 +416,7 @@ export class ChatSimilarityService {
    */
   private cleanupCache(): void {
     const now = Date.now();
-    for (const [key, value] of this.messageCache.entries()) {
+    for (const [key, value] of Array.from(this.messageCache.entries())) {
       if (now - value.timestamp > this.CACHE_DURATION) {
         this.messageCache.delete(key);
       }
@@ -580,6 +580,10 @@ export class ChatSimilarityService {
         content: prompt1,
         job_id: 'job1',
         created_at: new Date(),
+        order_index: 1,
+        metadata: {},
+        requires_action: false,
+        is_streaming: false,
       },
       {
         id: '2',
@@ -587,6 +591,10 @@ export class ChatSimilarityService {
         content: prompt2,
         job_id: 'job2',
         created_at: new Date(),
+        order_index: 2,
+        metadata: {},
+        requires_action: false,
+        is_streaming: false,
       },
     ];
 

@@ -76,7 +76,9 @@ export const Chat: FC<{
         console.log('No wallet connected - creating local conversation');
         return await handleLocalStorageJob(message, files, useResearch);
       }
-      const shouldAutoSchedule = bypassScheduling ? false : (userPreferences?.auto_schedule_jobs || false);
+      const shouldAutoSchedule = bypassScheduling
+        ? false
+        : userPreferences?.auto_schedule_jobs || false;
 
       // Create optimistic job immediately for instant UI feedback
       const tempJobId = `temp-${Date.now()}-${Math.random()
