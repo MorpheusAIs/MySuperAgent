@@ -58,7 +58,7 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
 
   return (
     <Box
-      display="flex"
+      display={{ base: 'none', md: 'flex' }}
       alignItems="center"
       justifyContent={textAlign}
       fontSize={fontSize}

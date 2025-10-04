@@ -354,3 +354,10 @@
     font-size: 14px;
   }
 }
+
+@media (max-width: 500px) {
+  .jobsContainer {
+    max-width: 100% !important;
+    padding: 0 8px !important;
+  }
+}

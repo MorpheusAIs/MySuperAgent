@@ -417,3 +417,10 @@
     max-width: 180px;
   }
 }
+
+@media (max-width: 500px) {
+  .flexContainer {
+    max-width: 100% !important;
+    padding: 0 0.5rem !important;
+  }
+}
