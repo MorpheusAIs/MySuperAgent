@@ -52,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       name: scheduledJob.name,
       description: scheduledJob.description,
       initial_message: scheduledJob.initial_message,
-      status: 'running', // Set to running since we'll execute it immediately
+      status: 'pending',
       has_uploaded_file: scheduledJob.has_uploaded_file,
       is_scheduled: false, // This is a regular job instance
       schedule_type: null,
@@ -86,63 +86,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       last_run_at: now,
       next_run_time: nextRunTime,
       // Deactivate if it was a one-time job or reached max runs
-      is_active: scheduledJob.schedule_type === 'once' ? false :
-                 (scheduledJob.max_runs && scheduledJob.run_count + 1 >= scheduledJob.max_runs) ? false :
+      is_active: scheduledJob.schedule_type === 'once' ? false : 
+                 (scheduledJob.max_runs && scheduledJob.run_count + 1 >= scheduledJob.max_runs) ? false : 
                  scheduledJob.is_active
     });
 
-    // Execute the job immediately by calling the orchestration endpoint
-    try {
-      // Import axios for making HTTP request
-      const axios = (await import('axios')).default;
-
-      // Get the base URL from the request
-      const protocol = req.headers['x-forwarded-proto'] || 'http';
-      const host = req.headers.host;
-      const baseURL = `${protocol}://${host}`;
-
-      // Create the user message for the new job
-      await DB.MessageDB.createMessage({
-        job_id: newJob.id,
-        role: 'user',
-        content: scheduledJob.initial_message,
-        order_index: 0,
-        metadata: null,
-        requires_action: false,
-        is_streaming: false,
-      });
-
-      // Call the orchestration endpoint to execute the job
-      // Use a background request so we don't wait for completion
-      axios.post(`${baseURL}/api/v1/chat/orchestrate`, {
-        prompt: { role: 'user', content: scheduledJob.initial_message },
-        chatHistory: [],
-        conversationId: newJob.id,
-        useResearch: true,
-        walletAddress: walletAddress,
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
-        },
-        timeout: 120000, // 2 minute timeout
-      }).catch(error => {
-        console.error('Background job execution error:', error);
-        // Update job status to failed
-        DB.JobDB.updateJob(newJob.id, { status: 'failed' });
-      });
-
-      // Don't wait for orchestration to complete - return immediately
-      console.log(`Job ${newJob.id} execution started in background`);
-
-    } catch (error) {
-      console.error('Error starting job execution:', error);
-      // Update job status to failed if we couldn't start execution
-      await DB.JobDB.updateJob(newJob.id, { status: 'failed' });
-    }
-
-    return res.status(201).json({
-      message: 'Job created and execution started',
+    return res.status(201).json({ 
+      message: 'Job executed successfully',
       newJob,
       scheduledJob: await DB.JobDB.getJob(jobId) // Return updated scheduled job
     });
