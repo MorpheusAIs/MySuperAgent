@@ -122,14 +122,12 @@ export class RateLimiterService {
     if (this.isIPAddress(identifier)) {
       return 'anonymous';
     }
-    
-    // Wallet addresses are at least free users
+
+    // Wallet addresses are Pro users (all authenticated users get Pro benefits)
     if (this.isWalletAddress(identifier)) {
-      // TODO: In the future, check database for pro status
-      // For now, all wallet users are 'free'
-      return 'free';
+      return 'pro';
     }
-    
+
     return 'anonymous';
   }
 

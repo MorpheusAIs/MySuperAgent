@@ -13,6 +13,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Job ID is required' });
   }
 
+  // Validate UUID format - reject localStorage conversation IDs like "chat_42"
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(jobId)) {
+    return res.status(400).json({
+      error: 'Invalid job ID format. Expected UUID, got: ' + jobId,
+      hint: 'This endpoint only works with database jobs, not localStorage conversations'
+    });
+  }
+
   try {
     let DB;
     try {
@@ -20,8 +29,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       DB = dbModule;
     } catch (importError) {
       console.error('Database module not available:', importError);
-      return res.status(503).json({ 
-        error: 'Database service unavailable. Please install dependencies and initialize the database.' 
+      return res.status(503).json({
+        error: 'Database service unavailable. Please install dependencies and initialize the database.'
       });
     }
 

@@ -41,13 +41,30 @@
 }
 
 /* Mobile Responsiveness */
+@media screen and (max-width: 768px) {
+  .headerBar {
+    padding: 6px 0;
+  }
+
+  .logo {
+    transform: scale(0.85);
+  }
+
+  .rateLimitWrapper {
+    display: none; /* Hide rate limit on small screens */
+  }
+}
+
 @media screen and (max-width: 480px) {
   .headerBar {
     padding: 4px 0;
   }
 
   .logo {
-    /* Smaller logo on mobile */
-    transform: scale(0.9);
+    transform: scale(0.75);
+  }
+
+  .connectButtonWrapper {
+    font-size: 13px;
   }
 }

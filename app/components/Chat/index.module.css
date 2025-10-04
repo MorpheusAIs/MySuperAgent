@@ -40,3 +40,36 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .chatContainer {
+    min-height: 100vh;
+    min-height: calc(var(--vh, 1vh) * 100);
+  }
+
+  .jobsTitle {
+    font-size: 1.5rem;
+  }
+
+  .centeredInput {
+    min-height: 30vh;
+    padding: 0 16px;
+  }
+
+  .jobsHeader {
+    margin-bottom: 1.5rem;
+    padding: 0 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .jobsTitle {
+    font-size: 1.3rem;
+  }
+
+  .centeredInput {
+    min-height: 25vh;
+    padding: 0 12px;
+  }
+}

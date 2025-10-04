@@ -286,8 +286,8 @@ export const Chat: FC<{
     return (
       <Box
         className={styles.chatContainer}
-        paddingLeft={isMobile ? '2%' : isSidebarOpen ? '30%' : '20%'}
-        paddingRight={isMobile ? '2%' : '20%'}
+        paddingLeft={isMobile ? '0' : isSidebarOpen ? '30%' : '20%'}
+        paddingRight={isMobile ? '0' : '20%'}
         overflow="auto"
         height="auto"
         minHeight="100vh"
@@ -312,7 +312,7 @@ export const Chat: FC<{
           display="flex"
           flexDirection="column"
           justifyContent="flex-start"
-          px={4}
+          px={isMobile ? 0 : 4}
           pt={4}
           width="100%"
         >
@@ -373,8 +373,8 @@ export const Chat: FC<{
   return (
     <Box
       className={styles.chatContainer}
-      paddingLeft={isMobile ? '2%' : isSidebarOpen ? '30%' : '20%'}
-      paddingRight={isMobile ? '2%' : '20%'}
+      paddingLeft={isMobile ? '0' : isSidebarOpen ? '30%' : '20%'}
+      paddingRight={isMobile ? '0' : '20%'}
       display="flex"
       flexDirection="column"
       zIndex="1"

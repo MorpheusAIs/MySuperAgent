@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import {
   Modal,
   ModalOverlay,
@@ -220,13 +221,12 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
               <Text fontSize="12px" color="rgba(255, 255, 255, 0.6)">
                 Powered by Lit Protocol
               </Text>
-              <Box width="48px" height="24px">
-                <img
+              <Box width="48px" height="24px" position="relative">
+                <Image
                   src="/images/lit-logo.png"
                   alt="Lit Protocol logo"
+                  fill
                   style={{
-                    width: "100%",
-                    height: "100%",
                     objectFit: "contain",
                   }}
                 />

@@ -5,7 +5,7 @@ import styles from './index.module.css';
 
 export const ModelSelectionButton: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState('llama3.3:70b');
-  const modelOptions = [{ value: 'llama3.3:70b', label: 'Llama 3.3 (70B)' }];
+  const modelOptions = [{ value: 'llama3.3:70b', label: 'Llama 3.3 70B (Web Enabled)' }];
 
   return (
     <Box p={3} className={styles.container}>
