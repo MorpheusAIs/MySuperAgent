@@ -1339,8 +1339,11 @@ export const JobsList: FC<JobsListProps> = ({
       setOutputsLoading(true);
       const outputs: Record<string, string> = {};
 
-      // Filter out optimistic jobs (they don't exist in database yet)
-      const realJobs = jobs.filter((job) => !job.id.startsWith('temp-'));
+      // Filter out optimistic jobs AND localStorage conversations (they don't exist in database)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const realJobs = jobs.filter(
+        (job) => !job.id.startsWith('temp-') && uuidRegex.test(job.id)
+      );
 
       // First, load the first few jobs immediately for better UX
       const immediateJobs = realJobs.slice(0, immediateCount);
@@ -1513,8 +1516,7 @@ export const JobsList: FC<JobsListProps> = ({
       const jobsList = await JobsAPI.getJobs(walletAddress);
       console.log('[JobsList] Fetched jobs:', jobsList.length);
       setJobs(jobsList);
-      // Fetch outputs for completed jobs
-      await fetchJobOutputs(jobsList);
+      // Don't fetch outputs here - will be loaded on-demand per page/tab
     } catch (error: any) {
       console.error('Error loading jobs:', error);
       setJobs([]);
@@ -1522,7 +1524,7 @@ export const JobsList: FC<JobsListProps> = ({
       setJobsLoading(false);
     }
 
-    // Load scheduled jobs
+    // Load scheduled jobs (don't fetch outputs immediately - will be loaded on-demand per page)
     setScheduledJobsLoading(true);
     try {
       const scheduledJobsList = await JobsAPI.getScheduledJobs(walletAddress);
@@ -1633,17 +1635,23 @@ export const JobsList: FC<JobsListProps> = ({
   );
 
   // Paginate results
-  const paginateJobs = (jobsList: Job[], page: number) => {
+  const paginateJobs = useCallback((jobsList: Job[], page: number) => {
     const start = (page - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
     return jobsList.slice(start, end);
-  };
+  }, []);
 
-  const currentJobs = paginateJobs(allCurrentJobs, currentPage);
-  const previousJobs = paginateJobs(allPreviousJobs, previousPage);
-  const activeScheduledJobs = paginateJobs(
-    allActiveScheduledJobs,
-    scheduledPage
+  const currentJobs = useMemo(
+    () => paginateJobs(allCurrentJobs, currentPage),
+    [allCurrentJobs, currentPage, paginateJobs]
+  );
+  const previousJobs = useMemo(
+    () => paginateJobs(allPreviousJobs, previousPage),
+    [allPreviousJobs, previousPage, paginateJobs]
+  );
+  const activeScheduledJobs = useMemo(
+    () => paginateJobs(allActiveScheduledJobs, scheduledPage),
+    [allActiveScheduledJobs, scheduledPage, paginateJobs]
   );
 
   // Calculate total pages
@@ -1652,6 +1660,23 @@ export const JobsList: FC<JobsListProps> = ({
   const scheduledTotalPages = Math.ceil(
     allActiveScheduledJobs.length / ITEMS_PER_PAGE
   );
+
+  // Fetch outputs for current page when tab or page changes
+  // Only trigger on tab/page changes, not when the job arrays change
+  useEffect(() => {
+    const getJobsForCurrentTab = () => {
+      if (activeTab === 0) return currentJobs;
+      if (activeTab === 1) return activeScheduledJobs;
+      if (activeTab === 2) return previousJobs;
+      return [];
+    };
+
+    const jobs = getJobsForCurrentTab();
+    if (jobs.length > 0) {
+      fetchJobOutputs(jobs, 10);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, currentPage, scheduledPage, previousPage]);
 
   const handleScheduledJobToggle = useCallback(
     async (jobId: string) => {

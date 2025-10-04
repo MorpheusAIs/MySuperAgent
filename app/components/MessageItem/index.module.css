@@ -48,3 +48,46 @@
   color: #2b95d6;
   text-decoration: underline;
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .messageContainer {
+    padding: 12px;
+  }
+
+  .userBubble {
+    padding: 12px 14px;
+    max-width: 85%;
+    font-size: 15px;
+  }
+
+  .assistantContent {
+    font-size: 15px;
+  }
+
+  .agentName {
+    font-size: 11px;
+  }
+
+  /* Make code blocks scrollable on mobile */
+  .messageContainer :global(pre) {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .messageContainer {
+    padding: 10px 8px;
+  }
+
+  .userBubble {
+    padding: 10px 12px;
+    max-width: 90%;
+    font-size: 14px;
+  }
+
+  .assistantContent {
+    font-size: 14px;
+  }
+}

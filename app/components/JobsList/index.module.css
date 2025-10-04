@@ -290,3 +290,67 @@
   min-height: 0;
   overflow: visible;
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .jobsContainer {
+    max-width: 95%;
+    padding: 0 8px;
+  }
+
+  .searchFilterContainer {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .statusFilter,
+  .timeFilter {
+    width: 100%;
+  }
+
+  .tabList {
+    gap: 4px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .tabList::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    font-size: 12px;
+    padding: 6px 12px;
+    margin: 0 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .paginationControls {
+    padding: 8px 0 16px 0;
+    gap: 8px;
+  }
+
+  .paginationButton {
+    min-width: 50px !important;
+    font-size: 11px !important;
+    padding: 5px 10px !important;
+  }
+
+  .paginationText {
+    font-size: 11px;
+    min-width: 50px;
+  }
+
+  .jobItem {
+    font-size: 14px;
+  }
+
+  .scheduledJobItem {
+    font-size: 14px;
+  }
+}

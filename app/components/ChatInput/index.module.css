@@ -362,10 +362,46 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
+/* Mobile Responsiveness */
 @media (max-width: 768px) {
+  .flexContainer {
+    max-width: 95%;
+    padding: 0 0.5rem;
+  }
+
+  .textareaContainer {
+    padding: 10px 12px;
+  }
+
+  .messageInput {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+
+  .actionsContainer {
+    padding: 6px 12px 10px;
+    flex-wrap: wrap;
+  }
+
+  .leftActions {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
   .actionButton {
     padding: 4px 8px !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
+    border-radius: 16px !important;
+  }
+
+  .actionIcon,
+  .toolsButton {
+    min-width: 28px !important;
+    height: 28px !important;
+  }
+
+  .sendButton {
+    min-width: 28px !important;
+    height: 28px !important;
   }
 
   .attachmentPreview {
@@ -375,5 +411,9 @@
 
   .attachmentName {
     font-size: 9px;
+  }
+
+  .fileName {
+    max-width: 180px;
   }
 }

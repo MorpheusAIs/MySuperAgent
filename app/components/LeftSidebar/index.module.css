@@ -130,13 +130,34 @@
 }
 
 
+/* Mobile Responsiveness */
 @media (max-width: 768px) {
-  .container {
-    padding-top: 16px;
+  .sidebarContainer {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .sidebar {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .sidebarContainer.collapsed {
+    transform: translateX(-100%);
   }
 
   .toggleButton {
+    left: calc(100% - 1px);
     top: 10px;
+  }
+
+  .container {
+    padding: 12px;
+    padding-top: 16px;
+  }
+
+  .mainContent {
+    gap: 2px;
   }
 }
 

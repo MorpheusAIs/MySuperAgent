@@ -58,10 +58,18 @@ const Home = () => {
         />
       </Box>
       <Flex className={styles.contentWrapper}>
+        {/* Mobile overlay when sidebar is open */}
+        {isMobile && isSidebarOpen && (
+          <Box
+            className={styles.mobileOverlay}
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         <Box
           className={styles.sidebarWrapper}
           style={{
-            position: isMobile ? 'absolute' : 'relative',
+            position: isMobile ? 'fixed' : 'relative',
             transform: isMobile
               ? `translateX(${isSidebarOpen ? '0' : '-100%'})`
               : 'none',
