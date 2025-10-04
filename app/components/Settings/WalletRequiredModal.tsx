@@ -46,6 +46,7 @@ export const WalletRequiredModal: FC<WalletRequiredModal> = ({
     } else if (hasAccess && isOpen) {
       onClose();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, isOpen, agentRequiresAuth, isAuthenticated]);
 
   return (

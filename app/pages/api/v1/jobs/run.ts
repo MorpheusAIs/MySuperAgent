@@ -102,11 +102,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const baseURL = `${protocol}://${host}`;
 
       // Create the user message for the new job
-      await DB.JobDB.createMessage({
+      await DB.MessageDB.createMessage({
         job_id: newJob.id,
         role: 'user',
         content: scheduledJob.initial_message,
         order_index: 0,
+        metadata: null,
+        requires_action: false,
+        is_streaming: false,
       });
 
       // Call the orchestration endpoint to execute the job
