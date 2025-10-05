@@ -477,11 +477,11 @@ const ScheduledJobItem: FC<{
               {job.id.startsWith('temp-')
                 ? 'Creating job...'
                 : jobOutputs
-                  ? jobOutputs
-                  : isLoading
-                    ? 'Loading job output...'
-                    : job.description ||
-                      job.initial_message.substring(0, 120) + '...'}
+                ? jobOutputs
+                : isLoading
+                ? 'Loading job output...'
+                : job.description ||
+                  job.initial_message.substring(0, 120) + '...'}
             </Text>
           </VStack>
 
@@ -491,10 +491,10 @@ const ScheduledJobItem: FC<{
               job.id.startsWith('temp-')
                 ? 'yellow'
                 : job.is_active
-                  ? isOverdue
-                    ? 'red'
-                    : 'blue'
-                  : 'gray'
+                ? isOverdue
+                  ? 'red'
+                  : 'blue'
+                : 'gray'
             }
             variant="subtle"
             size="sm"
@@ -503,10 +503,10 @@ const ScheduledJobItem: FC<{
             {job.id.startsWith('temp-')
               ? 'creating'
               : !job.is_active
-                ? 'inactive'
-                : isOverdue
-                  ? 'overdue'
-                  : 'active'}
+              ? 'inactive'
+              : isOverdue
+              ? 'overdue'
+              : 'active'}
           </Badge>
         </HStack>
 
@@ -987,73 +987,22 @@ const JobItem: FC<{
   isLoading = false,
 }) => {
   const status = getJobStatus(job);
-  const [jobResult, setJobResult] = useState<string>('');
-  const [resultLoading, setResultLoading] = useState(false);
-  const { getAddress } = useWalletAddress();
-
-  // Fetch job result on mount for completed jobs
-  useEffect(() => {
-    const fetchJobResult = async () => {
-      if (status !== 'completed' && status !== 'failed') return;
-
-      setResultLoading(true);
-      try {
-        const walletAddress = getAddress();
-        if (!walletAddress) return;
-
-        const messages = await JobsAPI.getMessages(walletAddress, job.id);
-        // Find the latest assistant message
-        const assistantMessages = messages
-          .filter((m) => m.role === 'assistant')
-          .sort((a, b) => b.order_index - a.order_index);
-
-        if (assistantMessages.length > 0) {
-          const latestMessage = assistantMessages[0];
-          let content = '';
-
-          if (typeof latestMessage.content === 'string') {
-            content = latestMessage.content;
-          } else if (
-            typeof latestMessage.content === 'object' &&
-            latestMessage.content.text
-          ) {
-            content = latestMessage.content.text;
-          } else if (
-            typeof latestMessage.content === 'object' &&
-            latestMessage.content.content
-          ) {
-            content = latestMessage.content.content;
-          } else {
-            content = JSON.stringify(latestMessage.content);
-          }
-
-          setJobResult(content);
-        }
-      } catch (error) {
-        console.error('Error fetching job result:', error);
-      } finally {
-        setResultLoading(false);
-      }
-    };
-
-    fetchJobResult();
-  }, [job.id, status, getAddress]);
 
   // Get title and description from job
   const title =
     job.name !== 'New Job'
       ? job.name
       : job.initial_message
-        ? job.initial_message.substring(0, 50) +
-          (job.initial_message.length > 50 ? '...' : '')
-        : 'Untitled Job';
+      ? job.initial_message.substring(0, 50) +
+        (job.initial_message.length > 50 ? '...' : '')
+      : 'Untitled Job';
 
   // Show job outputs as main content, fallback to description or initial message
   const description = jobOutputs
     ? jobOutputs
     : isLoading
-      ? 'Loading job output...'
-      : job.description || job.initial_message || 'No description';
+    ? 'Loading job output...'
+    : job.description || job.initial_message || 'No description';
 
   // Function to truncate job result for display
   const truncateResult = (result: string, maxLength: number = 200): string => {
@@ -1128,7 +1077,7 @@ const JobItem: FC<{
           <HStack justify="space-between" align="flex-start" spacing={3}>
             <VStack align="flex-start" spacing={2} flex={1} minW={0}>
               {/* Job Result - Primary Content */}
-              {(status === 'completed' || status === 'failed') && jobResult ? (
+              {(status === 'completed' || status === 'failed') && jobOutputs ? (
                 <Box w="100%">
                   <Text
                     fontSize="md"
@@ -1139,7 +1088,7 @@ const JobItem: FC<{
                     noOfLines={3}
                     w="100%"
                   >
-                    {truncateResult(jobResult)}
+                    {truncateResult(jobOutputs)}
                   </Text>
                   <Text
                     fontSize="xs"
@@ -1152,7 +1101,7 @@ const JobItem: FC<{
                     {title}
                   </Text>
                 </Box>
-              ) : resultLoading ? (
+              ) : outputsLoading ? (
                 <HStack spacing={2} w="100%">
                   <Spinner size="xs" color="blue.400" />
                   <Text fontSize="sm" color="gray.400">
@@ -1514,36 +1463,30 @@ export const JobsList: FC<JobsListProps> = ({
   }, []);
 
   // Load threaded jobs
-  const loadThreadedJobs = useCallback(
-    async (walletAddress: string) => {
-      setThreadedJobsLoading(true);
-      try {
-        const response = await fetch('/api/v1/jobs/threaded', {
-          headers: {
-            'x-wallet-address': walletAddress,
-          },
-        });
+  const loadThreadedJobs = useCallback(async (walletAddress: string) => {
+    setThreadedJobsLoading(true);
+    try {
+      const response = await fetch('/api/v1/jobs/threaded', {
+        headers: {
+          'x-wallet-address': walletAddress,
+        },
+      });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch threaded jobs');
-        }
-
-        const data = await response.json();
-        setThreadedJobs(data.threads || []);
-
-        // Fetch outputs for threaded jobs
-        const allJobs =
-          data.threads?.flatMap((thread: JobThread) => thread.jobs) || [];
-        await fetchJobOutputs(allJobs);
-      } catch (error: any) {
-        console.error('Error loading threaded jobs:', error);
-        setThreadedJobs([]);
-      } finally {
-        setThreadedJobsLoading(false);
+      if (!response.ok) {
+        throw new Error('Failed to fetch threaded jobs');
       }
-    },
-    [fetchJobOutputs]
-  );
+
+      const data = await response.json();
+      setThreadedJobs(data.threads || []);
+
+      // Don't fetch outputs here - will be loaded on-demand per page/tab
+    } catch (error: any) {
+      console.error('Error loading threaded jobs:', error);
+      setThreadedJobs([]);
+    } finally {
+      setThreadedJobsLoading(false);
+    }
+  }, []);
 
   // Load jobs and scheduled jobs
   const loadAllData = useCallback(async () => {
@@ -1583,12 +1526,7 @@ export const JobsList: FC<JobsListProps> = ({
 
     // Load threaded jobs
     await loadThreadedJobs(walletAddress);
-  }, [
-    getAddress,
-    loadLocalStorageConversations,
-    fetchJobOutputs,
-    loadThreadedJobs,
-  ]);
+  }, [getAddress, loadLocalStorageConversations, loadThreadedJobs]);
 
   useEffect(() => {
     console.log('[JobsList] Loading data, refreshKey:', refreshKey);
@@ -1764,9 +1702,22 @@ export const JobsList: FC<JobsListProps> = ({
     return jobsList.slice(start, end);
   }, []);
 
+  const paginateThreads = useCallback(
+    (threadsList: JobThread[], page: number) => {
+      const start = (page - 1) * ITEMS_PER_PAGE;
+      const end = start + ITEMS_PER_PAGE;
+      return threadsList.slice(start, end);
+    },
+    []
+  );
+
   const currentJobs = useMemo(
     () => paginateJobs(allCurrentJobs, currentPage),
     [allCurrentJobs, currentPage, paginateJobs]
+  );
+  const currentThreadedJobs = useMemo(
+    () => paginateThreads(allCurrentThreadedJobs, currentPage),
+    [allCurrentThreadedJobs, currentPage, paginateThreads]
   );
   const previousJobs = useMemo(
     () => paginateJobs(allPreviousJobs, previousPage),
@@ -1791,7 +1742,10 @@ export const JobsList: FC<JobsListProps> = ({
   // Only trigger on tab/page changes, not when the job arrays change
   useEffect(() => {
     const getJobsForCurrentTab = () => {
-      if (activeTab === 0) return currentJobs;
+      if (activeTab === 0) {
+        // For threaded jobs tab, get all jobs from current threads
+        return currentThreadedJobs.flatMap((thread) => thread.jobs);
+      }
       if (activeTab === 1) return activeScheduledJobs;
       if (activeTab === 2) return previousJobs;
       return [];
@@ -1802,7 +1756,13 @@ export const JobsList: FC<JobsListProps> = ({
       fetchJobOutputs(jobs, 10);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, currentPage, scheduledPage, previousPage]);
+  }, [
+    activeTab,
+    currentPage,
+    scheduledPage,
+    previousPage,
+    currentThreadedJobs,
+  ]);
 
   const handleScheduledJobToggle = useCallback(
     async (jobId: string) => {
