@@ -1,3 +1,4 @@
+import { Job } from '@/services/database/db';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 export interface JobThread {
@@ -52,7 +53,7 @@ export default async function handler(
 
     for (const job of allJobs) {
       // Determine thread key - use parent_job_id if available, otherwise use name
-      const threadKey = job.parent_job_id || job.name;
+      const threadKey = (job as any).parent_job_id || job.name;
 
       if (!threadMap.has(threadKey)) {
         // Create new thread
@@ -61,7 +62,7 @@ export default async function handler(
           name: job.name,
           description: job.description,
           initial_message: job.initial_message,
-          parent_job_id: job.parent_job_id,
+          parent_job_id: (job as any).parent_job_id,
           is_scheduled: job.is_scheduled,
           schedule_type: job.schedule_type,
           jobs: [],

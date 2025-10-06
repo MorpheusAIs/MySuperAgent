@@ -71,7 +71,7 @@ export default async function handler(
       max_runs: null,
       timezone: scheduledJob.timezone,
       parent_job_id: jobId, // Link to the scheduled job template
-    });
+    } as any);
 
     // Update the scheduled job's run count and last run time
     const now = new Date();
