@@ -46,13 +46,13 @@
   background: #000;
   color: white;
   width: 100%;
-  height: calc(var(--vh, 1vh) * 100);
+  height: 100vh;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  padding-bottom: 0;
-  margin-bottom: 0;
+  padding: 0;
+  margin: 0;
 }
 
 .mobileHeader {
@@ -76,17 +76,17 @@
 }
 
 .mobileChatInput {
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: 0;
+  right: 0;
   background: #000;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0 16px 0 16px; /* we'll control vertical padding via pt/pb in JSX */
+  padding: 0 16px;
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 10;
   flex-shrink: 0;
-  margin-bottom: 0;
-  margin-top: auto;
-  border-radius: 0;
+  margin: 0;
 }
 
 .mobileJobsButton {
@@ -108,8 +108,8 @@
   }
   
   .mobileChatInput {
-    margin-top: 12px;
-    bottom: 0;
+    padding: 0 12px;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
@@ -192,9 +192,7 @@
   }
 
   .mobileChatInput {
-    padding: 0 12px 0 12px;
+    padding: 0 12px;
     padding-bottom: env(safe-area-inset-bottom);
-    margin-top: 8px;
-    bottom: 0;
   }
 }

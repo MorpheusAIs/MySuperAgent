@@ -340,16 +340,7 @@ export const Chat: FC<{
           </Box>
 
           {/* Mobile Chat Input - fixed at bottom */}
-          <Box
-            className={styles.mobileChatInput}
-            position="sticky"
-            bottom={0}
-            bg="black"
-            borderTop="1px solid rgba(255, 255, 255, 0.1)"
-            pt={2}
-            pb={1}
-            zIndex={10}
-          >
+          <Box className={styles.mobileChatInput} pt={2} pb={1}>
             {/* Mobile Jobs Dropdown Button */}
             <Box mb={3} display="flex" justifyContent="center">
               <Box
