@@ -1,5 +1,6 @@
 import ShareJobModal from '@/components/ShareJobModal';
 import { useGlobalSearch } from '@/contexts/GlobalSearchProvider';
+import { JobThread } from '@/pages/api/v1/jobs/threaded';
 import { trackEvent } from '@/services/analytics';
 import JobsAPI from '@/services/api-clients/jobs';
 import { Job } from '@/services/database/db';
@@ -44,6 +45,7 @@ import {
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import styles from './index.module.css';
 import { JobHoverPreview } from './JobHoverPreview';
+import { ThreadedJobItem } from './ThreadedJobItem';
 
 interface JobsListProps {
   onJobClick: (jobId: string) => void;
@@ -985,51 +987,6 @@ const JobItem: FC<{
   isLoading = false,
 }) => {
   const status = getJobStatus(job);
-  const [jobResult, setJobResult] = useState<string>('');
-  const [resultLoading, setResultLoading] = useState(false);
-  const { getAddress } = useWalletAddress();
-
-  // Fetch job result on mount for completed jobs
-  useEffect(() => {
-    const fetchJobResult = async () => {
-      if (status !== 'completed' && status !== 'failed') return;
-      
-      setResultLoading(true);
-      try {
-        const walletAddress = getAddress();
-        if (!walletAddress) return;
-
-        const messages = await JobsAPI.getMessages(walletAddress, job.id);
-        // Find the latest assistant message
-        const assistantMessages = messages
-          .filter(m => m.role === 'assistant')
-          .sort((a, b) => b.order_index - a.order_index);
-        
-        if (assistantMessages.length > 0) {
-          const latestMessage = assistantMessages[0];
-          let content = '';
-          
-          if (typeof latestMessage.content === 'string') {
-            content = latestMessage.content;
-          } else if (typeof latestMessage.content === 'object' && latestMessage.content.text) {
-            content = latestMessage.content.text;
-          } else if (typeof latestMessage.content === 'object' && latestMessage.content.content) {
-            content = latestMessage.content.content;
-          } else {
-            content = JSON.stringify(latestMessage.content);
-          }
-          
-          setJobResult(content);
-        }
-      } catch (error) {
-        console.error('Error fetching job result:', error);
-      } finally {
-        setResultLoading(false);
-      }
-    };
-
-    fetchJobResult();
-  }, [job.id, status, getAddress]);
 
   // Get title and description from job
   const title =
@@ -1120,7 +1077,7 @@ const JobItem: FC<{
           <HStack justify="space-between" align="flex-start" spacing={3}>
             <VStack align="flex-start" spacing={2} flex={1} minW={0}>
               {/* Job Result - Primary Content */}
-              {(status === 'completed' || status === 'failed') && jobResult ? (
+              {(status === 'completed' || status === 'failed') && jobOutputs ? (
                 <Box w="100%">
                   <Text
                     fontSize="md"
@@ -1131,7 +1088,7 @@ const JobItem: FC<{
                     noOfLines={3}
                     w="100%"
                   >
-                    {truncateResult(jobResult)}
+                    {truncateResult(jobOutputs)}
                   </Text>
                   <Text
                     fontSize="xs"
@@ -1144,10 +1101,12 @@ const JobItem: FC<{
                     {title}
                   </Text>
                 </Box>
-              ) : resultLoading ? (
+              ) : outputsLoading ? (
                 <HStack spacing={2} w="100%">
                   <Spinner size="xs" color="blue.400" />
-                  <Text fontSize="sm" color="gray.400">Loading result...</Text>
+                  <Text fontSize="sm" color="gray.400">
+                    Loading result...
+                  </Text>
                 </HStack>
               ) : (
                 /* Fallback to traditional layout for pending/running jobs */
@@ -1308,8 +1267,10 @@ export const JobsList: FC<JobsListProps> = ({
   const [activeTab, setActiveTab] = useState(0);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [scheduledJobs, setScheduledJobs] = useState<Job[]>([]);
+  const [threadedJobs, setThreadedJobs] = useState<JobThread[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [scheduledJobsLoading, setScheduledJobsLoading] = useState(false);
+  const [threadedJobsLoading, setThreadedJobsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [timeFilter, setTimeFilter] = useState<string>('all');
@@ -1340,7 +1301,8 @@ export const JobsList: FC<JobsListProps> = ({
       const outputs: Record<string, string> = {};
 
       // Filter out optimistic jobs AND localStorage conversations (they don't exist in database)
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const realJobs = jobs.filter(
         (job) => !job.id.startsWith('temp-') && uuidRegex.test(job.id)
       );
@@ -1500,6 +1462,32 @@ export const JobsList: FC<JobsListProps> = ({
     }
   }, []);
 
+  // Load threaded jobs
+  const loadThreadedJobs = useCallback(async (walletAddress: string) => {
+    setThreadedJobsLoading(true);
+    try {
+      const response = await fetch('/api/v1/jobs/threaded', {
+        headers: {
+          'x-wallet-address': walletAddress,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch threaded jobs');
+      }
+
+      const data = await response.json();
+      setThreadedJobs(data.threads || []);
+
+      // Don't fetch outputs here - will be loaded on-demand per page/tab
+    } catch (error: any) {
+      console.error('Error loading threaded jobs:', error);
+      setThreadedJobs([]);
+    } finally {
+      setThreadedJobsLoading(false);
+    }
+  }, []);
+
   // Load jobs and scheduled jobs
   const loadAllData = useCallback(async () => {
     const walletAddress = getAddress();
@@ -1535,7 +1523,10 @@ export const JobsList: FC<JobsListProps> = ({
     } finally {
       setScheduledJobsLoading(false);
     }
-  }, [getAddress, loadLocalStorageConversations, fetchJobOutputs]);
+
+    // Load threaded jobs
+    await loadThreadedJobs(walletAddress);
+  }, [getAddress, loadLocalStorageConversations, loadThreadedJobs]);
 
   useEffect(() => {
     console.log('[JobsList] Loading data, refreshKey:', refreshKey);
@@ -1595,6 +1586,61 @@ export const JobsList: FC<JobsListProps> = ({
     [searchQuery, statusFilter, timeFilter]
   );
 
+  // Filter threaded jobs
+  const filterThreadedJobs = useCallback(
+    (threads: JobThread[]) => {
+      return threads.filter((thread) => {
+        const matchesSearch =
+          searchQuery === '' ||
+          thread.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (thread.description &&
+            thread.description
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase())) ||
+          thread.initial_message
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase());
+
+        const matchesStatus =
+          statusFilter === 'all' || thread.latest_status === statusFilter;
+
+        const threadDate = new Date(thread.latest_created_at);
+        const now = new Date();
+        let matchesTime = true;
+
+        if (timeFilter !== 'all') {
+          const dayInMs = 24 * 60 * 60 * 1000;
+          const diffTime = now.getTime() - threadDate.getTime();
+
+          switch (timeFilter) {
+            case 'today':
+              matchesTime =
+                diffTime < dayInMs &&
+                threadDate.toDateString() === now.toDateString();
+              break;
+            case 'yesterday':
+              const yesterday = new Date(now.getTime() - dayInMs);
+              matchesTime =
+                threadDate.toDateString() === yesterday.toDateString();
+              break;
+            case 'week':
+              matchesTime = diffTime < 7 * dayInMs;
+              break;
+            case 'month':
+              matchesTime = diffTime < 30 * dayInMs;
+              break;
+            case 'older':
+              matchesTime = diffTime >= 30 * dayInMs;
+              break;
+          }
+        }
+
+        return matchesSearch && matchesStatus && matchesTime;
+      });
+    },
+    [searchQuery, statusFilter, timeFilter]
+  );
+
   // Apply filters and pagination with sorting by created_at DESC (newest first)
   // Include optimistic jobs in current jobs
   const allCurrentJobs = useMemo(() => {
@@ -1615,6 +1661,21 @@ export const JobsList: FC<JobsListProps> = ({
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
   }, [jobs, optimisticJobs, filterJobs]);
+
+  // Filter threaded jobs for current jobs tab
+  const allCurrentThreadedJobs = useMemo(() => {
+    // Filter threaded jobs to only show those with non-scheduled jobs
+    const currentThreads = threadedJobs.filter((thread) => {
+      // Only show threads that have at least one non-scheduled job
+      return thread.jobs.some((job) => !job.is_scheduled);
+    });
+
+    return filterThreadedJobs(currentThreads).sort(
+      (a, b) =>
+        new Date(b.latest_created_at).getTime() -
+        new Date(a.latest_created_at).getTime()
+    );
+  }, [threadedJobs, filterThreadedJobs]);
   const allPreviousJobs = useMemo(
     () =>
       filterJobs(jobs.filter(isPreviousJob)).sort(
@@ -1641,9 +1702,22 @@ export const JobsList: FC<JobsListProps> = ({
     return jobsList.slice(start, end);
   }, []);
 
+  const paginateThreads = useCallback(
+    (threadsList: JobThread[], page: number) => {
+      const start = (page - 1) * ITEMS_PER_PAGE;
+      const end = start + ITEMS_PER_PAGE;
+      return threadsList.slice(start, end);
+    },
+    []
+  );
+
   const currentJobs = useMemo(
     () => paginateJobs(allCurrentJobs, currentPage),
     [allCurrentJobs, currentPage, paginateJobs]
+  );
+  const currentThreadedJobs = useMemo(
+    () => paginateThreads(allCurrentThreadedJobs, currentPage),
+    [allCurrentThreadedJobs, currentPage, paginateThreads]
   );
   const previousJobs = useMemo(
     () => paginateJobs(allPreviousJobs, previousPage),
@@ -1656,6 +1730,9 @@ export const JobsList: FC<JobsListProps> = ({
 
   // Calculate total pages
   const currentTotalPages = Math.ceil(allCurrentJobs.length / ITEMS_PER_PAGE);
+  const currentThreadedTotalPages = Math.ceil(
+    allCurrentThreadedJobs.length / ITEMS_PER_PAGE
+  );
   const previousTotalPages = Math.ceil(allPreviousJobs.length / ITEMS_PER_PAGE);
   const scheduledTotalPages = Math.ceil(
     allActiveScheduledJobs.length / ITEMS_PER_PAGE
@@ -1665,7 +1742,10 @@ export const JobsList: FC<JobsListProps> = ({
   // Only trigger on tab/page changes, not when the job arrays change
   useEffect(() => {
     const getJobsForCurrentTab = () => {
-      if (activeTab === 0) return currentJobs;
+      if (activeTab === 0) {
+        // For threaded jobs tab, get all jobs from current threads
+        return currentThreadedJobs.flatMap((thread) => thread.jobs);
+      }
       if (activeTab === 1) return activeScheduledJobs;
       if (activeTab === 2) return previousJobs;
       return [];
@@ -1676,7 +1756,13 @@ export const JobsList: FC<JobsListProps> = ({
       fetchJobOutputs(jobs, 10);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, currentPage, scheduledPage, previousPage]);
+  }, [
+    activeTab,
+    currentPage,
+    scheduledPage,
+    previousPage,
+    currentThreadedJobs,
+  ]);
 
   const handleScheduledJobToggle = useCallback(
     async (jobId: string) => {
@@ -2000,17 +2086,22 @@ export const JobsList: FC<JobsListProps> = ({
     setHoveredJobId(null);
   }, []);
 
+  // Check if wallet is connected
+  const walletAddress = getAddress();
+
   if (
-    jobs.length === 0 &&
+    threadedJobs.length === 0 &&
     activeScheduledJobs.length === 0 &&
     !isLoading &&
-    !scheduledJobsLoading
+    !scheduledJobsLoading &&
+    !threadedJobsLoading
   ) {
     return (
       <Box className={styles.emptyState}>
         <Text fontSize="md" color="gray.500" textAlign="center">
-          No jobs yet. Create your first job by describing what you&apos;d like
-          to accomplish.
+          {!walletAddress
+            ? 'Please connect your wallet to view and manage jobs.'
+            : "No jobs yet. Create your first job by describing what you'd like to accomplish."}
         </Text>
       </Box>
     );
@@ -2116,7 +2207,7 @@ export const JobsList: FC<JobsListProps> = ({
             fontSize="sm"
             fontWeight="medium"
           >
-            Current Jobs ({allCurrentJobs.length})
+            Current Jobs ({allCurrentThreadedJobs.length})
           </Tab>
           <Tab
             className={styles.tab}
@@ -2145,10 +2236,16 @@ export const JobsList: FC<JobsListProps> = ({
         </TabList>
 
         <TabPanels className={styles.tabPanelsContainer}>
-          {/* First TabPanel: Current Jobs */}
+          {/* First TabPanel: Current Jobs (Threaded) */}
           <TabPanel p={0} h="100%">
             <Box className={styles.scrollableContent}>
-              {allCurrentJobs.length === 0 ? (
+              {threadedJobsLoading ? (
+                <Box className={styles.emptyTabState}>
+                  <Text fontSize="sm" color="gray.600" textAlign="center">
+                    Loading threaded jobs...
+                  </Text>
+                </Box>
+              ) : allCurrentThreadedJobs.length === 0 ? (
                 <Box className={styles.emptyTabState}>
                   <Text fontSize="sm" color="gray.600" textAlign="center">
                     {searchQuery || statusFilter !== 'all'
@@ -2159,25 +2256,25 @@ export const JobsList: FC<JobsListProps> = ({
               ) : (
                 <>
                   <VStack spacing={2} width="100%" align="stretch" pb={2}>
-                    {currentJobs.map((job) => (
-                      <JobItem
-                        key={job.id}
-                        job={job}
+                    {currentThreadedJobs.map((thread) => (
+                      <ThreadedJobItem
+                        key={thread.id}
+                        thread={thread}
                         onClick={onJobClick}
                         onDelete={handleDeleteJob}
                         onEdit={handleEditJob}
                         onShare={handleShareJob}
                         onHover={handleJobHover}
                         onHoverEnd={handleJobHoverEnd}
-                        jobOutputs={jobOutputs[job.id]}
+                        jobOutputs={jobOutputs}
                         outputsLoading={outputsLoading}
-                        isLoading={loadingJobs.has(job.id)}
+                        isLoading={isLoading}
                       />
                     ))}
                   </VStack>
                   <PaginationControls
                     currentPage={currentPage}
-                    totalPages={currentTotalPages}
+                    totalPages={currentThreadedTotalPages}
                     onPageChange={(page) => {
                       trackEvent('job.pagination', {
                         fromPage: currentPage,

@@ -1,10 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const walletAddress = req.headers['x-wallet-address'] as string;
 
   if (!walletAddress) {
-    return res.status(400).json({ error: 'Wallet address is required in x-wallet-address header' });
+    return res
+      .status(400)
+      .json({ error: 'Wallet address is required in x-wallet-address header' });
   }
 
   if (req.method !== 'POST') {
@@ -19,13 +24,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       DB = dbModule;
     } catch (importError) {
       console.error('Database module not available:', importError);
-      return res.status(503).json({ 
-        error: 'Database service unavailable. Please install dependencies and initialize the database.' 
+      return res.status(503).json({
+        error:
+          'Database service unavailable. Please install dependencies and initialize the database.',
       });
     }
 
     const { jobId } = req.body;
-    
+
     if (!jobId) {
       return res.status(400).json({ error: 'Job ID is required' });
     }
@@ -63,13 +69,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       last_run_at: null,
       run_count: 0,
       max_runs: null,
-      timezone: scheduledJob.timezone
-    });
+      timezone: scheduledJob.timezone,
+      parent_job_id: jobId, // Link to the scheduled job template
+    } as any);
 
     // Update the scheduled job's run count and last run time
     const now = new Date();
     let nextRunTime: Date | null = null;
-    
+
     // Calculate next run time if it's not a one-time job
     if (scheduledJob.schedule_type && scheduledJob.schedule_type !== 'once') {
       const JobsAPI = await import('@/services/api-clients/jobs');
@@ -86,22 +93,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       last_run_at: now,
       next_run_time: nextRunTime,
       // Deactivate if it was a one-time job or reached max runs
-      is_active: scheduledJob.schedule_type === 'once' ? false : 
-                 (scheduledJob.max_runs && scheduledJob.run_count + 1 >= scheduledJob.max_runs) ? false : 
-                 scheduledJob.is_active
+      is_active:
+        scheduledJob.schedule_type === 'once'
+          ? false
+          : scheduledJob.max_runs &&
+            scheduledJob.run_count + 1 >= scheduledJob.max_runs
+          ? false
+          : scheduledJob.is_active,
     });
 
-    return res.status(201).json({ 
+    return res.status(201).json({
       message: 'Job executed successfully',
       newJob,
-      scheduledJob: await DB.JobDB.getJob(jobId) // Return updated scheduled job
+      scheduledJob: await DB.JobDB.getJob(jobId), // Return updated scheduled job
     });
-
   } catch (error) {
     console.error('Run job API error:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error', 
-      message: error instanceof Error ? error.message : 'Unknown error' 
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 }
