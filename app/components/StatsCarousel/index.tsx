@@ -57,59 +57,116 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
   }, [messages]);
 
   return (
-    <Box
-      display={{ base: 'none', md: 'flex' }}
-      alignItems="center"
-      justifyContent={textAlign}
-      fontSize={fontSize}
-      fontWeight="500"
-      pl={56}
-    >
-      {/* FreeAI is ALWAYS visible */}
-      <Text
-        background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-        backgroundClip="text"
-        sx={{
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-        }}
-        fontWeight="700"
-        fontSize="3xl"
-        display="inline"
-      >
-        FreeAI
-      </Text>
-
-      {/* Space */}
-      <Text as="span" color={color} mx={1}>
-        {' '}
-      </Text>
-
-      {/* Animated message */}
+    <>
+      {/* Desktop version */}
       <Box
-        position="relative"
-        display="inline-block"
-        height="1.5em"
-        overflow="hidden"
-        minWidth="600px"
+        display={{ base: 'none', md: 'flex' }}
+        alignItems="center"
+        justifyContent={textAlign}
+        fontSize={fontSize}
+        fontWeight="500"
+        pl={56}
       >
-        {messages.map((msg, index) => (
-          <Text
-            key={`msg-${index}`}
-            color={color}
-            position="absolute"
-            top="0"
-            left="0"
-            width="100%"
-            whiteSpace="nowrap"
-            transition="all 0.5s ease-in-out"
-            transform={`translateY(${(index - currentIndex) * 100}%)`}
-            opacity={index === currentIndex ? 1 : 0}
-          >
-            {msg}
-          </Text>
-        ))}
+        {/* FreeAI is ALWAYS visible */}
+        <Text
+          background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+          backgroundClip="text"
+          sx={{
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+          fontWeight="700"
+          fontSize="3xl"
+          display="inline"
+        >
+          FreeAI
+        </Text>
+
+        {/* Space */}
+        <Text as="span" color={color} mx={1}>
+          {' '}
+        </Text>
+
+        {/* Animated message */}
+        <Box
+          position="relative"
+          display="inline-block"
+          height="1.5em"
+          overflow="hidden"
+          minWidth="600px"
+        >
+          {messages.map((msg, index) => (
+            <Text
+              key={`msg-${index}`}
+              color={color}
+              position="absolute"
+              top="0"
+              left="0"
+              width="100%"
+              whiteSpace="nowrap"
+              transition="all 0.5s ease-in-out"
+              transform={`translateY(${(index - currentIndex) * 100}%)`}
+              opacity={index === currentIndex ? 1 : 0}
+            >
+              {msg}
+            </Text>
+          ))}
+        </Box>
       </Box>
-    </Box>
+
+      {/* Mobile version (wrap to multiple lines, full width) */}
+      <Box
+        display={{ base: 'flex', md: 'none' }}
+        alignItems="center"
+        justifyContent="center"
+        fontSize="lg"
+        fontWeight="500"
+        flexDirection="column"
+        textAlign="center"
+        px={4}
+        width="100%"
+      >
+        {/* FreeAI is ALWAYS visible */}
+        <Text
+          background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+          backgroundClip="text"
+          sx={{
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+          fontWeight="700"
+          fontSize="2xl"
+          display="inline"
+        >
+          FreeAI
+        </Text>
+
+        {/* Space */}
+        <Text as="span" color={color} mx={1}>
+          {' '}
+        </Text>
+
+        {/* Current message with wrapping */}
+        <Text
+          key={`mobile-msg-${currentIndex}`}
+          color={color}
+          whiteSpace="normal"
+          wordBreak="break-word"
+          lineHeight="1.4"
+          fontSize="lg"
+          maxW="90vw"
+          mt={1}
+          sx={{
+            '@keyframes fadeSlideIn': {
+              from: { opacity: 0, transform: 'translateY(6px)' },
+              to: { opacity: 1, transform: 'translateY(0)' },
+            },
+          }}
+          animation="fadeSlideIn 400ms ease"
+        >
+          {messages[currentIndex]}
+        </Text>
+      </Box>
+    </>
   );
 };
