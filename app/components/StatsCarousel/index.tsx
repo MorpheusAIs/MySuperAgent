@@ -114,7 +114,7 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
         </Box>
       </Box>
 
-      {/* Mobile version */}
+      {/* Mobile version (wrap to multiple lines, full width) */}
       <Box
         display={{ base: 'flex', md: 'none' }}
         alignItems="center"
@@ -123,6 +123,8 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
         fontWeight="500"
         flexDirection="column"
         textAlign="center"
+        px={4}
+        width="100%"
       >
         {/* FreeAI is ALWAYS visible */}
         <Text
@@ -144,33 +146,26 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
           {' '}
         </Text>
 
-        {/* Animated message */}
-        <Box
-          position="relative"
-          display="inline-block"
-          height="1.5em"
-          overflow="hidden"
-          minWidth="200px"
-          maxWidth="100%"
+        {/* Current message with wrapping */}
+        <Text
+          key={`mobile-msg-${currentIndex}`}
+          color={color}
+          whiteSpace="normal"
+          wordBreak="break-word"
+          lineHeight="1.4"
+          fontSize="lg"
+          maxW="90vw"
+          mt={1}
+          sx={{
+            '@keyframes fadeSlideIn': {
+              from: { opacity: 0, transform: 'translateY(6px)' },
+              to: { opacity: 1, transform: 'translateY(0)' },
+            },
+          }}
+          animation="fadeSlideIn 400ms ease"
         >
-          {messages.map((msg, index) => (
-            <Text
-              key={`msg-mobile-${index}`}
-              color={color}
-              position="absolute"
-              top="0"
-              left="0"
-              width="100%"
-              whiteSpace="nowrap"
-              transition="all 0.5s ease-in-out"
-              transform={`translateY(${(index - currentIndex) * 100}%)`}
-              opacity={index === currentIndex ? 1 : 0}
-              fontSize="lg"
-            >
-              {msg}
-            </Text>
-          ))}
-        </Box>
+          {messages[currentIndex]}
+        </Text>
       </Box>
     </>
   );
