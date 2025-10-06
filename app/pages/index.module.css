@@ -43,4 +43,20 @@
     width: 100%;
     max-width: 320px;
   }
+  
+  .container {
+    height: 100vh;
+    height: calc(var(--vh, 1vh) * 100);
+    overflow: hidden;
+  }
+  
+  .contentWrapper {
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  .chatWrapper {
+    height: 100%;
+    overflow: hidden;
+  }
 }

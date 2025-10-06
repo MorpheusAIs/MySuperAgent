@@ -23,6 +23,7 @@ export const Chat: FC<{
   const [localLoading, setLocalLoading] = useState(false);
   const [showPrefilledOptions, setShowPrefilledOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showJobsModal, setShowJobsModal] = useState(false);
   const [userPreferences, setUserPreferences] =
     useState<UserPreferences | null>(null);
   const [jobsRefreshKey, setJobsRefreshKey] = useState(0);
@@ -283,6 +284,204 @@ export const Chat: FC<{
   };
 
   if (currentView === 'jobs') {
+    if (isMobile) {
+      // Mobile-specific layout
+      return (
+        <Box
+          className={styles.mobileJobsContainer}
+          height="calc(var(--vh, 1vh) * 100)"
+          display="flex"
+          flexDirection="column"
+          position="relative"
+          minHeight="100vh"
+        >
+          {/* Mobile Header with centered text */}
+          <Box
+            className={styles.mobileHeader}
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            justifyContent="center"
+            flex="1"
+            px={4}
+            textAlign="center"
+          >
+            <Box width="100%" mb={6}>
+              <StatsCarousel />
+            </Box>
+            <Text
+              fontSize="2xl"
+              fontWeight="bold"
+              color="white"
+              textAlign="center"
+              px={2}
+              wordBreak="break-word"
+            >
+              What are we working on next?
+            </Text>
+          </Box>
+
+          {/* Mobile Jobs List - hidden, will be shown in modal */}
+          <Box
+            className={styles.mobileJobsList}
+            flex="1"
+            overflowY="auto"
+            px={4}
+            pb={4}
+            display="none"
+          >
+            <JobsList
+              onJobClick={handleJobClick}
+              onRunScheduledJob={handleRunScheduledJob}
+              isLoading={showLoading}
+              refreshKey={jobsRefreshKey}
+              optimisticJobs={optimisticJobs}
+            />
+          </Box>
+
+          {/* Mobile Chat Input - fixed at bottom */}
+          <Box
+            className={styles.mobileChatInput}
+            position="sticky"
+            bottom={0}
+            bg="black"
+            borderTop="1px solid rgba(255, 255, 255, 0.1)"
+            pt={2}
+            pb={1}
+            zIndex={10}
+          >
+            {/* Mobile Jobs Dropdown Button */}
+            <Box mb={3} display="flex" justifyContent="center">
+              <Box
+                as="button"
+                onClick={() => setShowJobsModal(true)}
+                className={styles.mobileJobsButton}
+                display="flex"
+                alignItems="center"
+                gap={2}
+                px={4}
+                py={2}
+                bg="rgba(255, 255, 255, 0.1)"
+                borderRadius="full"
+                border="1px solid rgba(255, 255, 255, 0.2)"
+                color="white"
+                fontSize="sm"
+                fontWeight="500"
+                _hover={{
+                  bg: 'rgba(255, 255, 255, 0.15)',
+                }}
+                _active={{
+                  bg: 'rgba(255, 255, 255, 0.2)',
+                }}
+              >
+                <Text>View Jobs</Text>
+                <Text fontSize="xs">▼</Text>
+              </Box>
+            </Box>
+
+            <ChatInput
+              onSubmit={handleSubmit}
+              disabled={isSubmitting || showLoading}
+              isSidebarOpen={isSidebarOpen}
+              onToggleHelp={() => {
+                const newValue = !showPrefilledOptions;
+                setShowPrefilledOptions(newValue);
+                trackEvent('ui.prefilled_options_toggled', {
+                  isOpen: newValue,
+                });
+              }}
+              showPrefilledOptions={showPrefilledOptions}
+              placeholder="Ask anything"
+              onJobCreated={refreshJobsList}
+            />
+
+            {/* Mobile Prefilled Options */}
+            {showPrefilledOptions && (
+              <Box mt={4}>
+                <PrefilledOptions
+                  onSelect={handlePrefilledSelect}
+                  isSidebarOpen={isSidebarOpen}
+                />
+              </Box>
+            )}
+          </Box>
+
+          {/* Mobile Jobs Modal */}
+          {showJobsModal && (
+            <Box
+              className={styles.mobileJobsModal}
+              position="fixed"
+              top="80px"
+              left={0}
+              right={0}
+              bottom={0}
+              bg="black"
+              zIndex={20}
+              display="flex"
+              flexDirection="column"
+            >
+              {/* Modal Header */}
+              <Box
+                className={styles.mobileJobsModalHeader}
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                p={4}
+                borderBottom="1px solid rgba(255, 255, 255, 0.1)"
+              >
+                <Text fontSize="lg" fontWeight="bold" color="white">
+                  Your Jobs
+                </Text>
+                <Box
+                  as="button"
+                  onClick={() => setShowJobsModal(false)}
+                  className={styles.mobileJobsBackButton}
+                  display="flex"
+                  alignItems="center"
+                  gap={2}
+                  px={3}
+                  py={2}
+                  bg="rgba(255, 255, 255, 0.1)"
+                  borderRadius="md"
+                  border="1px solid rgba(255, 255, 255, 0.2)"
+                  color="white"
+                  fontSize="sm"
+                  fontWeight="500"
+                  _hover={{
+                    bg: 'rgba(255, 255, 255, 0.15)',
+                  }}
+                >
+                  <Text>←</Text>
+                  <Text>Back</Text>
+                </Box>
+              </Box>
+
+              {/* Modal Content - Jobs List */}
+              <Box
+                className={styles.mobileJobsModalContent}
+                flex="1"
+                overflowY="auto"
+                px={4}
+                py={4}
+              >
+                <JobsList
+                  onJobClick={(jobId) => {
+                    handleJobClick(jobId);
+                    setShowJobsModal(false);
+                  }}
+                  onRunScheduledJob={handleRunScheduledJob}
+                  isLoading={showLoading}
+                  refreshKey={jobsRefreshKey}
+                  optimisticJobs={optimisticJobs}
+                />
+              </Box>
+            </Box>
+          )}
+        </Box>
+      );
+    }
+
+    // Desktop layout (unchanged)
     return (
       <Box
         className={styles.chatContainer}
