@@ -28,6 +28,7 @@ type ChatInputProps = {
   showPrefilledOptions: boolean;
   placeholder?: string;
   onJobCreated?: () => void;
+  initialMessage?: string | null;
 };
 
 export const ChatInput: FC<ChatInputProps> = ({
@@ -38,6 +39,7 @@ export const ChatInput: FC<ChatInputProps> = ({
   showPrefilledOptions,
   placeholder = 'Ask anything',
   onJobCreated,
+  initialMessage = null,
 }) => {
   const [message, setMessage] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
@@ -54,6 +56,17 @@ export const ChatInput: FC<ChatInputProps> = ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scheduleRef = useRef<InlineScheduleRef>(null);
+
+  // Set initial message from URL parameter if provided
+  useEffect(() => {
+    if (initialMessage && !message) {
+      setMessage(initialMessage);
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialMessage]);
 
   // Auto-resize textarea based on content
   const adjustTextareaHeight = () => {
@@ -466,7 +479,6 @@ export const ChatInput: FC<ChatInputProps> = ({
                 Run Non-Scheduled
               </Button>
             </div>
-
           </div>
 
           {/* Inline Schedule Component */}

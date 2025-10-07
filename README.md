@@ -125,6 +125,20 @@ For developers looking to build and deploy their own agents:
 2. [API Documentation](docs/available-apis-guide.md)
 3. [Testing Framework](docs/testing-framework-guide.md)
 4. [Deployment Guide](docs/deployment-guide.md)
+5. [External Prompt API](app/docs/external-prompt-api.md) - Link to MySuperAgent with pre-filled prompts
+
+### External Integration
+
+Quick start link to MySuperAgent from external app with a pre-filled prompt?
+
+```html
+<a href="https://mysuperagent.io/?prompt=What%20is%20the%20price%20of%20Bitcoin%3F">
+  Check Bitcoin Price on MySuperAgent
+</a>
+```
+
+Read [External Prompt API documentation](app/docs/external-prompt-api.md) on how
+to more help
 
 # Contributing
 

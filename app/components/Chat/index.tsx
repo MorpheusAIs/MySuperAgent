@@ -17,7 +17,13 @@ export const Chat: FC<{
   isSidebarOpen?: boolean;
   currentView: 'chat' | 'jobs';
   setCurrentView: (view: 'chat' | 'jobs') => void;
-}> = ({ isSidebarOpen = false, currentView, setCurrentView }) => {
+  initialPrompt?: string | null;
+}> = ({
+  isSidebarOpen = false,
+  currentView,
+  setCurrentView,
+  initialPrompt = null,
+}) => {
   const { state, sendMessage, setCurrentConversation } = useChatContext();
   const { messages, currentConversationId, isLoading } = state;
   const [localLoading, setLocalLoading] = useState(false);
@@ -384,6 +390,7 @@ export const Chat: FC<{
               showPrefilledOptions={showPrefilledOptions}
               placeholder="Ask anything"
               onJobCreated={refreshJobsList}
+              initialMessage={initialPrompt}
             />
 
             {/* Mobile Prefilled Options */}
@@ -523,6 +530,7 @@ export const Chat: FC<{
                 showPrefilledOptions={showPrefilledOptions}
                 placeholder="Describe a job"
                 onJobCreated={refreshJobsList}
+                initialMessage={initialPrompt}
               />
             </Box>
 
@@ -591,6 +599,7 @@ export const Chat: FC<{
           }}
           showPrefilledOptions={showPrefilledOptions}
           onJobCreated={refreshJobsList}
+          initialMessage={initialPrompt}
         />
       </Box>
     </Box>
