@@ -5,6 +5,7 @@ import { ChatProviderDB } from '@/contexts/chat/ChatProviderDB';
 import { useGlobalUI } from '@/contexts/GlobalSearchProvider';
 import { Box, Flex, useBreakpointValue } from '@chakra-ui/react';
 import type { NextPage } from 'next';
+import { useRouter } from 'next/router';
 import { useEffect, useRef, useState } from 'react';
 import styles from './index.module.css';
 
@@ -21,12 +22,24 @@ const Home = () => {
   const { isSidebarOpen, setSidebarOpen } = useGlobalUI();
   const [currentView, setCurrentView] = useState<'chat' | 'jobs'>('jobs');
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [initialPrompt, setInitialPrompt] = useState<string | null>(null);
   const isMobile = useBreakpointValue({ base: true, md: false });
   const headerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const handleBackToJobs = () => {
     setCurrentView('jobs');
   };
+
+  useEffect(() => {
+    if (router.isReady) {
+      const { prompt } = router.query;
+      if (prompt && typeof prompt === 'string') {
+        setInitialPrompt(decodeURIComponent(prompt));
+        router.replace('/', undefined, { shallow: true });
+      }
+    }
+  }, [router.isReady, router.query, router]);
 
   // Track header visibility based on scroll position
   useEffect(() => {
@@ -93,6 +106,7 @@ const Home = () => {
             isSidebarOpen={isSidebarOpen}
             currentView={currentView}
             setCurrentView={setCurrentView}
+            initialPrompt={initialPrompt}
           />
         </Box>
       </Flex>
