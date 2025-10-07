@@ -61,12 +61,10 @@ export const ChatInput: FC<ChatInputProps> = ({
   useEffect(() => {
     if (initialMessage && !message) {
       setMessage(initialMessage);
-      // Focus the input to draw attention
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
     }
-    // Note: we only want to run this when initialMessage changes, not when message changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMessage]);
 
