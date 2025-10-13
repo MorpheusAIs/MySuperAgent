@@ -144,6 +144,9 @@ export class Orchestrator {
         response = await selectedAgent.chat({
           prompt: request.prompt,
           conversationId: request.conversationId || 'default',
+          chatHistory: request.chatHistory,
+          similarPrompts: request.similarPrompts,
+          similarityContext: request.similarityContext,
         });
       } catch (chatError) {
         console.error(`[Orchestrator ${this.requestId}] Agent chat failed:`, chatError);

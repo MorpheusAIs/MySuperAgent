@@ -26,7 +26,6 @@ export const MessageCounter: FC<MessageCounterProps> = ({
   textAlign = 'center',
 }) => {
   const [stats, setStats] = useState<ComprehensiveStats | null>(null);
-  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -48,70 +47,18 @@ export const MessageCounter: FC<MessageCounterProps> = ({
     return () => clearInterval(interval);
   }, [fetchStats]);
 
-  // Carousel animation logic
-  useEffect(() => {
-    const messages = stats?.carouselMessages || [
-      'has completed 0 jobs',
-      'is ready to assist you',
-      'handles automated tasks',
-      'saves you time',
-    ];
-
-    if (messages.length <= 1) return;
-
-    const interval = setInterval(() => {
-      setCurrentMessageIndex((prev) => (prev + 1) % messages.length);
-    }, 4000); // Change every 4 seconds
-
-    return () => clearInterval(interval);
-  }, [stats]);
-
-  const messages = stats?.carouselMessages || [
-    'has completed 0 jobs',
-    'is ready to assist you',
-    'handles automated tasks',
-    'saves you time',
-  ];
+  // Single message display - no carousel needed
+  const message = stats?.carouselMessages?.[0] || 'has completed 0 total jobs to date';
 
   return (
-    <Box
-      textAlign={textAlign}
-      position="relative"
-      height="40px"
-      overflow="hidden"
-    >
-      <style jsx global>{`
-        @keyframes slideUp {
-          0% {
-            transform: translateY(100%);
-            opacity: 0;
-          }
-          10% {
-            transform: translateY(0);
-            opacity: 1;
-          }
-          90% {
-            transform: translateY(0);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(-100%);
-            opacity: 0;
-          }
-        }
-
-        .carousel-text {
-          animation: slideUp 4s ease-in-out infinite;
-        }
-      `}</style>
-
+    <Box textAlign={textAlign}>
       <Text
         fontSize={fontSize}
         fontWeight="500"
         display="inline-flex"
         alignItems="baseline"
       >
-        {/* FreeAI is ALWAYS visible and fixed */}
+        {/* FreeAI branding */}
         <Text
           as="span"
           background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
@@ -126,32 +73,10 @@ export const MessageCounter: FC<MessageCounterProps> = ({
           {' '}
         </Text>
 
-        {/* Carousel container - inline-block to stay on same line */}
-        <Box
-          as="span"
-          display="inline-block"
-          position="relative"
-          height="1.5em"
-          width="auto"
-          overflow="hidden"
-          verticalAlign="baseline"
-        >
-          {messages.map((msg, index) => (
-            <Text
-              key={`${msg}-${index}`}
-              as="span"
-              color={color}
-              position="absolute"
-              whiteSpace="nowrap"
-              transform={`translateY(${(index - currentMessageIndex) * 100}%)`}
-              transition="transform 0.5s ease-in-out"
-              opacity={index === currentMessageIndex ? 1 : 0}
-              display="block"
-            >
-              {msg}
-            </Text>
-          ))}
-        </Box>
+        {/* Single message display */}
+        <Text as="span" color={color}>
+          {message}
+        </Text>
       </Text>
     </Box>
   );

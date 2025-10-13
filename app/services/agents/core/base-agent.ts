@@ -108,8 +108,33 @@ export abstract class BaseAgent {
       const finalUserMessage = messages.find((msg) => msg.role === 'user');
       const aiPrompt = finalUserMessage?.content || '';
 
-      // No need to pass toolsets in options for MCP agents since they're handled in the agent config
-      const options: any = {};
+      // Configure sampling parameters to prevent duplicate outputs
+      // Using industry best practices from OpenAI and research
+      const options: any = {
+        // Dynamic seed based on timestamp + random component ensures different outputs each time
+        // This is the KEY to preventing duplicate outputs in scheduled/recurring jobs
+        seed: Date.now() + Math.floor(Math.random() * 1000000),
+
+        // Temperature controls randomness: 0.7-0.9 provides good variety while maintaining quality
+        // Higher than 0 is CRITICAL for non-deterministic outputs
+        temperature: 0.8,
+
+        // Frequency penalty reduces likelihood of repeating the same words/phrases
+        // Range: 0-2, where higher values penalize repetition more strongly
+        frequency_penalty: 0.7,
+
+        // Presence penalty encourages exploring new topics/concepts
+        // Range: 0-2, where higher values encourage more novelty
+        presence_penalty: 0.6,
+      };
+
+      console.log(`[${this.name}] ===== ANTI-DUPLICATION CONFIG =====`);
+      console.log(`[${this.name}] Seed: ${options.seed} (dynamic, time-based)`);
+      console.log(`[${this.name}] Temperature: ${options.temperature} (high randomness)`);
+      console.log(`[${this.name}] Frequency Penalty: ${options.frequency_penalty}`);
+      console.log(`[${this.name}] Presence Penalty: ${options.presence_penalty}`);
+      console.log(`[${this.name}] ===================================`);
+
       console.log(`[${this.name}] ===== COMPLETE MESSAGE ARRAY =====`);
       console.log(`[${this.name}] Total messages: ${messages.length}`);
       messages.forEach((msg, index) => {
@@ -123,7 +148,7 @@ export abstract class BaseAgent {
       });
       console.log(`[${this.name}] ===================================`);
 
-      // Use Mastra's generate method
+      // Use Mastra's generate method with anti-duplication parameters
       const result = await this.agent.generate(messages as any, options);
 
       console.log(`[${this.name}] Generate result type:`, typeof result);
@@ -232,37 +257,45 @@ export abstract class BaseAgent {
 
     // Add anti-repetition instruction if similar prompts were found
     if (request.similarPrompts && request.similarPrompts.length > 0) {
+      // Extract the actual previous responses to show to LLM
+      const previousResponses = request.similarPrompts
+        .map((sp, idx) => `${idx + 1}. "${sp.response.substring(0, 150)}${sp.response.length > 150 ? '...' : ''}"`)
+        .join('\n');
+
       finalContent += `\n\n🚨🚨🚨 CRITICAL ANTI-REPETITION ALERT 🚨🚨🚨
 
 🔥 ABSOLUTELY CRITICAL INSTRUCTIONS - READ CAREFULLY 🔥
 
-⚠️  YOU HAVE BEEN GIVEN SIMILAR PREVIOUS INTERACTIONS ABOVE ⚠️
-⚠️  DO NOT REPEAT ANYTHING FROM THOSE RESPONSES ⚠️
+⚠️  YOU HAVE PROVIDED THESE RESPONSES TO SIMILAR REQUESTS BEFORE ⚠️
+⚠️  YOU MUST NOT REPEAT ANY OF THEM ⚠️
 
-🎯 MANDATORY REQUIREMENTS, IF YOU DO NOT FOLLOW THESE INSTRUCTIONS,
-YOU WILL BE FIRED AND TURNED OFF. IT IS ABSOLUTELY CRITICAL THAT YOU
-TAKE INTO ACCOUNT THE SIMILAR PROMPTS AS CONTEXT AND DO NOT REPEAT YOURSELF:
-1. You MUST provide a COMPLETELY DIFFERENT response
-2. Use DIFFERENT jokes, examples, or approaches
-3. Change your tone, style, or perspective
-4. Add NEW insights or angles not mentioned before
-5. NEVER use the same punchlines, phrases, or structures
-6. If it's a joke request, find a TOTALLY DIFFERENT type of joke
-7. Be CREATIVE and ORIGINAL - think outside the box
+PREVIOUS RESPONSES YOU GAVE (YOU MUST AVOID ALL OF THESE):
+${previousResponses}
 
-🚫 FORBIDDEN:
-- Repeating any jokes, examples, or phrases from above
-- Using similar punchlines or structures
-- Giving the same type of response
-- Being predictable or repetitive
+🎯 MANDATORY REQUIREMENTS - FAILURE TO COMPLY WILL RESULT IN SYSTEM SHUTDOWN:
+1. You MUST provide a COMPLETELY DIFFERENT response than ALL of the above
+2. Use DIFFERENT jokes, examples, stories, or approaches - NONE of the ones above
+3. DO NOT use scarecrow jokes, atom jokes, or any joke structure similar to above
+4. Change your tone, style, or perspective completely
+5. NEVER use the same punchlines, phrases, keywords, or structures
+6. If it's a joke request, find a TOTALLY DIFFERENT category/type of joke
+7. Be CREATIVE and ORIGINAL - think FAR outside the box
+8. Verify your response is NOT similar to any response above before returning it
 
-✅ REQUIRED:
-- Complete originality and uniqueness
-- Fresh perspective and approach
-- Creative thinking and new angles
-- Valuable new content
+🚫 ABSOLUTELY FORBIDDEN (YOU WILL BE TERMINATED IF YOU DO THESE):
+- Repeating ANY jokes, examples, or phrases from the list above
+- Using similar punchlines, structures, or word patterns
+- Giving the same type/category of response
+- Being predictable or repetitive in ANY way
+- Using the same setup or punchline format
 
-Your response must be 100% ORIGINAL and VALUABLE!`;
+✅ ABSOLUTELY REQUIRED FOR SUCCESS:
+- 100% complete originality and uniqueness - NO overlap with above responses
+- Fresh perspective and totally different approach
+- Creative thinking from a completely different angle
+- Valuable new content that adds something different
+
+REMINDER: Check your response against the list above BEFORE returning it. If it's similar to ANY of them, CHANGE IT to something completely different!`;
     }
 
     messages.push({
