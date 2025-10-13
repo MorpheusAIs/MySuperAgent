@@ -75,7 +75,10 @@ export default async function handler(
 
       const thread = threadMap.get(threadKey)!;
       thread.jobs.push(job);
-      thread.total_runs++;
+      // Only count completed jobs in total_runs
+      if (job.status === 'completed') {
+        thread.total_runs++;
+      }
 
       // Update latest job if this one is newer
       if (new Date(job.created_at) > new Date(thread.latest_created_at)) {

@@ -148,64 +148,79 @@ export class JobProcessorService {
           
           // Job is already set to 'running' by the atomic claim query
           
-          // For scheduled jobs, load context from previous job executions
+          // For scheduled jobs with parent_job_id, inject temporal context for variety
           let chatHistory: Array<{ role: string; content: string }> = [];
           let promptContent = job.initial_message;
-          
-          if (job.is_scheduled && job.original_job_id) {
+
+          // Check if this is part of a job thread (has parent_job_id)
+          if (job.parent_job_id) {
             try {
-              // Get previous jobs with the same original_job_id (previous executions of this scheduled job)
+              // Get statistics about this job thread
               const { pool } = await import('@/services/database/db');
-              const previousJobsQuery = `
-                SELECT j.*, m.content as response_content, m.created_at as response_time
+
+              // Count total runs and get recent responses
+              const threadStatsQuery = `
+                SELECT
+                  COUNT(*) FILTER (WHERE status = 'completed') as completed_count,
+                  COUNT(*) as total_count
+                FROM jobs
+                WHERE (parent_job_id = $1 OR id = $1)
+                  AND id != $2
+              `;
+
+              const recentResponsesQuery = `
+                SELECT m.content, j.created_at
                 FROM jobs j
-                LEFT JOIN messages m ON j.id = m.job_id AND m.role = 'assistant'
-                WHERE j.original_job_id = $1 
+                INNER JOIN messages m ON j.id = m.job_id AND m.role = 'assistant'
+                WHERE (j.parent_job_id = $1 OR j.id = $1)
                   AND j.id != $2
                   AND j.status = 'completed'
                 ORDER BY j.created_at DESC
-                LIMIT 3
+                LIMIT 5
               `;
-              
-              const previousJobsResult = await pool.query(previousJobsQuery, [job.original_job_id, job.id]);
-              const previousJobs = previousJobsResult.rows;
-              
-              if (previousJobs.length > 0) {
-                // Build context from previous job executions
-                const lastJob = previousJobs[0];
-                const timeSinceLastRun = new Date().getTime() - new Date(lastJob.created_at).getTime();
-                const hoursSince = Math.floor(timeSinceLastRun / (1000 * 60 * 60));
-                
-                // Create chat history from previous executions
-                chatHistory = previousJobs.reverse().flatMap(prevJob => [
-                  {
-                    role: 'user',
-                    content: prevJob.initial_message,
-                    timestamp: new Date(prevJob.created_at).getTime()
-                  },
-                  ...(prevJob.response_content ? [{
-                    role: 'assistant',
-                    content: prevJob.response_content,
-                    timestamp: new Date(prevJob.response_time).getTime()
-                  }] : [])
-                ]);
-                
-                // Modify prompt for scheduled job follow-up
-                promptContent = `This is a scheduled follow-up to: "${job.initial_message}"
 
-Previous context: This scheduled job last ran ${hoursSince > 0 ? `${hoursSince} hours ago` : 'recently'} (${previousJobs.length} previous execution${previousJobs.length > 1 ? 's' : ''}).
+              const [statsResult, responsesResult] = await Promise.all([
+                pool.query(threadStatsQuery, [job.parent_job_id, job.id]),
+                pool.query(recentResponsesQuery, [job.parent_job_id, job.id])
+              ]);
 
-Please provide an updated response that:
-1. Acknowledges what was covered in previous executions
-2. Focuses on NEW developments or information since the last run
-3. Builds upon previous responses rather than repeating them
-4. Maintains continuity while providing fresh value
+              const stats = statsResult.rows[0];
+              const recentResponses = responsesResult.rows;
 
-Original request: ${job.initial_message}`;
-              }
+              const runNumber = parseInt(stats.completed_count) + 1;
+              const currentDate = new Date();
+              const dateString = currentDate.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              });
+              const timeString = currentDate.toLocaleTimeString('en-US');
+
+              // Inject temporal context to make this run unique
+              promptContent = `[Execution #${runNumber} - ${dateString} at ${timeString}]
+
+${job.initial_message}
+
+IMPORTANT CONTEXT FOR VARIETY:
+- This is execution #${runNumber} of this recurring task
+- Current date/time: ${dateString} at ${timeString}
+- Previous executions: ${stats.completed_count}
+
+${recentResponses.length > 0 ? `AVOID REPEATING THESE RECENT RESPONSES:
+${recentResponses.map((r, i) => `${i + 1}. ${r.content.substring(0, 200)}${r.content.length > 200 ? '...' : ''}`).join('\n')}
+
+🚨 CRITICAL: Provide completely DIFFERENT content from the above. Use different examples, different jokes, different angles, or different information.` : ''}
+
+Provide a FRESH, UNIQUE response for THIS specific execution.`;
+
+              console.log(`[JOB PROCESSOR] Injected temporal context for job ${job.id}: Run #${runNumber} with ${recentResponses.length} recent responses to avoid`);
+
             } catch (contextError) {
-              console.warn(`[JOB PROCESSOR] Could not load context for scheduled job ${job.id}:`, contextError);
-              // Continue with empty history if context loading fails
+              console.warn(`[JOB PROCESSOR] Could not load context for threaded job ${job.id}:`, contextError);
+              // Fallback: at least add date/time for uniqueness
+              const currentDate = new Date();
+              promptContent = `[${currentDate.toLocaleDateString()} ${currentDate.toLocaleTimeString()}]\n\n${job.initial_message}`;
             }
           }
 

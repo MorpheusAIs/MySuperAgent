@@ -50,13 +50,10 @@ export default async function handler(
       totalIncomeEarned,
     };
 
+    // Simplified to single metric as per user feedback
     const carouselMessages = [
       `has completed ${stats.totalJobs.toLocaleString()} total jobs to date`,
-      `has worked ${stats.humanEquivalentHours.toLocaleString()} human equivalent hours`,
-      stats.totalIncomeEarned > 0
-        ? `has earned $${stats.totalIncomeEarned.toLocaleString()} for humans so far`
-        : null,
-    ].filter(Boolean); // Remove null messages
+    ];
 
     return res.status(200).json({
       stats,

@@ -30,34 +30,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }));
 
     const prompt = `
-You are a job suggestion AI that helps users discover useful automations and tasks. Based on the user's existing jobs and context, suggest 5-8 new job ideas that would be valuable.
+You are a job suggestion AI that helps users discover valuable recurring automations. Based on the user's existing jobs, suggest 5-8 new scheduled job ideas that automate repetitive tasks.
 
 User's existing jobs:
 ${JSON.stringify(jobSummary, null, 2)}
 
-Context: ${userContext || 'General user looking for helpful automations'}
+Context: ${userContext || 'User wants to automate recurring tasks and save time'}
 
-Consider these categories of useful jobs:
-1. **Information Monitoring**: Daily crypto prices, weather, news summaries
-2. **Productivity**: Calendar reminders, task tracking, deadline alerts  
-3. **Financial**: Portfolio tracking, market alerts, price notifications
-4. **Health & Lifestyle**: Daily affirmations, workout reminders, habit tracking
-5. **Professional**: Industry news, competitor analysis, market research
-6. **Entertainment**: Daily jokes, quotes, interesting facts
-7. **Technical**: System monitoring, code deployment, automated reports
+Focus on RECURRING AUTOMATION jobs in these categories:
+1. **Financial Monitoring**: Daily crypto prices (CoinCap), stock alerts, portfolio tracking
+2. **Lifestyle & Local**: Restaurant recommendations (Google Maps), weather, local events
+3. **Entertainment & Family**: Bedtime stories, daily jokes, fun facts for kids
+4. **Productivity**: Email summaries, calendar digests, deadline reminders
+5. **Information**: News digests, industry updates, learning content
+6. **Health & Wellness**: Workout reminders, meal planning, health check-ins
+
+IMPORTANT: Every suggestion should be:
+- A RECURRING task (daily, weekly, or custom schedule)
+- Something that AUTOMATES a repetitive activity
+- Saves the user from having to remember or manually do something
+- Provides consistent value over time
 
 For each suggestion, provide:
-- A compelling title (max 50 chars)
-- A clear description (max 150 chars) 
-- Suggested schedule type
-- Estimated value/benefit
-
-Focus on jobs that:
-- Save time through automation
-- Provide regular valuable information
-- Help with consistency (habits, routines)
-- Are genuinely useful, not just novelties
-- Complement existing jobs without duplicating them
+- A compelling title emphasizing the automation (max 50 chars)
+- A description highlighting time saved (max 150 chars)
+- Schedule type (daily, weekly, or custom)
+- Clear value proposition about automation benefit
 
 Respond with JSON array:
 [
@@ -135,56 +133,56 @@ Provide 5-8 diverse, high-value suggestions.
     } catch (parseError) {
       console.error('Failed to parse AI response:', content);
       
-      // Fallback to hardcoded suggestions
+      // Fallback to hardcoded suggestions focused on recurring tasks
       const fallbackSuggestions = [
         {
-          title: "Daily Crypto Market Update",
-          description: "Get Bitcoin, Ethereum, and top altcoin prices and news every morning",
+          title: "Morning Crypto Price Check",
+          description: "Get prices of your favorite cryptocurrencies every morning via CoinCap",
           scheduleType: "daily",
           scheduledTime: "09:00",
           category: "Financial",
-          estimatedValue: "Stay informed on crypto markets",
-          initialMessage: "Provide daily cryptocurrency market summary with Bitcoin, Ethereum, and top 10 altcoin prices, percentage changes, and major news",
+          estimatedValue: "Stay informed on crypto markets without manual checking",
+          initialMessage: "Tell me the prices of my favorite cryptocurrencies (Bitcoin, Ethereum, and Solana) every morning",
           difficulty: "easy"
         },
         {
-          title: "Weather & Day Planner",
-          description: "Get weather forecast and daily planning suggestions",
-          scheduleType: "daily", 
-          scheduledTime: "08:00",
-          category: "Productivity",
-          estimatedValue: "Better daily planning",
-          initialMessage: "Provide today's weather forecast and suggest how to plan my day based on weather conditions",
+          title: "Restaurant Recommendations",
+          description: "Find 3 great places to eat in your city using Google Maps",
+          scheduleType: "weekly",
+          scheduledTime: "18:00",
+          category: "Lifestyle",
+          estimatedValue: "Never run out of date night ideas",
+          initialMessage: "Recommend 3 highly-rated places to eat in my city for this weekend",
           difficulty: "easy"
         },
         {
-          title: "AI News Digest",
-          description: "Curated AI and tech news summary to stay current with innovations",
+          title: "Bedtime Story Writer",
+          description: "Generate a unique bedtime story for your kids every night",
           scheduleType: "daily",
-          scheduledTime: "18:00", 
-          category: "Professional",
-          estimatedValue: "Stay current with tech trends",
-          initialMessage: "Create a daily digest of the most important AI and technology news, including breakthroughs, product launches, and industry trends",
+          scheduledTime: "19:30",
+          category: "Entertainment",
+          estimatedValue: "Fresh stories every night without thinking",
+          initialMessage: "Write a creative bedtime story for my kid about adventure and friendship",
           difficulty: "easy"
         },
         {
-          title: "Motivational Quote Generator",
-          description: "Daily inspiration and motivational quotes to start your day positively",
+          title: "Daily Weather Briefing",
+          description: "Morning weather forecast so you know what to wear and plan for",
           scheduleType: "daily",
           scheduledTime: "07:00",
-          category: "Health & Lifestyle", 
-          estimatedValue: "Daily motivation and positivity",
-          initialMessage: "Generate an inspiring and motivational quote with brief context about why it's meaningful and how to apply it today",
+          category: "Productivity",
+          estimatedValue: "Better daily planning based on weather",
+          initialMessage: "Give me today's weather forecast with temperature, precipitation, and clothing suggestions",
           difficulty: "easy"
         },
         {
-          title: "Weekly Goal Progress Check",
-          description: "Weekly reminder to review and plan your goals and achievements",
+          title: "Weekly Email Summary",
+          description: "Automated summary of important emails to save inbox time",
           scheduleType: "weekly",
           scheduledTime: "09:00",
           category: "Productivity",
-          estimatedValue: "Better goal tracking and achievement",
-          initialMessage: "Help me review my weekly goals and progress, suggest adjustments, and plan priorities for the upcoming week",
+          estimatedValue: "Stay on top of emails without constant checking",
+          initialMessage: "Summarize my most important unread emails from the past week and highlight action items",
           difficulty: "medium"
         }
       ];

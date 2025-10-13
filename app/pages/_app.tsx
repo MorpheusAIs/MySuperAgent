@@ -6,6 +6,7 @@ import {
 import '@rainbow-me/rainbowkit/styles.css';
 import { Analytics } from '@vercel/analytics/react';
 import type { AppProps } from 'next/app';
+import Head from 'next/head';
 import '../styles/globals.css';
 
 import { PrivyAuthProvider } from '@/contexts/auth/PrivyAuthProvider';
@@ -153,54 +154,59 @@ const client = new QueryClient();
 
 function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   return (
-    <SessionProvider session={session}>
-      <PrivyProvider
-        appId={
-          process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'cmf9b4j1301gdkz0cxud5ox6p'
-        }
-        config={{
-          loginMethods: ['google', 'twitter', 'wallet', 'email', 'sms'],
-          appearance: {
-            theme: 'dark',
-            accentColor: '#59F886',
-            logo: '/assets/logo.svg',
-            showWalletLoginFirst: false,
-            walletChainType: 'ethereum-only',
-          },
-          embeddedWallets: {
-            createOnLogin: 'users-without-wallets',
-            requireUserPasswordOnCreate: false,
-          },
-          mfa: {
-            noPromptOnMfaRequired: false,
-          },
-        }}
-      >
-        <WagmiProvider config={config}>
-          <QueryClientProvider client={client}>
-            <RainbowKitProvider
-              avatar={CustomAvatar}
-              theme={darkTheme({
-                accentColor: '#111613',
-                accentColorForeground: 'white',
-                borderRadius: 'small',
-                fontStack: 'system',
-                overlayBlur: 'small',
-              })}
-            >
-              <PrivyAuthProvider>
-                <ChakraProvider theme={theme}>
-                  <GlobalSearchProvider>
-                    <Component {...pageProps} />
-                    <Analytics />
-                  </GlobalSearchProvider>
-                </ChakraProvider>
-              </PrivyAuthProvider>
-            </RainbowKitProvider>
-          </QueryClientProvider>
-        </WagmiProvider>
-      </PrivyProvider>
-    </SessionProvider>
+    <>
+      <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+      </Head>
+      <SessionProvider session={session}>
+        <PrivyProvider
+          appId={
+            process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'cmf9b4j1301gdkz0cxud5ox6p'
+          }
+          config={{
+            loginMethods: ['google', 'twitter', 'wallet', 'email', 'sms'],
+            appearance: {
+              theme: 'dark',
+              accentColor: '#59F886',
+              logo: '/assets/logo.svg',
+              showWalletLoginFirst: false,
+              walletChainType: 'ethereum-only',
+            },
+            embeddedWallets: {
+              createOnLogin: 'users-without-wallets',
+              requireUserPasswordOnCreate: false,
+            },
+            mfa: {
+              noPromptOnMfaRequired: false,
+            },
+          }}
+        >
+          <WagmiProvider config={config}>
+            <QueryClientProvider client={client}>
+              <RainbowKitProvider
+                avatar={CustomAvatar}
+                theme={darkTheme({
+                  accentColor: '#111613',
+                  accentColorForeground: 'white',
+                  borderRadius: 'small',
+                  fontStack: 'system',
+                  overlayBlur: 'small',
+                })}
+              >
+                <PrivyAuthProvider>
+                  <ChakraProvider theme={theme}>
+                    <GlobalSearchProvider>
+                      <Component {...pageProps} />
+                      <Analytics />
+                    </GlobalSearchProvider>
+                  </ChakraProvider>
+                </PrivyAuthProvider>
+              </RainbowKitProvider>
+            </QueryClientProvider>
+          </WagmiProvider>
+        </PrivyProvider>
+      </SessionProvider>
+    </>
   );
 }
 
