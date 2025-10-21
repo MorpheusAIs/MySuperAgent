@@ -101,6 +101,3 @@ const MySuperAgentPromptForm = () => {
 
 // Usage
 <MySuperAgentPromptForm />
-```
-
-

@@ -123,6 +123,14 @@ export const Chat: FC<{
         return newJobs;
       });
 
+      // Dispatch event to trigger counter animation
+      console.log('🚀 Dispatching jobCreated event');
+      const event = new CustomEvent('jobCreated', {
+        detail: { jobId: tempJobId },
+      });
+      window.dispatchEvent(event);
+      console.log('🚀 jobCreated event dispatched');
+
       // Switch to this optimistic job immediately
       console.log(
         '[Chat] Setting current conversation to optimistic job:',

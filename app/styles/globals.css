@@ -90,3 +90,266 @@ button, a, input, textarea, select {
     opacity: 1;
   }
 }
+
+/* Flip counter animations */
+@keyframes animate-top {
+  0% {
+    background: #3e3e3e;
+    background: -moz-linear-gradient(top, #3e3e3e 0%, #2b2b2b 100%);
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#3e3e3e), color-stop(100%,#2b2b2b));
+    background: -webkit-linear-gradient(top, #3e3e3e 0%,#2b2b2b 100%);
+    background: -o-linear-gradient(top, #3e3e3e 0%,#2b2b2b 100%);
+    background: -ms-linear-gradient(top, #3e3e3e 0%,#2b2b2b 100%);
+    background: linear-gradient(to bottom, #3e3e3e 0%,#2b2b2b 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#3e3e3e', endColorstr='#2b2b2b',GradientType=0 );
+  }
+  
+  100% {
+    color: #474747;
+    transform: 
+      translateX(0px) 
+      translateY(0.35em) 
+      translateZ(5px) 
+      rotateX(-90deg)
+      rotateY(0deg)
+      rotateZ(0deg);
+  }
+}
+
+@keyframes animate-bottom {
+  0% {
+    color: #474747;
+    opacity: 1;
+  }
+  
+  100% {
+    transform: 
+      translateX(0) 
+      translateY(0) 
+      translateZ(0) 
+      rotateX(0deg) 
+      rotateY(0deg)
+      rotateZ(0deg);
+    opacity: 1;
+  }
+}
+
+@-webkit-keyframes animate-top {
+  0% {
+    background: #3e3e3e;
+    background: -moz-linear-gradient(top, #3e3e3e 0%, #2b2b2b 100%);
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#3e3e3e), color-stop(100%,#2b2b2b));
+    background: -webkit-linear-gradient(top, #3e3e3e 0%,#2b2b2b 100%);
+    background: -o-linear-gradient(top, #3e3e3e 0%,#2b2b2b 100%);
+    background: -ms-linear-gradient(top, #3e3e3e 0%,#2b2b2b 100%);
+    background: linear-gradient(to bottom, #3e3e3e 0%,#2b2b2b 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#3e3e3e', endColorstr='#2b2b2b',GradientType=0 );
+  }
+  
+  100% {
+    color: #474747;
+    -webkit-transform: 
+      translateX(0px) 
+      translateY(0.35em) 
+      translateZ(5px) 
+      rotateX(-90deg)
+      rotateY(0deg)
+      rotateZ(0deg);
+  }
+}
+
+@-webkit-keyframes animate-bottom {
+  0% {
+    color: #474747;
+    opacity: 1;
+  }
+  
+  100% {
+    -webkit-transform: 
+      translateX(0) 
+      translateY(0) 
+      translateZ(0) 
+      rotateX(0deg) 
+      rotateY(0deg)
+      rotateZ(0deg);
+    opacity: 1;
+  }
+}
+
+/* Number content styles for flip counter */
+[data-number="0"] span.primary:before {
+  content: "0";
+}
+
+[data-number="0"] span.secondary:after {
+  content: "0";
+}
+
+[data-number="0"] span.secondary:before {
+  content: attr(title);
+}
+
+[data-number="0"] span.primary:after {
+  content: attr(title);
+}
+
+[data-number="1"] span.primary:before {
+  content: "1";
+}
+
+[data-number="1"] span.secondary:after {
+  content: "1";
+}
+
+[data-number="1"] span.secondary:before {
+  content: attr(title);
+}
+
+[data-number="1"] span.primary:after {
+  content: attr(title);
+}
+
+[data-number="2"] span.primary:before {
+  content: "2";
+}
+
+[data-number="2"] span.secondary:after {
+  content: "2";
+}
+
+[data-number="2"] span.secondary:before {
+  content: attr(title);
+}
+
+[data-number="2"] span.primary:after {
+  content: attr(title);
+}
+
+[data-number="3"] span.primary:before {
+  content: "3";
+}
+
+[data-number="3"] span.secondary:after {
+  content: "3";
+}
+
+[data-number="3"] span.secondary:before {
+  content: attr(title);
+}
+
+[data-number="3"] span.primary:after {
+  content: attr(title);
+}
+
+[data-number="4"] span.primary:before {
+  content: "4";
+}
+
+[data-number="4"] span.secondary:after {
+  content: "4";
+}
+
+[data-number="4"] span.secondary:before {
+  content: attr(title);
+}
+
+[data-number="4"] span.primary:after {
+  content: attr(title);
+}
+
+[data-number="5"] span.primary:before {
+  content: "5";
+}
+
+[data-number="5"] span.secondary:after {
+  content: "5";
+}
+
+[data-number="5"] span.secondary:before {
+  content: attr(title);
+}
+
+[data-number="5"] span.primary:after {
+  content: attr(title);
+}
+
+[data-number="6"] span.primary:before {
+  content: "6";
+}
+
+[data-number="6"] span.secondary:after {
+  content: "6";
+}
+
+[data-number="6"] span.secondary:before {
+  content: attr(title);
+}
+
+[data-number="6"] span.primary:after {
+  content: attr(title);
+}
+
+[data-number="7"] span.primary:before {
+  content: "7";
+}
+
+[data-number="7"] span.secondary:after {
+  content: "7";
+}
+
+[data-number="7"] span.secondary:before {
+  content: attr(title);
+}
+
+[data-number="7"] span.primary:after {
+  content: attr(title);
+}
+
+[data-number="8"] span.primary:before {
+  content: "8";
+}
+
+[data-number="8"] span.secondary:after {
+  content: "8";
+}
+
+[data-number="8"] span.secondary:before {
+  content: attr(title);
+}
+
+[data-number="8"] span.primary:after {
+  content: attr(title);
+}
+
+[data-number="9"] span.primary:before {
+  content: "9";
+}
+
+[data-number="9"] span.secondary:after {
+  content: "9";
+}
+
+[data-number="9"] span.secondary:before {
+  content: attr(title);
+}
+
+[data-number="9"] span.primary:after {
+  content: attr(title);
+}
+
+/* Comma support */
+[data-number=","] span.primary:before {
+  content: ",";
+}
+
+[data-number=","] span.secondary:after {
+  content: ",";
+}
+
+[data-number=","] span.secondary:before {
+  content: attr(title);
+}
+
+[data-number=","] span.primary:after {
+  content: attr(title);
+}

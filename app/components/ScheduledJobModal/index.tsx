@@ -192,6 +192,14 @@ export const ScheduledJobModal: FC<ScheduledJobModalProps> = ({
         weekly_days: scheduleType === 'weekly' ? selectedDays.join(',') : null,
       });
 
+      // Dispatch event to trigger counter animation
+      console.log('🚀 Dispatching jobCreated event from ScheduledJobModal');
+      const event = new CustomEvent('jobCreated', {
+        detail: { jobId: job.id },
+      });
+      window.dispatchEvent(event);
+      console.log('🚀 jobCreated event dispatched from ScheduledJobModal');
+
       toast({
         title: 'Job scheduled successfully! 🎉',
         description: `"${jobName}" will ${getScheduleDescription()}`,
