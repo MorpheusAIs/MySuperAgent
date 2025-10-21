@@ -21,6 +21,13 @@ export interface ChatRequest {
     jobId: string;
     createdAt: Date;
   }>;
+  scheduledJobContext?: {
+    isScheduled: boolean;
+    isFirstRun: boolean;
+    runCount: number;
+    scheduleType: string;
+    parentJobId?: string;
+  };
 }
 
 export enum ResponseType {

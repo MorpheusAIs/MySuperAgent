@@ -20,6 +20,8 @@ interface GlobalUIContextType {
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
+  selectedJobId: string | null;
+  selectJob: (jobId: string) => void;
 }
 
 const GlobalUIContext = createContext<GlobalUIContextType | undefined>(
@@ -51,6 +53,7 @@ export const GlobalSearchProvider: React.FC<GlobalSearchProviderProps> = ({
   const [jobs, setJobs] = useState<Job[]>([]);
   const [scheduledJobs, setScheduledJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const { getAddress } = useWalletAddress();
   const router = useRouter();
 
@@ -128,24 +131,35 @@ export const GlobalSearchProvider: React.FC<GlobalSearchProviderProps> = ({
     setIsSidebarOpen(open);
   }, []);
 
+  const selectJob = useCallback((jobId: string) => {
+    console.log('[GlobalSearch] Setting selectedJobId to:', jobId);
+    setSelectedJobId(jobId);
+    // Reset after a brief moment to allow it to be selected again later
+    setTimeout(() => setSelectedJobId(null), 500);
+  }, []);
+
   const handleJobSelect = useCallback(
     (jobId: string) => {
+      console.log('[GlobalSearch] Job selected:', jobId);
+      console.log('[GlobalSearch] Current pathname:', router.pathname);
+
       trackEvent('job.clicked', {
         jobId,
       });
 
-      // Navigate to the appropriate page based on current route
       if (router.pathname === '/') {
-        // If on home page, navigate to jobs view with the selected job
-        router.push(`/?job=${jobId}`);
+        // If on home page, use direct state communication
+        console.log('[GlobalSearch] On home page - using direct state');
+        selectJob(jobId);
       } else {
         // If on other pages, navigate to home with the job
+        console.log('[GlobalSearch] On other page - navigating to home');
         router.push(`/?job=${jobId}`);
       }
 
       closeSearch();
     },
-    [router, closeSearch]
+    [router, closeSearch, selectJob]
   );
 
   // Global keyboard shortcuts
@@ -159,6 +173,8 @@ export const GlobalSearchProvider: React.FC<GlobalSearchProviderProps> = ({
     isSidebarOpen,
     toggleSidebar,
     setSidebarOpen,
+    selectedJobId,
+    selectJob,
   };
 
   return (

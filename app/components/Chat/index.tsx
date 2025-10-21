@@ -10,7 +10,7 @@ import UserPreferencesAPI from '@/services/api-clients/userPreferences';
 import { Job, UserPreferences } from '@/services/database/db';
 import { useWalletAddress } from '@/services/wallet/utils';
 import { Box, Text, useBreakpointValue, VStack } from '@chakra-ui/react';
-import { FC, useEffect, useState } from 'react';
+import { FC, useEffect, useRef, useState } from 'react';
 import styles from './index.module.css';
 
 export const Chat: FC<{
@@ -18,11 +18,13 @@ export const Chat: FC<{
   currentView: 'chat' | 'jobs';
   setCurrentView: (view: 'chat' | 'jobs') => void;
   initialPrompt?: string | null;
+  initialJobId?: string | null;
 }> = ({
   isSidebarOpen = false,
   currentView,
   setCurrentView,
   initialPrompt = null,
+  initialJobId = null,
 }) => {
   const { state, sendMessage, setCurrentConversation } = useChatContext();
   const { messages, currentConversationId, isLoading } = state;
@@ -36,6 +38,7 @@ export const Chat: FC<{
   const [optimisticJobs, setOptimisticJobs] = useState<Job[]>([]);
   const [localJobs, setLocalJobs] = useState<Job[]>([]);
   const { address, getAddress } = useWalletAddress();
+  const processedJobIdRef = useRef<string | null>(null);
 
   // Load user preferences only (jobs come from ChatProviderDB)
   useEffect(() => {
@@ -59,6 +62,40 @@ export const Chat: FC<{
 
     loadUserPreferences();
   }, [getAddress]);
+
+  // Handle initial job ID from URL (when clicking from search)
+  useEffect(() => {
+    if (initialJobId && processedJobIdRef.current !== initialJobId) {
+      console.log('[Chat] Received initialJobId:', initialJobId);
+      console.log('[Chat] Current conversation:', currentConversationId);
+      console.log('[Chat] Current view:', currentView);
+
+      // Mark this job as processed to prevent duplicate handling
+      processedJobIdRef.current = initialJobId;
+
+      const openJob = async () => {
+        try {
+          console.log('[Chat] Opening job from search:', initialJobId);
+          setLocalLoading(true);
+          await setCurrentConversation(initialJobId);
+          console.log('[Chat] Set current conversation to:', initialJobId);
+          setCurrentView('chat');
+          console.log('[Chat] Switched to chat view');
+          setTimeout(() => setLocalLoading(false), 100);
+        } catch (error) {
+          console.error('[Chat] Error opening job from search:', error);
+          setLocalLoading(false);
+        }
+      };
+      openJob();
+    }
+  }, [
+    initialJobId,
+    setCurrentConversation,
+    setCurrentView,
+    currentConversationId,
+    currentView,
+  ]);
 
   // Function to refresh jobs list
   const refreshJobsList = () => {
