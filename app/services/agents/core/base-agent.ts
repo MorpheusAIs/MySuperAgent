@@ -6,6 +6,10 @@ import {
 } from '@/services/agents/types';
 import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core';
+import {
+  getDynamicSelfAwarenessContext,
+  getScheduledJobContext,
+} from './self-awareness-context';
 
 export abstract class BaseAgent {
   protected agent: Agent;
@@ -190,15 +194,36 @@ export abstract class BaseAgent {
       console.log(`[${this.name}] ==========================================`);
     }
 
-    // Add system message for anti-repetition if similar prompts found
-    if (request.similarPrompts && request.similarPrompts.length > 0) {
-      console.log(`[${this.name}] Adding anti-repetition system message`);
-      messages.push({
-        role: 'system',
-        content:
-          'You are an AI assistant that MUST provide unique and original responses. When given similar previous interactions, you MUST avoid repetition and provide fresh, creative, and valuable content. Never repeat jokes, examples, or approaches from previous interactions.',
-      });
+    // Add dynamic system message based on job type
+    const isScheduled = request.scheduledJobContext?.isScheduled || false;
+    let selfAwarenessContext = getDynamicSelfAwarenessContext(isScheduled);
+
+    // Add additional scheduled job context if applicable
+    if (request.scheduledJobContext) {
+      const scheduledContext = getScheduledJobContext(
+        request.scheduledJobContext.isFirstRun,
+        request.scheduledJobContext.runCount,
+        request.scheduledJobContext.scheduleType
+      );
+      selfAwarenessContext += `\n\n${scheduledContext}`;
+
+      console.log(
+        `[${this.name}] Using SCHEDULED JOB context - First run: ${request.scheduledJobContext.isFirstRun}, Type: ${request.scheduledJobContext.scheduleType}`
+      );
+    } else {
+      console.log(`[${this.name}] Using REGULAR JOB context`);
     }
+
+    const systemMessageContent =
+      request.similarPrompts && request.similarPrompts.length > 0
+        ? `${selfAwarenessContext}\n\n---\n\nYou are an AI assistant that MUST provide unique and original responses. When given similar previous interactions, you MUST avoid repetition and provide fresh, creative, and valuable content. Never repeat jokes, examples, or approaches from previous interactions.`
+        : selfAwarenessContext;
+
+    console.log(`[${this.name}] Adding self-awareness system message`);
+    messages.push({
+      role: 'system',
+      content: systemMessageContent,
+    });
 
     if (request.chatHistory) {
       request.chatHistory.forEach((msg) => {
@@ -211,6 +236,41 @@ export abstract class BaseAgent {
 
     // Build the final user message with similarity context if available
     let finalContent = request.prompt.content;
+
+    // For scheduled jobs, prepend scheduling instructions to the USER PROMPT
+    if (request.scheduledJobContext?.isScheduled) {
+      const schedType = request.scheduledJobContext.scheduleType;
+      const runNum = request.scheduledJobContext.runCount;
+
+      if (request.scheduledJobContext.isFirstRun) {
+        // First run - suggest batch generation for repeated content
+        finalContent = `📅 SCHEDULED JOB - FIRST RUN
+
+This is a ${schedType} scheduled job that will run repeatedly.
+
+For repeated content (jokes, quotes, facts, tips), consider generating multiple items to ensure variety:
+- Generate 30-100 different items
+- Format as JSON: {"current_item": "...", "future_items": ["...", ...], "item_type": "joke"}
+- This prevents repetition across scheduled runs
+
+USER'S REQUEST:
+${finalContent}`;
+      } else {
+        // Subsequent run - emphasize NOT repeating
+        finalContent = `📅 SCHEDULED JOB - RUN #${runNum + 1}
+
+This is a ${schedType} scheduled job. You have responded to this ${runNum} time(s) before.
+
+Please provide NEW, DIFFERENT content. Do not repeat previous responses.
+
+USER'S REQUEST:
+${finalContent}`;
+      }
+
+      console.log(
+        `[${this.name}] Added scheduling instructions to user prompt - First run: ${request.scheduledJobContext.isFirstRun}`
+      );
+    }
 
     if (request.similarityContext) {
       console.log(`[${this.name}] ===== SIMILARITY CONTEXT INJECTION =====`);
