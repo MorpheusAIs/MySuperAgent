@@ -38,7 +38,7 @@ export class ChatSimilarityService {
       maxSimilarPrompts: 3, // Increased to get more context
       minPromptLength: 8, // Lowered to catch shorter similar prompts
       maxHistoryDays: 14, // Increased to 14 days for more context
-      excludeCurrentJob: true,
+      excludeCurrentJob: false, // Changed to false - we want to find similar prompts in the same conversation too
       contextInjectionEnabled: true,
       ...config,
     };

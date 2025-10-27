@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   VStack,
@@ -43,7 +43,7 @@ export const JobSuggestions: React.FC<JobSuggestionsProps> = ({
   const { getAddress } = useWalletAddress();
   const toast = useToast();
 
-  const fetchSuggestions = async () => {
+  const fetchSuggestions = useCallback(async () => {
     const walletAddress = getAddress();
     if (!walletAddress) return;
 
@@ -63,7 +63,7 @@ export const JobSuggestions: React.FC<JobSuggestionsProps> = ({
       if (response.ok) {
         const data = await response.json();
         setSuggestions(data.suggestions || []);
-        
+
         trackEvent('job.suggestions_loaded');
       }
     } catch (error) {
@@ -71,7 +71,7 @@ export const JobSuggestions: React.FC<JobSuggestionsProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAddress, userContext]);
 
   const createJobFromSuggestion = async (suggestion: JobSuggestion) => {
     const walletAddress = getAddress();
@@ -148,7 +148,7 @@ export const JobSuggestions: React.FC<JobSuggestionsProps> = ({
     if (isVisible && suggestions.length === 0) {
       fetchSuggestions();
     }
-  }, [isVisible]);
+  }, [isVisible, fetchSuggestions, suggestions.length]);
 
   if (!isVisible || suggestions.length === 0) {
     return null;

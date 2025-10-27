@@ -6,6 +6,8 @@ import {
   createSafeErrorResponse,
   validateRequired,
 } from '@/services/utils/errors';
+import { defaultChatSimilarityService } from '@/services/similarity/chat-similarity-service';
+import { MessageDB } from '@/services/database/db';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { v4 as uuidv4 } from 'uuid';
 import { withRateLimit, rateLimitErrorResponse } from '@/middleware/rate-limiting';
@@ -114,6 +116,33 @@ async function executeOrchestration(req: NextApiRequest) {
     throw new Error('Failed to initialize agents: ' + (error as Error).message);
   }
 
+  // Process similarity detection if wallet address provided
+  let enhancedRequest = chatRequest;
+  if (walletAddress) {
+    try {
+      console.log(`[ORCHESTRATION] Processing similarity detection for wallet: ${walletAddress}`);
+      enhancedRequest = await defaultChatSimilarityService.processChatRequest(
+        chatRequest,
+        walletAddress
+      );
+      console.log(`[ORCHESTRATION] Similarity detection complete - found ${enhancedRequest.similarPrompts?.length || 0} similar prompts`);
+    } catch (similarityError) {
+      console.error('[ORCHESTRATION] Similarity detection failed:', similarityError);
+      // Continue without similarity context if it fails
+    }
+  } else {
+    // For non-logged-in users, add temporal context to prevent duplicate responses
+    const currentDate = new Date();
+    const timestamp = `${currentDate.toLocaleDateString()} ${currentDate.toLocaleTimeString()}`;
+    enhancedRequest = {
+      ...chatRequest,
+      prompt: {
+        ...chatRequest.prompt,
+        content: `[Request at ${timestamp}]\n\n${chatRequest.prompt.content}`
+      }
+    };
+  }
+
   // Create a new orchestrator instance for this request
   const requestOrchestrator = createOrchestrator(chatRequest.requestId);
 
@@ -121,13 +150,58 @@ async function executeOrchestration(req: NextApiRequest) {
   try {
     const [currentAgent, agentResponse] = await withTimeout(
       requestOrchestrator.runOrchestrationWithRetry(
-        chatRequest,
+        enhancedRequest,
         walletAddress,
         3 // max retries
       ),
       AGENT_EXECUTION_TIMEOUT_MS,
       'Agent execution'
     );
+
+    // Save messages to database if wallet address is provided and conversationId exists
+    // This enables similarity detection for future requests
+    if (walletAddress && chatRequest.conversationId) {
+      try {
+        console.log(`[ORCHESTRATION] Saving messages to database for conversation: ${chatRequest.conversationId}`);
+
+        // Get current message count to determine order indices
+        const existingMessages = await MessageDB.getMessagesByJob(chatRequest.conversationId);
+        let orderIndex = existingMessages.length;
+
+        // Save user message
+        await MessageDB.createMessage({
+          job_id: chatRequest.conversationId,
+          role: 'user',
+          content: chatRequest.prompt.content,
+          order_index: orderIndex++,
+          metadata: {},
+          requires_action: false,
+          is_streaming: false
+        });
+
+        // Save assistant response
+        await MessageDB.createMessage({
+          job_id: chatRequest.conversationId,
+          role: 'assistant',
+          content: typeof agentResponse.content === 'string' ? agentResponse.content : JSON.stringify(agentResponse.content),
+          agent_name: currentAgent,
+          metadata: agentResponse.metadata || {},
+          order_index: orderIndex,
+          requires_action: false,
+          action_type: agentResponse.actionType,
+          is_streaming: false
+        });
+
+        console.log(`[ORCHESTRATION] Messages saved successfully to database`);
+
+        // Clear similarity cache so next request will fetch fresh messages including these new ones
+        defaultChatSimilarityService.clearCache();
+        console.log(`[ORCHESTRATION] Cleared similarity cache for fresh detection on next request`);
+      } catch (saveError) {
+        console.error(`[ORCHESTRATION] Failed to save messages to database:`, saveError);
+        // Continue even if save fails - don't block the response
+      }
+    }
 
     return {
       response: agentResponse,

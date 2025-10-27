@@ -82,6 +82,43 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
   const userAddress = getAddress();
   const hasSession = isAuthenticated || !!userAddress;
 
+  const loadEnabledAgents = useCallback(async () => {
+    const userAddress = getAddress();
+    if (!userAddress) return;
+
+    try {
+      const response = await fetch(
+        `/api/agents/status?walletAddress=${userAddress}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setEnabledAgents(data.agents || []);
+      }
+    } catch (error) {
+      console.error('Failed to load enabled agents:', error);
+    }
+  }, [getAddress]);
+
+  const loadUserConfig = useCallback(async () => {
+    const userAddress = getAddress();
+    if (!userAddress) return;
+
+    try {
+      const response = await fetch('/api/agents/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: userAddress }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserConfig(data.config || {});
+      }
+    } catch (error) {
+      console.error('Failed to load user agent config:', error);
+    }
+  }, [getAddress]);
+
   const loadUserAgentData = useCallback(async () => {
     const walletAddr = getAddress();
     if (!walletAddr) return;
@@ -98,9 +135,9 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
         isClosable: true,
       });
     }
-  }, [getAddress, toast]);
+  }, [getAddress, toast, loadEnabledAgents, loadUserConfig]);
 
-  const loadAvailableAgents = async () => {
+  const loadAvailableAgents = useCallback(async () => {
     try {
       const response = await fetch('/api/agents/available');
       if (response.ok) {
@@ -133,51 +170,14 @@ export const AgentsMain: React.FC<{ isSidebarOpen?: boolean }> = ({
     } catch (error) {
       console.error('Failed to load available agents:', error);
     }
-  };
-
-  const loadEnabledAgents = async () => {
-    const userAddress = getAddress();
-    if (!userAddress) return;
-
-    try {
-      const response = await fetch(
-        `/api/agents/status?walletAddress=${userAddress}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setEnabledAgents(data.agents || []);
-      }
-    } catch (error) {
-      console.error('Failed to load enabled agents:', error);
-    }
-  };
-
-  const loadUserConfig = async () => {
-    const userAddress = getAddress();
-    if (!userAddress) return;
-
-    try {
-      const response = await fetch('/api/agents/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: userAddress }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserConfig(data.config || {});
-      }
-    } catch (error) {
-      console.error('Failed to load user agent config:', error);
-    }
-  };
+  }, [defaultsInitialized]);
 
   // Load available agents immediately (no auth needed)
   useEffect(() => {
     loadAvailableAgents().finally(() => {
       setGlobalLoading(false);
     });
-  }, []);
+  }, [loadAvailableAgents]);
 
   // Load user-specific data when authenticated
   useEffect(() => {
