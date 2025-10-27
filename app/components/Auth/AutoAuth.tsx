@@ -11,7 +11,7 @@ export const AutoAuth = () => {
     if (isConnected && address && !isAuthenticated) {
       authenticate();
     }
-  }, [isConnected, address, isAuthenticated]);
+  }, [isConnected, address, isAuthenticated, authenticate]);
 
   // No UI is rendered
   return null;

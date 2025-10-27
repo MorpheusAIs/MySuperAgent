@@ -28,7 +28,7 @@ export const ErrorBackendModal: FC<ErrorBackendModalProps> = ({ show }) => {
         } else if (!show && isOpen) {
             onClose();
         }
-    }, [show, isOpen]);
+    }, [show, isOpen, onClose, onOpen]);
 
 
 

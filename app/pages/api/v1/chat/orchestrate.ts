@@ -165,7 +165,7 @@ async function executeOrchestration(req: NextApiRequest) {
         console.log(`[ORCHESTRATION] Saving messages to database for conversation: ${chatRequest.conversationId}`);
 
         // Get current message count to determine order indices
-        const existingMessages = await MessageDB.getMessagesByJobId(chatRequest.conversationId);
+        const existingMessages = await MessageDB.getMessagesByJob(chatRequest.conversationId);
         let orderIndex = existingMessages.length;
 
         // Save user message
@@ -187,8 +187,8 @@ async function executeOrchestration(req: NextApiRequest) {
           agent_name: currentAgent,
           metadata: agentResponse.metadata || {},
           order_index: orderIndex,
-          requires_action: agentResponse.requires_action || false,
-          action_type: agentResponse.action_type,
+          requires_action: false,
+          action_type: agentResponse.actionType,
           is_streaming: false
         });
 

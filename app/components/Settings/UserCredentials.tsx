@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   VStack,
   HStack,
@@ -117,14 +117,7 @@ export const UserCredentials: React.FC<UserCredentialsProps> = ({ onSave }) => {
   const userAddress = userWallet || walletAddress || address;
   const hasSession = isAuthenticated || !!userAddress;
 
-  // Load stored credentials on mount
-  useEffect(() => {
-    if (hasSession && userAddress) {
-      loadStoredCredentials();
-    }
-  }, [hasSession, userAddress]);
-
-  const loadStoredCredentials = async () => {
+  const loadStoredCredentials = useCallback(async () => {
     if (!userAddress) return;
 
     try {
@@ -141,7 +134,14 @@ export const UserCredentials: React.FC<UserCredentialsProps> = ({ onSave }) => {
     } catch (error) {
       console.error('Failed to load stored credentials:', error);
     }
-  };
+  }, [userAddress]);
+
+  // Load stored credentials on mount
+  useEffect(() => {
+    if (hasSession && userAddress) {
+      loadStoredCredentials();
+    }
+  }, [hasSession, userAddress, loadStoredCredentials]);
 
   const handleCredentialChange = (serviceName: string, fieldName: string, value: string) => {
     setCredentials(prev => ({
