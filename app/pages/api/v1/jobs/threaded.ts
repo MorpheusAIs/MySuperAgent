@@ -52,17 +52,16 @@ export default async function handler(
     const threadMap = new Map<string, JobThread>();
 
     for (const job of allJobs) {
-      // Determine thread key - use parent_job_id if available, otherwise use name
-      const threadKey = (job as any).parent_job_id || job.name;
+      const parentId = (job as any).parent_job_id;
+      const threadKey = parentId || (job.is_scheduled ? job.id : job.name);
 
       if (!threadMap.has(threadKey)) {
-        // Create new thread
         threadMap.set(threadKey, {
           id: threadKey,
           name: job.name,
           description: job.description,
           initial_message: job.initial_message,
-          parent_job_id: (job as any).parent_job_id,
+          parent_job_id: parentId,
           is_scheduled: job.is_scheduled,
           schedule_type: job.schedule_type,
           jobs: [],
@@ -75,7 +74,11 @@ export default async function handler(
 
       const thread = threadMap.get(threadKey)!;
       thread.jobs.push(job);
-      thread.total_runs++;
+
+      // Only count actual runs, not the scheduled template itself
+      if (parentId) {
+        thread.total_runs++;
+      }
 
       // Update latest job if this one is newer
       if (new Date(job.created_at) > new Date(thread.latest_created_at)) {
