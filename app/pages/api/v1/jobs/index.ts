@@ -76,7 +76,7 @@ export default async function handler(
           run_count: 0,
           // Threading linkage if client provides it
           parent_job_id: parent_job_id || null,
-        });
+        } as any);
 
         // Trigger immediate job processing for non-scheduled jobs
         if (!is_scheduled) {

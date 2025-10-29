@@ -221,7 +221,7 @@ export class JobSchedulerService {
         timezone: job.timezone || 'UTC',
         // Link run back to its scheduled template
         parent_job_id: job.id,
-      });
+      } as any);
 
       // Update the scheduled job's run count and last run time
       const now = new Date();
