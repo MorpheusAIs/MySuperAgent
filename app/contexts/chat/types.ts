@@ -1,4 +1,4 @@
-import { ChatMessage } from "@/services/types";
+import { ChatMessage } from '@/services/types';
 
 export interface TelemetryData {
   processing_time?: {
@@ -36,34 +36,34 @@ export interface ChatState {
 
 export type ChatAction =
   | {
-      type: "SET_MESSAGES";
+      type: 'SET_MESSAGES';
       payload: { conversationId: string; messages: ChatMessage[] };
     }
-  | { type: "SET_CURRENT_CONVERSATION"; payload: string }
-  | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_ERROR"; payload: string | null }
+  | { type: 'SET_CURRENT_CONVERSATION'; payload: string }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null }
   | {
-      type: "ADD_OPTIMISTIC_MESSAGE";
+      type: 'ADD_OPTIMISTIC_MESSAGE';
       payload: { conversationId: string; message: ChatMessage };
     }
   | {
-      type: "SET_CONVERSATION_TITLE";
+      type: 'SET_CONVERSATION_TITLE';
       payload: { conversationId: string; title: string };
     }
   | {
-      type: "SET_STREAMING_STATE";
+      type: 'SET_STREAMING_STATE';
       payload: StreamingState;
     }
   | {
-      type: "UPDATE_STREAMING_PROGRESS";
+      type: 'UPDATE_STREAMING_PROGRESS';
       payload: Partial<StreamingState>;
     }
   | {
-      type: "SET_STREAMING_CONTENT";
+      type: 'SET_STREAMING_CONTENT';
       payload: { content: string; isStreaming: boolean };
     }
   | {
-      type: "SET_CURRENT_VIEW";
+      type: 'SET_CURRENT_VIEW';
       payload: 'jobs' | 'chat';
     };
 
@@ -74,7 +74,8 @@ export interface ChatContextType {
     message: string,
     file: File | null,
     useResearch?: boolean,
-    conversationId?: string
+    conversationId?: string,
+    selectedAgents?: string[]
   ) => Promise<void>;
   refreshMessages: () => Promise<void>;
   refreshAllTitles: () => Promise<void>;

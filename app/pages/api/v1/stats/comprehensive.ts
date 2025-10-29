@@ -23,7 +23,7 @@ export default async function handler(
       });
     }
 
-    // Get total jobs and calculate the average rate
+    // Use completed jobs for headline metric
     const totalJobs = await DB.JobDB.getTotalCompletedJobsCount();
 
     // Calculate average job completion rate (jobs per minute)

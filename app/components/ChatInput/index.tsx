@@ -29,6 +29,8 @@ type ChatInputProps = {
   placeholder?: string;
   onJobCreated?: () => void;
   initialMessage?: string | null;
+  selectedAgent?: string | null;
+  onClearSelectedAgent?: () => void;
 };
 
 export const ChatInput: FC<ChatInputProps> = ({
@@ -40,6 +42,8 @@ export const ChatInput: FC<ChatInputProps> = ({
   placeholder = 'Ask anything',
   onJobCreated,
   initialMessage = null,
+  selectedAgent = null,
+  onClearSelectedAgent,
 }) => {
   const [message, setMessage] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
@@ -313,11 +317,33 @@ export const ChatInput: FC<ChatInputProps> = ({
           className={`${styles.inputWrapper} ${
             isDragOver ? styles.dragOver : ''
           }`}
+          style={selectedAgent ? { paddingTop: '26px' } : undefined}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         >
+          {selectedAgent && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '6px',
+                left: '16px',
+                background: '#59F886',
+                color: '#0f1411',
+                fontWeight: 700,
+                fontSize: '12px',
+                padding: '4px 10px',
+                borderRadius: '9999px',
+                border: '1px solid #0f1411',
+                cursor: 'pointer',
+              }}
+              onClick={onClearSelectedAgent}
+              aria-label="Clear selected agent"
+            >
+              {selectedAgent}
+            </div>
+          )}
           {/* Drag overlay */}
           {isDragOver && (
             <div className={styles.dragOverlay}>
