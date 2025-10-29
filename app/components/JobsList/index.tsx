@@ -71,6 +71,12 @@ const isCurrentJob = (job: Job) => {
     return false;
   }
 
+  // Jobs that are part of a thread (have parent_job_id) should not appear as separate current jobs
+  // They should only appear in the threaded jobs view
+  if ((job as any).parent_job_id) {
+    return false;
+  }
+
   const status = getJobStatus(job);
 
   // Current jobs are those in progress or completed/failed within the last 24 hours
@@ -90,6 +96,12 @@ const isCurrentJob = (job: Job) => {
 const isPreviousJob = (job: Job) => {
   // Scheduled jobs should never appear in previous jobs
   if (job.is_scheduled) {
+    return false;
+  }
+
+  // Jobs that are part of a thread (have parent_job_id) should not appear as separate previous jobs
+  // They should only appear in the threaded jobs view
+  if ((job as any).parent_job_id) {
     return false;
   }
 
