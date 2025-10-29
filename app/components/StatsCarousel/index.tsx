@@ -64,17 +64,27 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
         const response = await fetch('/api/v1/stats/comprehensive');
         if (response.ok) {
           const data = await response.json();
-          const { totalJobs, jobsPerMinute: rate } = data;
+          const totalJobsNum = Number(data?.totalJobs);
+          const rateNum = Number(data?.jobsPerMinute);
 
-          console.log('Stats fetched:', { totalJobs, jobsPerMinute: rate });
+          const safeTotalJobs = Number.isFinite(totalJobsNum)
+            ? Math.max(0, Math.floor(totalJobsNum))
+            : 0;
+          const safeRate =
+            Number.isFinite(rateNum) && rateNum > 0 ? rateNum : 0;
+
+          console.log('Stats fetched:', {
+            totalJobs: safeTotalJobs,
+            jobsPerMinute: safeRate,
+          });
 
           // Set the target count
-          setTargetCount(totalJobs);
-          setJobsPerMinute(rate);
+          setTargetCount(safeTotalJobs);
+          setJobsPerMinute(safeRate);
 
           // Initialize display count on first load
-          if (displayCount === 0) {
-            setDisplayCount(totalJobs);
+          if (!Number.isFinite(displayCount) || displayCount === 0) {
+            setDisplayCount(safeTotalJobs);
           }
         }
       } catch (error) {
@@ -169,7 +179,8 @@ export const StatsCarousel: FC<StatsCarouselProps> = ({
 
   // Function to render simple counter
   const renderCounter = (num: number) => {
-    return <SimpleCounter count={Math.floor(num)} />;
+    const safe = Number.isFinite(num) ? Math.max(0, Math.floor(num)) : 0;
+    return <SimpleCounter count={safe} />;
   };
 
   return (

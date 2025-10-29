@@ -1,3 +1,4 @@
+import AgentQuickBar from '@/components/Agents/AgentQuickBar';
 import { Chat } from '@/components/Chat';
 import { HeaderBar } from '@/components/HeaderBar';
 import { LeftSidebar } from '@/components/LeftSidebar';
@@ -24,6 +25,7 @@ const Home = () => {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [initialPrompt, setInitialPrompt] = useState<string | null>(null);
   const [initialJobId, setInitialJobId] = useState<string | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const isMobile = useBreakpointValue({ base: true, md: false });
   const headerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -113,9 +115,16 @@ const Home = () => {
             setCurrentView={setCurrentView}
             initialPrompt={initialPrompt}
             initialJobId={initialJobId}
+            selectedAgent={selectedAgent}
+            onSelectAgent={setSelectedAgent}
           />
         </Box>
       </Flex>
+      {/* Right-side Agent Quick Bar visible only on landing page */}
+      <AgentQuickBar
+        selectedAgent={selectedAgent}
+        onSelect={(name) => setSelectedAgent(name)}
+      />
     </Box>
   );
 };

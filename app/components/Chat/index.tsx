@@ -19,12 +19,16 @@ export const Chat: FC<{
   setCurrentView: (view: 'chat' | 'jobs') => void;
   initialPrompt?: string | null;
   initialJobId?: string | null;
+  selectedAgent?: string | null;
+  onSelectAgent?: (name: string | null) => void;
 }> = ({
   isSidebarOpen = false,
   currentView,
   setCurrentView,
   initialPrompt = null,
   initialJobId = null,
+  selectedAgent = null,
+  onSelectAgent,
 }) => {
   const { state, sendMessage, setCurrentConversation } = useChatContext();
   const { messages, currentConversationId, isLoading } = state;
@@ -251,7 +255,13 @@ export const Chat: FC<{
 
         // Send the message in the background (non-blocking)
         console.log('[Chat] Sending message for job:', newJob.id);
-        sendMessage(message, files[0] || null, useResearch, newJob.id)
+        sendMessage(
+          message,
+          files[0] || null,
+          useResearch,
+          newJob.id,
+          selectedAgent ? [selectedAgent] : undefined
+        )
           .then(() => {
             console.log('Message sent successfully for job:', newJob.id);
             // Refresh jobs list after message is sent to update status
@@ -279,7 +289,13 @@ export const Chat: FC<{
       // For regular chat (not jobs), use the existing flow
       try {
         setLocalLoading(true);
-        await sendMessage(message, files[0] || null, useResearch);
+        await sendMessage(
+          message,
+          files[0] || null,
+          useResearch,
+          undefined,
+          selectedAgent ? [selectedAgent] : undefined
+        );
         setTimeout(() => setLocalLoading(false), 200);
       } catch (error) {
         console.error('Error sending message:', error);
@@ -624,6 +640,8 @@ export const Chat: FC<{
                 placeholder="Describe a job"
                 onJobCreated={refreshJobsList}
                 initialMessage={initialPrompt}
+                selectedAgent={selectedAgent}
+                onClearSelectedAgent={() => onSelectAgent?.(null)}
               />
             </Box>
 
@@ -693,6 +711,8 @@ export const Chat: FC<{
           showPrefilledOptions={showPrefilledOptions}
           onJobCreated={refreshJobsList}
           initialMessage={initialPrompt}
+          selectedAgent={selectedAgent}
+          onClearSelectedAgent={() => onSelectAgent?.(null)}
         />
       </Box>
     </Box>
