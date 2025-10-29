@@ -10,7 +10,7 @@ import UserPreferencesAPI from '@/services/api-clients/userPreferences';
 import { Job, UserPreferences } from '@/services/database/db';
 import { useWalletAddress } from '@/services/wallet/utils';
 import { Box, Text, useBreakpointValue, VStack } from '@chakra-ui/react';
-import { FC, useEffect, useState } from 'react';
+import { FC, useEffect, useRef, useState } from 'react';
 import styles from './index.module.css';
 
 export const Chat: FC<{
@@ -18,11 +18,13 @@ export const Chat: FC<{
   currentView: 'chat' | 'jobs';
   setCurrentView: (view: 'chat' | 'jobs') => void;
   initialPrompt?: string | null;
+  initialJobId?: string | null;
 }> = ({
   isSidebarOpen = false,
   currentView,
   setCurrentView,
   initialPrompt = null,
+  initialJobId = null,
 }) => {
   const { state, sendMessage, setCurrentConversation } = useChatContext();
   const { messages, currentConversationId, isLoading } = state;
@@ -36,6 +38,7 @@ export const Chat: FC<{
   const [optimisticJobs, setOptimisticJobs] = useState<Job[]>([]);
   const [localJobs, setLocalJobs] = useState<Job[]>([]);
   const { address, getAddress } = useWalletAddress();
+  const processedJobIdRef = useRef<string | null>(null);
 
   // Load user preferences only (jobs come from ChatProviderDB)
   useEffect(() => {
@@ -59,6 +62,88 @@ export const Chat: FC<{
 
     loadUserPreferences();
   }, [getAddress]);
+
+  // Handle initial job ID from URL (when clicking from search)
+  useEffect(() => {
+    if (initialJobId && processedJobIdRef.current !== initialJobId) {
+      console.log('[Chat] Received initialJobId:', initialJobId);
+      console.log('[Chat] Current conversation:', currentConversationId);
+      console.log('[Chat] Current view:', currentView);
+
+      // Mark this job as processed to prevent duplicate handling
+      processedJobIdRef.current = initialJobId;
+
+      const openJob = async () => {
+        try {
+          console.log('[Chat] Opening job from search:', initialJobId);
+          setLocalLoading(true);
+
+          // Check if this is a threaded job and get the latest job in the thread
+          const walletAddress = getAddress();
+          if (walletAddress) {
+            try {
+              const jobs = await JobsAPI.getJobs(walletAddress);
+              const clickedJob = jobs.find((job) => job.id === initialJobId);
+
+              if (clickedJob) {
+                // Check if this job has children (is a parent job)
+                const childJobs = jobs.filter(
+                  (job) => (job as any).parent_job_id === initialJobId
+                );
+
+                if (childJobs.length > 0) {
+                  // This is a parent job with children, find the latest child
+                  const latestChild = childJobs.sort(
+                    (a, b) =>
+                      new Date(b.created_at).getTime() -
+                      new Date(a.created_at).getTime()
+                  )[0];
+
+                  console.log(
+                    '[Chat] Found threaded job, using latest child:',
+                    latestChild.id
+                  );
+                  await setCurrentConversation(latestChild.id);
+                } else {
+                  // This is a regular job or the latest in a thread
+                  await setCurrentConversation(initialJobId);
+                }
+              } else {
+                // Job not found in current jobs, try to use the ID directly
+                await setCurrentConversation(initialJobId);
+              }
+            } catch (error) {
+              console.error(
+                '[Chat] Error fetching jobs for threading check:',
+                error
+              );
+              // Fallback to using the original job ID
+              await setCurrentConversation(initialJobId);
+            }
+          } else {
+            // No wallet connected, use the job ID directly
+            await setCurrentConversation(initialJobId);
+          }
+
+          console.log('[Chat] Set current conversation to:', initialJobId);
+          setCurrentView('chat');
+          console.log('[Chat] Switched to chat view');
+          setTimeout(() => setLocalLoading(false), 100);
+        } catch (error) {
+          console.error('[Chat] Error opening job from search:', error);
+          setLocalLoading(false);
+        }
+      };
+      openJob();
+    }
+  }, [
+    initialJobId,
+    setCurrentConversation,
+    setCurrentView,
+    currentConversationId,
+    currentView,
+    getAddress,
+  ]);
 
   // Function to refresh jobs list
   const refreshJobsList = () => {
@@ -122,6 +207,14 @@ export const Chat: FC<{
         console.log('[Chat] Updated optimistic jobs:', newJobs.length);
         return newJobs;
       });
+
+      // Dispatch event to trigger counter animation
+      console.log('🚀 Dispatching jobCreated event');
+      const event = new CustomEvent('jobCreated', {
+        detail: { jobId: tempJobId },
+      });
+      window.dispatchEvent(event);
+      console.log('🚀 jobCreated event dispatched');
 
       // Switch to this optimistic job immediately
       console.log(

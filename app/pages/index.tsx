@@ -23,6 +23,7 @@ const Home = () => {
   const [currentView, setCurrentView] = useState<'chat' | 'jobs'>('jobs');
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [initialPrompt, setInitialPrompt] = useState<string | null>(null);
+  const [initialJobId, setInitialJobId] = useState<string | null>(null);
   const isMobile = useBreakpointValue({ base: true, md: false });
   const headerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -33,9 +34,13 @@ const Home = () => {
 
   useEffect(() => {
     if (router.isReady) {
-      const { prompt } = router.query;
+      const { prompt, job } = router.query;
       if (prompt && typeof prompt === 'string') {
         setInitialPrompt(decodeURIComponent(prompt));
+        router.replace('/', undefined, { shallow: true });
+      }
+      if (job && typeof job === 'string') {
+        setInitialJobId(job);
         router.replace('/', undefined, { shallow: true });
       }
     }
@@ -107,6 +112,7 @@ const Home = () => {
             currentView={currentView}
             setCurrentView={setCurrentView}
             initialPrompt={initialPrompt}
+            initialJobId={initialJobId}
           />
         </Box>
       </Flex>

@@ -1,13 +1,19 @@
+import {
+  rateLimitErrorResponse,
+  withRateLimit,
+} from '@/middleware/rate-limiting';
 import { NextApiRequest, NextApiResponse } from 'next';
-import { JobDB, MessageDB } from '@/services/database/db';
-import { withRateLimit, rateLimitErrorResponse } from '@/middleware/rate-limiting';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const walletAddress = req.headers['x-wallet-address'] as string;
 
   if (!walletAddress) {
-    return res.status(400).json({ error: 'Wallet address is required in x-wallet-address header' });
+    return res
+      .status(400)
+      .json({ error: 'Wallet address is required in x-wallet-address header' });
   }
 
   try {
@@ -17,8 +23,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       DB = dbModule;
     } catch (importError) {
       console.error('Database module not available:', importError);
-      return res.status(503).json({ 
-        error: 'Database service unavailable. Please install dependencies and initialize the database.' 
+      return res.status(503).json({
+        error:
+          'Database service unavailable. Please install dependencies and initialize the database.',
       });
     }
 
@@ -29,23 +36,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       case 'POST':
         // Check rate limits for job creation
-        const { allowed: jobAllowed, result: jobResult } = await withRateLimit(req, res, 'jobs');
+        const { allowed: jobAllowed, result: jobResult } = await withRateLimit(
+          req,
+          res,
+          'jobs'
+        );
         if (!jobAllowed) {
-          console.log(`[JOBS API] Job creation rate limit exceeded for ${jobResult.userType} user`);
+          console.log(
+            `[JOBS API] Job creation rate limit exceeded for ${jobResult.userType} user`
+          );
           return rateLimitErrorResponse(res, jobResult);
         }
 
-        const { 
-          name, 
-          description, 
-          initial_message, 
+        const {
+          name,
+          description,
+          initial_message,
           is_scheduled,
-          has_uploaded_file 
+          has_uploaded_file,
+          parent_job_id,
         } = req.body;
 
         if (!initial_message) {
-          return res.status(400).json({ 
-            error: 'initial_message is required' 
+          return res.status(400).json({
+            error: 'initial_message is required',
           });
         }
 
@@ -59,17 +73,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           has_uploaded_file: has_uploaded_file || false,
           timezone: 'UTC',
           is_active: true,
-          run_count: 0
-        });
+          run_count: 0,
+          // Threading linkage if client provides it
+          parent_job_id: parent_job_id || null,
+        } as any);
 
         // Trigger immediate job processing for non-scheduled jobs
         if (!is_scheduled) {
           try {
-            const { jobProcessor } = await import('@/services/jobs/job-processor-service');
+            const { jobProcessor } = await import(
+              '@/services/jobs/job-processor-service'
+            );
             // Trigger processing asynchronously (don't wait for completion)
             setImmediate(() => {
-              jobProcessor.processPendingJobs().catch(error => {
-                console.error('Failed to trigger immediate job processing:', error);
+              jobProcessor.processPendingJobs().catch((error) => {
+                console.error(
+                  'Failed to trigger immediate job processing:',
+                  error
+                );
               });
             });
           } catch (processingError) {
@@ -81,7 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       case 'PUT':
         const { id, ...updates } = req.body;
-        
+
         if (!id) {
           return res.status(400).json({ error: 'Job ID is required' });
         }
@@ -97,7 +118,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       case 'DELETE':
         const { id: deleteId } = req.body;
-        
+
         if (!deleteId) {
           return res.status(400).json({ error: 'Job ID is required' });
         }
@@ -117,9 +138,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } catch (error) {
     console.error('Jobs API error:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error', 
-      message: error instanceof Error ? error.message : 'Unknown error' 
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 }
