@@ -70,7 +70,8 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({
     if (isAuthenticated && userAddress) {
       loadMCPData();
     }
-  }, [isAuthenticated, getAddress, loadMCPData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   const loadAvailableServers = useCallback(async () => {
     try {
