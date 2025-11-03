@@ -24,7 +24,7 @@ export class JobSchedulerService {
   private isRunning = false;
   private schedulerInterval: NodeJS.Timeout | null = null;
   private lastRun: Date | null = null;
-  
+
   // Configuration
   private readonly SCHEDULER_INTERVAL_MS = 2 * 60 * 1000; // Check every 2 minutes for faster scheduling
   private readonly MIN_INTERVAL_BETWEEN_RUNS_MS = 30 * 1000; // At least 30 seconds between runs
@@ -51,10 +51,10 @@ export class JobSchedulerService {
     }
 
     console.log('[JOB SCHEDULER] Starting automatic job scheduler');
-    
+
     // Run initial check after a short delay
     setTimeout(() => this.processScheduledJobs(), 5000); // 5 seconds
-    
+
     // Set up recurring scheduler
     this.schedulerInterval = setInterval(() => {
       this.processScheduledJobs();
@@ -91,7 +91,7 @@ export class JobSchedulerService {
 
     this.isRunning = true;
     const startTime = Date.now();
-    
+
     const result: SchedulerResult = {
       success: false,
       timestamp: new Date().toISOString(),
@@ -99,17 +99,17 @@ export class JobSchedulerService {
       executedJobs: 0,
       failedJobs: 0,
       errors: [],
-      executions: []
+      executions: [],
     };
 
     try {
       console.log('[JOB SCHEDULER] Processing scheduled jobs...');
-      
+
       // Get jobs that are due to run
       const { JobDB } = await import('@/services/database/db');
       const dueJobs = await JobDB.getActiveScheduledJobs();
       result.processedJobs = dueJobs.length;
-      
+
       if (dueJobs.length === 0) {
         result.success = true;
         this.lastRun = new Date();
@@ -118,30 +118,38 @@ export class JobSchedulerService {
 
       // Limit jobs per run to prevent overload
       const jobsToProcess = dueJobs.slice(0, this.MAX_JOBS_PER_RUN);
-      
-      console.log(`[JOB SCHEDULER] Found ${dueJobs.length} due jobs, processing ${jobsToProcess.length}`);
+
+      console.log(
+        `[JOB SCHEDULER] Found ${dueJobs.length} due jobs, processing ${jobsToProcess.length}`
+      );
 
       // Process jobs in parallel with controlled concurrency
       const executions = await Promise.allSettled(
-        jobsToProcess.map(job => this.executeScheduledJob(job))
+        jobsToProcess.map((job) => this.executeScheduledJob(job))
       );
 
       // Process results
       executions.forEach((execution, index) => {
         const job = jobsToProcess[index];
-        
+
         if (execution.status === 'fulfilled' && execution.value.success) {
           result.executedJobs++;
           result.executions.push(execution.value);
-          console.log(`[JOB SCHEDULER] Successfully executed job ${job.id} (${job.name})`);
+          console.log(
+            `[JOB SCHEDULER] Successfully executed job ${job.id} (${job.name})`
+          );
         } else {
           result.failedJobs++;
-          const error = execution.status === 'rejected' 
-            ? execution.reason 
-            : execution.value.error;
+          const error =
+            execution.status === 'rejected'
+              ? execution.reason
+              : execution.value.error;
           result.errors.push(`Job ${job.id} (${job.name}): ${error}`);
-          console.error(`[JOB SCHEDULER] Failed to execute job ${job.id}:`, error);
-          
+          console.error(
+            `[JOB SCHEDULER] Failed to execute job ${job.id}:`,
+            error
+          );
+
           if (execution.status === 'fulfilled') {
             result.executions.push(execution.value);
           }
@@ -150,15 +158,18 @@ export class JobSchedulerService {
 
       result.success = result.errors.length === 0;
       this.lastRun = new Date();
-      
+
       const processingTime = Date.now() - startTime;
-      console.log(`[JOB SCHEDULER] Completed in ${processingTime}ms: ${result.executedJobs} executed, ${result.failedJobs} failed`);
-      
+      console.log(
+        `[JOB SCHEDULER] Completed in ${processingTime}ms: ${result.executedJobs} executed, ${result.failedJobs} failed`
+      );
+
       return result;
-      
     } catch (error) {
       console.error('[JOB SCHEDULER] Failed to process scheduled jobs:', error);
-      result.errors.push(error instanceof Error ? error.message : 'Unknown scheduler error');
+      result.errors.push(
+        error instanceof Error ? error.message : 'Unknown scheduler error'
+      );
       return result;
     } finally {
       this.isRunning = false;
@@ -173,20 +184,24 @@ export class JobSchedulerService {
       jobId: job.id,
       walletAddress: job.wallet_address,
       success: false,
-      executedAt: new Date()
+      executedAt: new Date(),
     };
 
     try {
-      console.log(`[JOB SCHEDULER] Executing scheduled job ${job.id} (${job.name}) - last run: ${job.last_run_at || 'never'}`);
-      
+      console.log(
+        `[JOB SCHEDULER] Executing scheduled job ${job.id} (${
+          job.name
+        }) - last run: ${job.last_run_at || 'never'}`
+      );
+
       // Call the job execution API directly without HTTP client to avoid circular issues
       const { JobDB } = await import('@/services/database/db');
       const JobsAPI = await import('@/services/api-clients/jobs');
-      
+
       // Create a new job instance based on the scheduled job
       const runCount = (job.run_count || 0) + 1;
       const jobSuffix = runCount === 1 ? ' (First Run)' : ` (Run ${runCount})`;
-      
+
       const newJob = await JobDB.createJob({
         wallet_address: job.wallet_address,
         name: job.name + jobSuffix,
@@ -203,13 +218,15 @@ export class JobSchedulerService {
         last_run_at: null,
         run_count: 0,
         max_runs: null,
-        timezone: job.timezone || 'UTC'
-      });
+        timezone: job.timezone || 'UTC',
+        // Link run back to its scheduled template
+        parent_job_id: job.id,
+      } as any);
 
       // Update the scheduled job's run count and last run time
       const now = new Date();
       let nextRunTime: Date | null = null;
-      
+
       // Calculate next run time if it's not a one-time job
       if (job.schedule_type && job.schedule_type !== 'once') {
         nextRunTime = JobsAPI.default.calculateNextRunTime(
@@ -225,43 +242,62 @@ export class JobSchedulerService {
         last_run_at: now,
         next_run_time: nextRunTime,
         // Deactivate if it was a one-time job or reached max runs
-        is_active: job.schedule_type === 'once' ? false : 
-                   (job.max_runs && (job.run_count || 0) + 1 >= job.max_runs) ? false : 
-                   job.is_active
+        is_active:
+          job.schedule_type === 'once'
+            ? false
+            : job.max_runs && (job.run_count || 0) + 1 >= job.max_runs
+            ? false
+            : job.is_active,
       });
 
       // Trigger job processor to immediately process the new job
       try {
         const { jobProcessor } = await import('./job-processor-service');
-        console.log(`[JOB SCHEDULER] Triggering job processor for new job ${newJob.id}`);
+        console.log(
+          `[JOB SCHEDULER] Triggering job processor for new job ${newJob.id}`
+        );
         // Process the specific job asynchronously (don't wait for it)
-        jobProcessor.processPendingJobs().catch(error => {
-          console.error(`[JOB SCHEDULER] Failed to trigger job processor for job ${newJob.id}:`, error);
+        jobProcessor.processPendingJobs().catch((error) => {
+          console.error(
+            `[JOB SCHEDULER] Failed to trigger job processor for job ${newJob.id}:`,
+            error
+          );
         });
       } catch (processingError) {
-        console.error(`[JOB SCHEDULER] Failed to import job processor:`, processingError);
+        console.error(
+          `[JOB SCHEDULER] Failed to import job processor:`,
+          processingError
+        );
       }
 
       execution.success = true;
       execution.newJobId = newJob.id;
-      
+
       console.log(`[JOB SCHEDULER] Job ${job.id} executed successfully:`);
       console.log(`  - Created new job instance: ${newJob.id}`);
-      console.log(`  - Run count: ${job.run_count || 0} → ${(job.run_count || 0) + 1}`);
-      console.log(`  - Next run time: ${nextRunTime ? nextRunTime.toISOString() : 'none (job completed)'}`);
+      console.log(
+        `  - Run count: ${job.run_count || 0} → ${(job.run_count || 0) + 1}`
+      );
+      console.log(
+        `  - Next run time: ${
+          nextRunTime ? nextRunTime.toISOString() : 'none (job completed)'
+        }`
+      );
       console.log(`  - Triggered job processor for immediate execution`);
-      
     } catch (error) {
       execution.success = false;
       execution.error = error instanceof Error ? error.message : String(error);
-      console.error(`[JOB SCHEDULER] Job ${job.id} execution failed:`, execution.error);
-      
+      console.error(
+        `[JOB SCHEDULER] Job ${job.id} execution failed:`,
+        execution.error
+      );
+
       // If execution fails, we should still update the next run time to avoid getting stuck
       try {
         const { JobDB } = await import('@/services/database/db');
         const JobsAPI = await import('@/services/api-clients/jobs');
         const now = new Date();
-        
+
         let nextRunTime: Date | null = null;
         if (job.schedule_type && job.schedule_type !== 'once') {
           nextRunTime = JobsAPI.default.calculateNextRunTime(
@@ -270,15 +306,22 @@ export class JobSchedulerService {
             job.interval_days || undefined
           );
         }
-        
+
         await JobDB.updateJob(job.id, {
           last_run_at: now,
-          next_run_time: nextRunTime
+          next_run_time: nextRunTime,
         });
-        
-        console.log(`[JOB SCHEDULER] Updated failed job ${job.id} next run time to ${nextRunTime?.toISOString() || 'none'}`);
+
+        console.log(
+          `[JOB SCHEDULER] Updated failed job ${job.id} next run time to ${
+            nextRunTime?.toISOString() || 'none'
+          }`
+        );
       } catch (updateError) {
-        console.error(`[JOB SCHEDULER] Failed to update job ${job.id} after execution failure:`, updateError);
+        console.error(
+          `[JOB SCHEDULER] Failed to update job ${job.id} after execution failure:`,
+          updateError
+        );
       }
     }
 
@@ -294,7 +337,7 @@ export class JobSchedulerService {
       lastRun: this.lastRun,
       schedulerActive: this.schedulerInterval !== null,
       intervalMs: this.SCHEDULER_INTERVAL_MS,
-      maxJobsPerRun: this.MAX_JOBS_PER_RUN
+      maxJobsPerRun: this.MAX_JOBS_PER_RUN,
     };
   }
 

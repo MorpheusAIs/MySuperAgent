@@ -1,3 +1,4 @@
+import AgentQuickBar from '@/components/Agents/AgentQuickBar';
 import { Chat } from '@/components/Chat';
 import { HeaderBar } from '@/components/HeaderBar';
 import { LeftSidebar } from '@/components/LeftSidebar';
@@ -23,6 +24,8 @@ const Home = () => {
   const [currentView, setCurrentView] = useState<'chat' | 'jobs'>('jobs');
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [initialPrompt, setInitialPrompt] = useState<string | null>(null);
+  const [initialJobId, setInitialJobId] = useState<string | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const isMobile = useBreakpointValue({ base: true, md: false });
   const headerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -33,9 +36,13 @@ const Home = () => {
 
   useEffect(() => {
     if (router.isReady) {
-      const { prompt } = router.query;
+      const { prompt, job } = router.query;
       if (prompt && typeof prompt === 'string') {
         setInitialPrompt(decodeURIComponent(prompt));
+        router.replace('/', undefined, { shallow: true });
+      }
+      if (job && typeof job === 'string') {
+        setInitialJobId(job);
         router.replace('/', undefined, { shallow: true });
       }
     }
@@ -107,9 +114,17 @@ const Home = () => {
             currentView={currentView}
             setCurrentView={setCurrentView}
             initialPrompt={initialPrompt}
+            initialJobId={initialJobId}
+            selectedAgent={selectedAgent}
+            onSelectAgent={setSelectedAgent}
           />
         </Box>
       </Flex>
+      {/* Right-side Agent Quick Bar visible only on landing page */}
+      <AgentQuickBar
+        selectedAgent={selectedAgent}
+        onSelect={(name) => setSelectedAgent(name)}
+      />
     </Box>
   );
 };

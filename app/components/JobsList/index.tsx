@@ -71,6 +71,12 @@ const isCurrentJob = (job: Job) => {
     return false;
   }
 
+  // Jobs that are part of a thread (have parent_job_id) should not appear as separate current jobs
+  // They should only appear in the threaded jobs view
+  if ((job as any).parent_job_id) {
+    return false;
+  }
+
   const status = getJobStatus(job);
 
   // Current jobs are those in progress or completed/failed within the last 24 hours
@@ -90,6 +96,12 @@ const isCurrentJob = (job: Job) => {
 const isPreviousJob = (job: Job) => {
   // Scheduled jobs should never appear in previous jobs
   if (job.is_scheduled) {
+    return false;
+  }
+
+  // Jobs that are part of a thread (have parent_job_id) should not appear as separate previous jobs
+  // They should only appear in the threaded jobs view
+  if ((job as any).parent_job_id) {
     return false;
   }
 
@@ -1291,6 +1303,15 @@ export const JobsList: FC<JobsListProps> = ({
 
   const ITEMS_PER_PAGE = 10;
 
+  // Build a quick lookup of all job IDs that belong to any thread (covers legacy jobs without parent_job_id)
+  const threadJobIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const thread of threadedJobs) {
+      for (const job of thread.jobs) ids.add(job.id);
+    }
+    return ids;
+  }, [threadedJobs]);
+
   // Fetch job outputs for display
   const fetchJobOutputs = useCallback(
     async (jobs: Job[], immediateCount: number = 5) => {
@@ -1646,7 +1667,10 @@ export const JobsList: FC<JobsListProps> = ({
   const allCurrentJobs = useMemo(() => {
     const currentJobs = jobs.filter(isCurrentJob);
     const optimisticCurrentJobs = optimisticJobs.filter(isCurrentJob);
-    const combinedJobs = [...optimisticCurrentJobs, ...currentJobs];
+    // Hide any job that already appears inside a thread
+    const combinedJobs = [...optimisticCurrentJobs, ...currentJobs].filter(
+      (job) => !threadJobIds.has(job.id)
+    );
 
     console.log('[JobsList] Current jobs:', currentJobs.length);
     console.log('[JobsList] Optimistic jobs:', optimisticJobs.length);
@@ -1660,7 +1684,7 @@ export const JobsList: FC<JobsListProps> = ({
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-  }, [jobs, optimisticJobs, filterJobs]);
+  }, [jobs, optimisticJobs, filterJobs, threadJobIds]);
 
   // Filter threaded jobs for current jobs tab
   const allCurrentThreadedJobs = useMemo(() => {
@@ -1678,11 +1702,13 @@ export const JobsList: FC<JobsListProps> = ({
   }, [threadedJobs, filterThreadedJobs]);
   const allPreviousJobs = useMemo(
     () =>
-      filterJobs(jobs.filter(isPreviousJob)).sort(
+      filterJobs(
+        jobs.filter((job) => isPreviousJob(job) && !threadJobIds.has(job.id))
+      ).sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       ),
-    [jobs, filterJobs]
+    [jobs, filterJobs, threadJobIds]
   );
   const allActiveScheduledJobs = useMemo(
     () =>

@@ -1,28 +1,20 @@
-"use client";
+'use client';
 
-import React, {
-  useReducer,
-  useCallback,
-  useEffect,
-  ReactNode,
-  useRef,
-} from "react";
-import { useChainId, useAccount } from "wagmi";
-import { ChatMessage } from "@/services/types";
-import { getHttpClient } from "@/services/config/constants";
+import ChatContext from '@/contexts/chat/ChatContext';
+import { chatReducer, initialState } from '@/contexts/chat/ChatReducer';
+import JobsAPI from '@/services/api-clients/jobs';
 import {
-  writeMessage,
-  writeOrchestratedMessage,
-  uploadFile,
   generateConversationTitle,
-} from "@/services/chat-management/api";
-import { getMessagesHistory } from "@/services/chat-management/storage";
-import { addMessageToHistory } from "@/services/chat-management/messages";
-import JobsAPI from "@/services/api-clients/jobs";
-import { useWalletAddress } from "@/services/wallet/utils";
-import { Job, Message } from "@/services/database/db";
-import { chatReducer, initialState } from "@/contexts/chat/ChatReducer";
-import ChatContext from "@/contexts/chat/ChatContext";
+  uploadFile,
+  writeOrchestratedMessage,
+} from '@/services/chat-management/api';
+import { getMessagesHistory } from '@/services/chat-management/storage';
+import { getHttpClient } from '@/services/config/constants';
+import { Job, Message } from '@/services/database/db';
+import { ChatMessage } from '@/services/types';
+import { useWalletAddress } from '@/services/wallet/utils';
+import { ReactNode, useCallback, useEffect, useReducer, useRef } from 'react';
+import { useChainId } from 'wagmi';
 
 interface ChatProviderProps {
   children: ReactNode;
@@ -46,7 +38,11 @@ const convertMessageToChatMessage = (message: Message): ChatMessage => {
 };
 
 // Convert ChatMessage to database message format
-const convertChatMessageToMessage = (chatMessage: ChatMessage, jobId: string, orderIndex: number): Omit<Message, 'id' | 'created_at'> => {
+const convertChatMessageToMessage = (
+  chatMessage: ChatMessage,
+  jobId: string,
+  orderIndex: number
+): Omit<Message, 'id' | 'created_at'> => {
   return {
     job_id: jobId,
     role: chatMessage.role as any,
@@ -87,14 +83,14 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
         for (const job of jobs) {
           const messages = await JobsAPI.getMessages(walletAddress, job.id);
           const chatMessages = messages.map(convertMessageToChatMessage);
-          
+
           dispatch({
-            type: "SET_MESSAGES",
+            type: 'SET_MESSAGES',
             payload: { conversationId: job.id, messages: chatMessages },
           });
 
           dispatch({
-            type: "SET_CONVERSATION_TITLE",
+            type: 'SET_CONVERSATION_TITLE',
             payload: { conversationId: job.id, title: job.name },
           });
         }
@@ -102,19 +98,19 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
         // Set current conversation to the first job (most recent) if any exist
         if (jobs.length > 0) {
           dispatch({
-            type: "SET_CURRENT_CONVERSATION",
+            type: 'SET_CURRENT_CONVERSATION',
             payload: jobs[0].id,
           });
         } else {
           // No jobs exist, don't set a current conversation
           // User will create their first job through the UI
           dispatch({
-            type: "SET_CURRENT_CONVERSATION",
-            payload: "",
+            type: 'SET_CURRENT_CONVERSATION',
+            payload: '',
           });
         }
       } catch (error) {
-        console.error("Error loading initial data:", error);
+        console.error('Error loading initial data:', error);
         // Fallback to localStorage if database fails
         await loadLocalStorageData();
       }
@@ -126,69 +122,88 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
   // Load initial data from localStorage when no wallet is connected
   const loadLocalStorageData = useCallback(async () => {
     try {
-      const { getMessagesHistory } = await import("@/services/chat-management/storage");
-      const { getStorageData } = await import("@/services/local-storage/core");
-      
-      const messages = getMessagesHistory("default");
+      const { getMessagesHistory } = await import(
+        '@/services/chat-management/storage'
+      );
+      const { getStorageData } = await import('@/services/local-storage/core');
+
+      const messages = getMessagesHistory('default');
       dispatch({
-        type: "SET_MESSAGES",
-        payload: { conversationId: "default", messages },
+        type: 'SET_MESSAGES',
+        payload: { conversationId: 'default', messages },
       });
 
       const data = getStorageData();
       Object.entries(data.conversations).forEach(([id, conversation]) => {
         dispatch({
-          type: "SET_CONVERSATION_TITLE",
+          type: 'SET_CONVERSATION_TITLE',
           payload: { conversationId: id, title: conversation.name },
         });
       });
     } catch (error) {
-      console.error("Error loading localStorage data:", error);
+      console.error('Error loading localStorage data:', error);
     }
   }, []);
 
   const sendMessage = useCallback(
-    async (message: string, file: File | null = null, useResearch: boolean = false, jobId?: string): Promise<void> => {
+    async (
+      message: string,
+      file: File | null = null,
+      useResearch: boolean = false,
+      jobId?: string,
+      selectedAgents?: string[]
+    ): Promise<void> => {
       try {
         const walletAddress = getAddress();
         if (!walletAddress) {
           // No wallet connected, use localStorage-based messaging
-          return await sendLocalStorageMessage(message, file, useResearch, jobId);
+          return await sendLocalStorageMessage(
+            message,
+            file,
+            useResearch,
+            jobId
+          );
         }
 
         const currentConvId = jobId || state.currentConversationId;
         if (!currentConvId) {
-          throw new Error("No conversation selected");
+          throw new Error('No conversation selected');
         }
 
         // Get next order index for messages
-        const existingMessages = await JobsAPI.getMessages(walletAddress, currentConvId);
+        const existingMessages = await JobsAPI.getMessages(
+          walletAddress,
+          currentConvId
+        );
         let nextOrderIndex = existingMessages.length;
 
         // Add optimistic user message
         const optimisticUserMessage: ChatMessage = {
-          role: "user",
+          role: 'user',
           content: message,
           timestamp: Date.now(),
         };
 
         dispatch({
-          type: "ADD_OPTIMISTIC_MESSAGE",
-          payload: { conversationId: currentConvId, message: optimisticUserMessage },
+          type: 'ADD_OPTIMISTIC_MESSAGE',
+          payload: {
+            conversationId: currentConvId,
+            message: optimisticUserMessage,
+          },
         });
 
         // Save user message to database
         await JobsAPI.createMessage(walletAddress, currentConvId, {
           role: 'user',
           content: message,
-          order_index: nextOrderIndex
+          order_index: nextOrderIndex,
         });
         nextOrderIndex++;
 
         // Update job status to running
         await JobsAPI.updateJob(currentConvId, {
           wallet_address: walletAddress,
-          status: 'running'
+          status: 'running',
         });
 
         // Handle file upload if present
@@ -197,52 +212,65 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
             const httpClient = getHttpClient();
             await uploadFile(file, httpClient);
           } catch (uploadError) {
-            console.error("File upload error:", uploadError);
+            console.error('File upload error:', uploadError);
           }
         }
 
         // Prepare message for API
-        const messageToSend = file ? `${message}\n\nFile: ${file.name}` : message;
+        const messageToSend = file
+          ? `${message}\n\nFile: ${file.name}`
+          : message;
 
         // Use direct chat endpoint (no streaming)
         const httpClient = getHttpClient();
-        
+
         dispatch({
-          type: "SET_LOADING",
+          type: 'SET_LOADING',
           payload: true,
         });
 
         try {
           // Call orchestration API with timeout and retries
           const response = await Promise.race([
-            httpClient.post("/api/v1/chat/orchestrate", {
+            httpClient.post('/api/v1/chat/orchestrate', {
               prompt: {
-                role: "user",
+                role: 'user',
                 content: messageToSend,
               },
               chatHistory: state.messages[currentConvId] || [],
               conversationId: currentConvId,
               useResearch: true, // Always use orchestration
+              selectedAgents:
+                selectedAgents && selectedAgents.length > 0
+                  ? selectedAgents
+                  : undefined,
               walletAddress: walletAddress,
             }),
-            new Promise<never>((_, reject) => 
-              setTimeout(() => reject(new Error('Orchestration request timeout after 6 minutes')), 6 * 60 * 1000)
-            )
+            new Promise<never>((_, reject) =>
+              setTimeout(
+                () =>
+                  reject(
+                    new Error('Orchestration request timeout after 6 minutes')
+                  ),
+                6 * 60 * 1000
+              )
+            ),
           ]);
 
           if (response.data) {
             const { response: agentResponse, current_agent } = response.data;
-            
+
             // Create assistant message with proper metadata
             const assistantMessage: ChatMessage = {
-              role: "assistant",
+              role: 'assistant',
               content: agentResponse.content,
               agentName: current_agent,
               error_message: agentResponse.error_message,
               metadata: {
                 ...agentResponse.metadata,
                 // Ensure orchestration metadata is present
-                selectedAgent: agentResponse.metadata?.selectedAgent || current_agent,
+                selectedAgent:
+                  agentResponse.metadata?.selectedAgent || current_agent,
                 selectionReasoning: agentResponse.metadata?.selectionReasoning,
                 availableAgents: agentResponse.metadata?.availableAgents,
                 agentType: agentResponse.metadata?.agentType,
@@ -255,104 +283,135 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
             };
 
             // Save assistant response to database
-            await JobsAPI.createMessage(walletAddress, currentConvId, convertChatMessageToMessage(assistantMessage, currentConvId, nextOrderIndex));
-            
+            await JobsAPI.createMessage(
+              walletAddress,
+              currentConvId,
+              convertChatMessageToMessage(
+                assistantMessage,
+                currentConvId,
+                nextOrderIndex
+              )
+            );
+
             // Update job status
             await JobsAPI.updateJob(currentConvId, {
               wallet_address: walletAddress,
-              status: 'completed'
+              status: 'completed',
             });
 
             // Add assistant message to state
             dispatch({
-              type: "ADD_OPTIMISTIC_MESSAGE",
-              payload: { conversationId: currentConvId, message: assistantMessage },
+              type: 'ADD_OPTIMISTIC_MESSAGE',
+              payload: {
+                conversationId: currentConvId,
+                message: assistantMessage,
+              },
             });
 
             // Generate title if this is a new conversation
             if (!titleGenerationAttempted.current.has(currentConvId)) {
               titleGenerationAttempted.current.add(currentConvId);
-              
+
               if (!pendingTitleGeneration.current.has(currentConvId)) {
                 pendingTitleGeneration.current.add(currentConvId);
-                
+
                 try {
                   const messages = state.messages[currentConvId] || [];
-                  const generatedTitle = await generateConversationTitle(messages, httpClient, currentConvId);
-                  
+                  const generatedTitle = await generateConversationTitle(
+                    messages,
+                    httpClient,
+                    currentConvId
+                  );
+
                   // Update job name in database
                   await JobsAPI.updateJob(currentConvId, {
                     wallet_address: walletAddress,
-                    name: generatedTitle
+                    name: generatedTitle,
                   });
-                  
+
                   dispatch({
-                    type: "SET_CONVERSATION_TITLE",
-                    payload: { conversationId: currentConvId, title: generatedTitle },
+                    type: 'SET_CONVERSATION_TITLE',
+                    payload: {
+                      conversationId: currentConvId,
+                      title: generatedTitle,
+                    },
                   });
                 } catch (titleError) {
-                  console.error("Failed to generate title:", titleError);
+                  console.error('Failed to generate title:', titleError);
                 } finally {
                   pendingTitleGeneration.current.delete(currentConvId);
                 }
               }
             }
           }
-
         } catch (error: any) {
-          console.error("Chat error:", error);
-          
+          console.error('Chat error:', error);
+
           // Determine error message based on error type
-          let errorContent = "I encountered an error while processing your request. Please try again.";
-          let errorDetails = error.message || "Unknown error occurred";
-          
+          let errorContent =
+            'I encountered an error while processing your request. Please try again.';
+          let errorDetails = error.message || 'Unknown error occurred';
+
           if (error.message?.includes('timeout')) {
-            errorContent = "Your request took too long to process and was cancelled. Please try again with a simpler request.";
+            errorContent =
+              'Your request took too long to process and was cancelled. Please try again with a simpler request.';
             errorDetails = `Request timeout: ${error.message}`;
           } else if (error.message?.includes('Agent')) {
-            errorContent = "There was an issue with the AI agent system. Please try again in a moment.";
+            errorContent =
+              'There was an issue with the AI agent system. Please try again in a moment.';
             errorDetails = `Agent error: ${error.message}`;
           }
-          
+
           // Save error message to database with retry logic
           const errorMessage: ChatMessage = {
-            role: "assistant",
+            role: 'assistant',
             content: errorContent,
             error_message: errorDetails,
             timestamp: Date.now(),
           };
-          
+
           try {
-            await JobsAPI.createMessage(walletAddress, currentConvId, convertChatMessageToMessage(errorMessage, currentConvId, nextOrderIndex));
+            await JobsAPI.createMessage(
+              walletAddress,
+              currentConvId,
+              convertChatMessageToMessage(
+                errorMessage,
+                currentConvId,
+                nextOrderIndex
+              )
+            );
           } catch (dbError) {
-            console.error("Failed to save error message to database:", dbError);
+            console.error('Failed to save error message to database:', dbError);
             // Continue with UI update even if DB save fails
           }
-          
+
           // Update job status with retry logic
           try {
             await JobsAPI.updateJob(currentConvId, {
               wallet_address: walletAddress,
-              status: 'failed'
+              status: 'failed',
             });
           } catch (dbError) {
-            console.error("Failed to update job status to failed:", dbError);
+            console.error('Failed to update job status to failed:', dbError);
             // Continue with UI update even if DB save fails
           }
 
           dispatch({
-            type: "ADD_OPTIMISTIC_MESSAGE",
+            type: 'ADD_OPTIMISTIC_MESSAGE',
             payload: { conversationId: currentConvId, message: errorMessage },
           });
         } finally {
           dispatch({
-            type: "SET_LOADING",
+            type: 'SET_LOADING',
             payload: false,
           });
         }
       } catch (error: any) {
-        console.error("Send message error:", error);
-        dispatch({ type: "SET_ERROR", payload: error.message || "Failed to send message" });
+        console.error('Send message error:', error);
+        dispatch({
+          type: 'SET_ERROR',
+          payload: error.message || 'Failed to send message',
+        });
       }
     },
     [state.currentConversationId, getAddress, chainId]
@@ -360,13 +419,18 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
 
   // Send message using localStorage (no wallet)
   const sendLocalStorageMessage = useCallback(
-    async (message: string, file: File | null = null, useResearch: boolean = false, conversationId?: string): Promise<void> => {
+    async (
+      message: string,
+      file: File | null = null,
+      useResearch: boolean = false,
+      conversationId?: string
+    ): Promise<void> => {
       try {
         const httpClient = getHttpClient();
         const convId = conversationId || state.currentConversationId;
 
         if (!convId) {
-          throw new Error("No conversation selected");
+          throw new Error('No conversation selected');
         }
 
         // Handle file upload if present
@@ -374,15 +438,17 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
           try {
             await uploadFile(file, httpClient);
           } catch (uploadError) {
-            console.error("File upload error:", uploadError);
+            console.error('File upload error:', uploadError);
           }
         }
 
         // Prepare message for API
-        const messageToSend = file ? `${message}\n\nFile: ${file.name}` : message;
+        const messageToSend = file
+          ? `${message}\n\nFile: ${file.name}`
+          : message;
 
         dispatch({
-          type: "SET_LOADING",
+          type: 'SET_LOADING',
           payload: true,
         });
 
@@ -394,41 +460,48 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
             chainId,
             'temp-address',
             convId,
-            true  // Always use orchestration (research mode)
+            true // Always use orchestration (research mode)
           );
 
           // Update state with messages from localStorage
           dispatch({
-            type: "SET_MESSAGES",
+            type: 'SET_MESSAGES',
             payload: { conversationId: convId, messages: updatedMessages },
           });
 
           // Generate title for new conversations
           if (!titleGenerationAttempted.current.has(convId)) {
             titleGenerationAttempted.current.add(convId);
-            
+
             try {
-              const generatedTitle = await generateConversationTitle(updatedMessages, httpClient, convId);
+              const generatedTitle = await generateConversationTitle(
+                updatedMessages,
+                httpClient,
+                convId
+              );
               dispatch({
-                type: "SET_CONVERSATION_TITLE",
+                type: 'SET_CONVERSATION_TITLE',
                 payload: { conversationId: convId, title: generatedTitle },
               });
             } catch (titleError) {
-              console.error("Failed to generate title:", titleError);
+              console.error('Failed to generate title:', titleError);
             }
           }
         } catch (error: any) {
-          console.error("Chat error:", error);
+          console.error('Chat error:', error);
           throw error;
         } finally {
           dispatch({
-            type: "SET_LOADING",
+            type: 'SET_LOADING',
             payload: false,
           });
         }
       } catch (error: any) {
-        console.error("Send localStorage message error:", error);
-        dispatch({ type: "SET_ERROR", payload: error.message || "Failed to send message" });
+        console.error('Send localStorage message error:', error);
+        dispatch({
+          type: 'SET_ERROR',
+          payload: error.message || 'Failed to send message',
+        });
       }
     },
     [state.currentConversationId, chainId]
@@ -437,28 +510,31 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
   const setCurrentConversation = useCallback(
     async (conversationId: string): Promise<void> => {
       try {
-        dispatch({ type: "SET_CURRENT_CONVERSATION", payload: conversationId });
+        dispatch({ type: 'SET_CURRENT_CONVERSATION', payload: conversationId });
 
         const walletAddress = getAddress();
         if (!walletAddress) {
           // No wallet, load from localStorage
           const messages = getMessagesHistory(conversationId);
           dispatch({
-            type: "SET_MESSAGES",
+            type: 'SET_MESSAGES',
             payload: { conversationId, messages },
           });
         } else {
           // Load messages from database
-          const messages = await JobsAPI.getMessages(walletAddress, conversationId);
+          const messages = await JobsAPI.getMessages(
+            walletAddress,
+            conversationId
+          );
           const chatMessages = messages.map(convertMessageToChatMessage);
-          
+
           dispatch({
-            type: "SET_MESSAGES",
+            type: 'SET_MESSAGES',
             payload: { conversationId, messages: chatMessages },
           });
         }
       } catch (error) {
-        console.error("Error setting current conversation:", error);
+        console.error('Error setting current conversation:', error);
       }
     },
     [getAddress]
@@ -472,18 +548,18 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
         return;
       }
       const jobs = await JobsAPI.getJobs(walletAddress);
-      
+
       for (const job of jobs) {
         const messages = await JobsAPI.getMessages(walletAddress, job.id);
         const chatMessages = messages.map(convertMessageToChatMessage);
-        
+
         dispatch({
-          type: "SET_MESSAGES",
+          type: 'SET_MESSAGES',
           payload: { conversationId: job.id, messages: chatMessages },
         });
       }
     } catch (error) {
-      console.error("Error refreshing messages:", error);
+      console.error('Error refreshing messages:', error);
     }
   }, [getAddress]);
 
@@ -495,44 +571,47 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
         return;
       }
       const jobs = await JobsAPI.getJobs(walletAddress);
-      
+
       jobs.forEach((job: Job) => {
         dispatch({
-          type: "SET_CONVERSATION_TITLE",
+          type: 'SET_CONVERSATION_TITLE',
           payload: { conversationId: job.id, title: job.name },
         });
       });
     } catch (error) {
-      console.error("Error refreshing titles:", error);
+      console.error('Error refreshing titles:', error);
     }
   }, [getAddress]);
 
-  const deleteChat = useCallback(async (conversationId: string) => {
-    try {
-      const walletAddress = getAddress();
-      if (!walletAddress) {
-        console.error("No wallet connected - cannot delete chat");
-        return;
-      }
-      await JobsAPI.deleteJob(walletAddress, conversationId);
-      
-      // Remove from state
-      dispatch({
-        type: "SET_MESSAGES",
-        payload: { conversationId, messages: [] },
-      });
-      
-      // If this was the current conversation, switch to another one
-      if (state.currentConversationId === conversationId) {
-        const jobs = await JobsAPI.getJobs(walletAddress);
-        if (jobs.length > 0) {
-          setCurrentConversation(jobs[0].id);
+  const deleteChat = useCallback(
+    async (conversationId: string) => {
+      try {
+        const walletAddress = getAddress();
+        if (!walletAddress) {
+          console.error('No wallet connected - cannot delete chat');
+          return;
         }
+        await JobsAPI.deleteJob(walletAddress, conversationId);
+
+        // Remove from state
+        dispatch({
+          type: 'SET_MESSAGES',
+          payload: { conversationId, messages: [] },
+        });
+
+        // If this was the current conversation, switch to another one
+        if (state.currentConversationId === conversationId) {
+          const jobs = await JobsAPI.getJobs(walletAddress);
+          if (jobs.length > 0) {
+            setCurrentConversation(jobs[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Error deleting chat:', error);
       }
-    } catch (error) {
-      console.error("Error deleting chat:", error);
-    }
-  }, [getAddress, state.currentConversationId, setCurrentConversation]);
+    },
+    [getAddress, state.currentConversationId, setCurrentConversation]
+  );
 
   const refreshJobs = useCallback(async () => {
     // This is a placeholder - refreshJobs functionality can be added if needed
@@ -540,7 +619,7 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
   }, [refreshMessages]);
 
   const setCurrentView = useCallback((view: 'jobs' | 'chat') => {
-    dispatch({ type: "SET_CURRENT_VIEW", payload: view });
+    dispatch({ type: 'SET_CURRENT_VIEW', payload: view });
   }, []);
 
   const contextValue = {
@@ -555,8 +634,6 @@ export const ChatProviderDB = ({ children }: ChatProviderProps) => {
   };
 
   return (
-    <ChatContext.Provider value={contextValue}>
-      {children}
-    </ChatContext.Provider>
+    <ChatContext.Provider value={contextValue}>{children}</ChatContext.Provider>
   );
 };
