@@ -1,4 +1,4 @@
-import { Box, Tooltip } from '@chakra-ui/react';
+import { Box, Tooltip, useMediaQuery } from '@chakra-ui/react';
 import React, { useEffect, useState } from 'react';
 import styles from './AgentQuickBar.module.css';
 
@@ -14,6 +14,7 @@ export const AgentQuickBar: React.FC<AgentQuickBarProps> = ({
   onSelect,
 }) => {
   const [agents, setAgents] = useState<QuickAgent[]>([]);
+  const [isDesktop] = useMediaQuery('(min-width: 1280px)');
   const palette = [
     // Greens (site-accent leaning)
     '#59F886',
@@ -39,6 +40,11 @@ export const AgentQuickBar: React.FC<AgentQuickBarProps> = ({
   ];
 
   useEffect(() => {
+    if (!isDesktop) {
+      setAgents([]);
+      return;
+    }
+
     let active = true;
     (async () => {
       try {
@@ -71,9 +77,9 @@ export const AgentQuickBar: React.FC<AgentQuickBarProps> = ({
     return () => {
       active = false;
     };
-  }, []);
+  }, [isDesktop]);
 
-  if (!agents.length) return null;
+  if (!isDesktop || !agents.length) return null;
 
   const iconFor = (name: string): string => {
     const map: Record<string, string> = {

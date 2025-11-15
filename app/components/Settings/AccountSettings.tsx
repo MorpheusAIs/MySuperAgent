@@ -1,4 +1,7 @@
-import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import {
+  AuthMethodType,
+  usePrivyAuth,
+} from '@/contexts/auth/PrivyAuthProvider';
 import { useWalletAddress } from '@/services/wallet/utils';
 import {
   AlertDialog,
@@ -26,6 +29,7 @@ import {
   Crown,
   LogOut,
   Mail,
+  Phone,
   Shield,
   Trash2,
   User,
@@ -45,6 +49,50 @@ interface UsageData {
   isUnlimited: boolean;
 }
 
+const getAuthMethodMeta = (
+  method: AuthMethodType | null,
+  userEmail?: string | null
+) => {
+  switch (method) {
+    case 'google':
+      return {
+        label: 'Google',
+        description: userEmail ? `Google (${userEmail})` : 'Google Account',
+        icon: <Mail size={16} color="#59F886" />,
+      };
+    case 'email':
+      return {
+        label: 'Email',
+        description: userEmail ? `Email (${userEmail})` : 'Email Link',
+        icon: <Mail size={16} color="#59F886" />,
+      };
+    case 'x':
+      return {
+        label: 'X (Twitter)',
+        description: 'X (Twitter) Account',
+        icon: <FaXTwitter size={16} color="#59F886" />,
+      };
+    case 'sms':
+      return {
+        label: 'SMS',
+        description: 'SMS Passcode',
+        icon: <Phone size={16} color="#59F886" />,
+      };
+    case 'wallet':
+      return {
+        label: 'Crypto Wallet',
+        description: 'Wallet-based authentication',
+        icon: <Wallet size={16} color="#59F886" />,
+      };
+    default:
+      return {
+        label: 'Unknown Method',
+        description: 'Authentication method unavailable',
+        icon: <User size={16} color="rgba(255, 255, 255, 0.7)" />,
+      };
+  }
+};
+
 export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
@@ -56,6 +104,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
     loginWithGoogle,
     loginWithX,
     loginWithWallet,
+    authMethod: authMethodType,
   } = usePrivyAuth();
   const { getAddress } = useWalletAddress();
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -70,8 +119,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
 
   // Determine user plan based on authentication - Users with sessions are all "Pro" now
   const isProUser = hasSession;
-  const authMethod = userWallet ? 'wallet' : userEmail ? 'email' : 'x';
-  const planType = 'Pro'; // All authenticated users are Pro now
+  const authMeta = getAuthMethodMeta(authMethodType, userEmail);
   const messageLimit = 'Unlimited'; // All authenticated users get unlimited
   const messagesUsed = usageData?.messagesUsedToday || 0;
 
@@ -251,11 +299,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                   <Text color="rgba(255, 255, 255, 0.7)" fontSize="sm">
                     {!hasSession
                       ? 'No Authentication'
-                      : userWallet || walletAddress
-                      ? 'Crypto Wallet Connected'
-                      : userEmail
-                      ? `Google Account (${userEmail})`
-                      : 'X Account'}
+                      : authMeta.description}
                   </Text>
                 </VStack>
                 <HStack spacing={2}>
@@ -266,25 +310,11 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                         Not Signed In
                       </Text>
                     </>
-                  ) : userWallet ? (
-                    <>
-                      <Wallet size={16} color="#59F886" />
-                      <Text color="#59F886" fontSize="sm" fontWeight="500">
-                        Wallet
-                      </Text>
-                    </>
-                  ) : userEmail ? (
-                    <>
-                      <Mail size={16} color="#59F886" />
-                      <Text color="#59F886" fontSize="sm" fontWeight="500">
-                        Google
-                      </Text>
-                    </>
                   ) : (
                     <>
-                      <FaXTwitter size={16} color="#59F886" />
+                      {authMeta.icon}
                       <Text color="#59F886" fontSize="sm" fontWeight="500">
-                        X
+                        {authMeta.label}
                       </Text>
                     </>
                   )}
@@ -346,6 +376,11 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ onSave }) => {
                         ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
                         : userEmail || 'X Account'}
                     </Text>
+                    {hasSession && authMeta.description && (
+                      <Text color="rgba(255, 255, 255, 0.6)" fontSize="xs">
+                        Signed in with {authMeta.description}
+                      </Text>
+                    )}
                   </VStack>
                   {(userWallet || walletAddress) && (
                     <Button

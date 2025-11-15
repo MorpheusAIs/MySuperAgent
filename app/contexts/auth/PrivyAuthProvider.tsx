@@ -4,13 +4,50 @@ import axios from 'axios';
 import {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useState,
 } from 'react';
 import { useAccount } from 'wagmi';
 
+const AUTH_METHOD_STORAGE_KEY = 'authMethod';
+const AUTH_METHOD_PRIORITIES = [
+  'google_oauth',
+  'twitter_oauth',
+  'email',
+  'phone',
+  'wallet',
+  'smart_wallet',
+] as const;
+
+const mapLinkedAccountType = (type?: string): AuthMethodType | null => {
+  switch (type) {
+    case 'google_oauth':
+      return 'google';
+    case 'twitter_oauth':
+      return 'x';
+    case 'email':
+      return 'email';
+    case 'phone':
+      return 'sms';
+    case 'wallet':
+    case 'smart_wallet':
+      return 'wallet';
+    default:
+      return null;
+  }
+};
+
 // Types
+export type AuthMethodType =
+  | 'wallet'
+  | 'google'
+  | 'x'
+  | 'email'
+  | 'sms'
+  | 'unknown';
+
 interface PrivyAuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -24,6 +61,7 @@ interface PrivyAuthContextType {
   loginWithX: () => Promise<void>;
   userEmail: string | null;
   userWallet: string | null;
+  authMethod: AuthMethodType | null;
 }
 
 // Create context
@@ -51,6 +89,44 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userWallet, setUserWallet] = useState<string | null>(null);
+  const [authMethod, setAuthMethod] = useState<AuthMethodType | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const stored = localStorage.getItem(
+      AUTH_METHOD_STORAGE_KEY
+    ) as AuthMethodType | null;
+    return stored || null;
+  });
+
+  const persistAuthMethod = (method: AuthMethodType | null) => {
+    setAuthMethod(method);
+    if (typeof window === 'undefined') return;
+    if (method) {
+      localStorage.setItem(AUTH_METHOD_STORAGE_KEY, method);
+    } else {
+      localStorage.removeItem(AUTH_METHOD_STORAGE_KEY);
+    }
+  };
+
+  const determineAuthMethod = useCallback((): AuthMethodType | null => {
+    if (!user) return null;
+
+    for (const type of AUTH_METHOD_PRIORITIES) {
+      const match = user.linkedAccounts?.find(
+        (account) => account.type === type
+      );
+      if (match) {
+        const mapped = mapLinkedAccountType(match.type);
+        if (mapped) return mapped;
+      }
+    }
+
+    if (user.google) return 'google';
+    if (user.twitter) return 'x';
+    if (user.email) return 'email';
+    if (user.wallet) return 'wallet';
+
+    return null;
+  }, [user]);
 
   // Update user info when Privy user changes
   useEffect(() => {
@@ -89,11 +165,14 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
             setUserId(1); // Use a default user ID for now
             setIsAuthenticated(true);
 
+            const method = determineAuthMethod();
+            persistAuthMethod(method);
+
             // Track successful authentication
             trackEvent('auth.privy_authenticated', {
               privyUserId: user.id,
               userId: '1',
-              authMethod: user.email ? 'google' : user.wallet ? 'wallet' : 'x',
+              authMethod: method || 'unknown',
               email: user.email?.address,
               wallet: userWallet || undefined,
             });
@@ -112,6 +191,7 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
         setIsAuthenticated(false);
         setAuthToken(null);
         setUserId(null);
+        persistAuthMethod(null);
         localStorage.removeItem('authToken');
         localStorage.removeItem('userId');
         localStorage.removeItem('privyUserId');
@@ -121,7 +201,7 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
     if (ready) {
       syncAuth();
     }
-  }, [privyAuthenticated, user, ready, userWallet]);
+  }, [privyAuthenticated, ready, userWallet, determineAuthMethod]);
 
   // Login with Google
   const loginWithGoogle = async () => {
@@ -133,6 +213,7 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
         loginMethods: ['google'],
       });
 
+      persistAuthMethod('google');
       trackEvent('auth.google_login_success');
     } catch (error) {
       console.error('Google login error:', error);
@@ -154,6 +235,7 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
         loginMethods: ['wallet'],
       });
 
+      persistAuthMethod('wallet');
       trackEvent('auth.wallet_login_success');
     } catch (error) {
       console.error('Wallet login error:', error);
@@ -175,6 +257,7 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
         loginMethods: ['twitter'],
       });
 
+      persistAuthMethod('x');
       trackEvent('auth.x_login_success');
     } catch (error) {
       console.error('X login error:', error);
@@ -203,6 +286,7 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('authToken');
       localStorage.removeItem('userId');
       localStorage.removeItem('privyUserId');
+      persistAuthMethod(null);
 
       // Track logout event
       trackEvent('auth.privy_logout', {
@@ -247,6 +331,7 @@ export const PrivyAuthProvider = ({ children }: { children: ReactNode }) => {
         loginWithX,
         userEmail,
         userWallet,
+        authMethod,
       }}
     >
       {children}

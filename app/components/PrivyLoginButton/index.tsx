@@ -1,4 +1,7 @@
-import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import {
+  AuthMethodType,
+  usePrivyAuth,
+} from '@/contexts/auth/PrivyAuthProvider';
 import {
   Box,
   Button,
@@ -13,7 +16,15 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import { usePrivy } from '@privy-io/react-auth';
-import { ChevronDown, LogIn, LogOut, Mail, User, Wallet } from 'lucide-react';
+import {
+  ChevronDown,
+  LogIn,
+  LogOut,
+  Mail,
+  Phone,
+  User,
+  Wallet,
+} from 'lucide-react';
 import { useRouter } from 'next/router';
 import { FaXTwitter } from 'react-icons/fa6';
 import { useAccount } from 'wagmi';
@@ -22,6 +33,51 @@ interface PrivyLoginButtonProps {
   variant?: 'header' | 'sidebar';
   size?: 'sm' | 'md';
 }
+
+const AUTH_METHOD_COPY: Record<AuthMethodType, string> = {
+  wallet: 'Wallet',
+  google: 'Google',
+  x: 'X (Twitter)',
+  email: 'Email',
+  sms: 'SMS',
+  unknown: 'Unknown Method',
+};
+
+const getAuthMethodDescription = (
+  method: AuthMethodType | null,
+  userEmail?: string | null
+) => {
+  if (!method) return null;
+  switch (method) {
+    case 'google':
+      return userEmail ? `Google (${userEmail})` : 'Google';
+    case 'email':
+      return userEmail ? `Email (${userEmail})` : 'Email';
+    default:
+      return AUTH_METHOD_COPY[method];
+  }
+};
+
+const renderAuthMethodIcon = (
+  method: AuthMethodType | null,
+  size = 12
+): JSX.Element | null => {
+  switch (method) {
+    case 'wallet':
+      return <Wallet size={size} />;
+    case 'google':
+    case 'email':
+      return <Mail size={size} />;
+    case 'sms':
+      return <Phone size={size} />;
+    case 'x':
+      return <Icon as={FaXTwitter} boxSize={`${size}px`} />;
+    case 'unknown':
+      return <User size={size} />;
+    default:
+      return null;
+  }
+};
 
 export const PrivyLoginButton = ({
   variant = 'header',
@@ -39,9 +95,11 @@ export const PrivyLoginButton = ({
     userEmail,
     userWallet,
     isAuthenticated,
+    authMethod,
   } = usePrivyAuth();
 
   const { address } = useAccount();
+  const authMethodDescription = getAuthMethodDescription(authMethod, userEmail);
 
   // Handle navigation to account settings
   const handleNavigateToAccountSettings = () => {
@@ -116,6 +174,18 @@ export const PrivyLoginButton = ({
                 Signed In
               </Text>
             </HStack>
+            {authMethodDescription && (
+              <HStack spacing={1} justify="center">
+                {renderAuthMethodIcon(authMethod, 12)}
+                <Text
+                  fontSize="xs"
+                  fontWeight="400"
+                  color="rgba(255, 255, 255, 0.7)"
+                >
+                  Signed in with {authMethodDescription}
+                </Text>
+              </HStack>
+            )}
             {userWallet ? (
               <HStack
                 spacing={1}
@@ -269,6 +339,17 @@ export const PrivyLoginButton = ({
                   <Box>User ID: {user.id.slice(0, 12)}...</Box>
                 )}
               </Box>
+              {authMethodDescription && (
+                <HStack
+                  spacing={2}
+                  mt={2}
+                  fontSize="xs"
+                  color="rgba(255, 255, 255, 0.7)"
+                >
+                  {renderAuthMethodIcon(authMethod, 12)}
+                  <Box>Signed in with {authMethodDescription}</Box>
+                </HStack>
+              )}
             </VStack>
           </MenuItem>
           <MenuItem
