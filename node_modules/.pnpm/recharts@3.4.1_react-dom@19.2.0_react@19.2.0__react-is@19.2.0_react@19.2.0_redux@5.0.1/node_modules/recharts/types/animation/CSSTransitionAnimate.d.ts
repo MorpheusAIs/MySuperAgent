@@ -1,0 +1,20 @@
+import * as React from 'react';
+import { CSSProperties } from 'react';
+import { AnimationManager, ReactSmoothStyle } from './AnimationManager';
+type CSSTransitionAnimateProps<T extends ReactSmoothStyle> = {
+    animationId: string;
+    animationManager?: AnimationManager;
+    duration?: number;
+    begin?: number;
+    easing?: string;
+    isActive?: boolean;
+    canBegin?: boolean;
+    from: T;
+    to: T;
+    attributeName: string;
+    onAnimationStart?: () => void;
+    onAnimationEnd?: () => void;
+    children: (style: CSSProperties | undefined) => React.ReactNode;
+};
+export declare function CSSTransitionAnimate<T extends ReactSmoothStyle>(outsideProps: CSSTransitionAnimateProps<T>): React.ReactNode;
+export {};
