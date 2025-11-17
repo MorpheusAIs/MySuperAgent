@@ -2585,18 +2585,18 @@ export class FailureMetricsDB {
 
     const result = await pool.query(query, [
       metric.job_id,
-      metric.message_id || null,
-      metric.user_id || null,
-      metric.wallet_address || null,
-      metric.agent_name || null,
+      metric.message_id ?? null,
+      metric.user_id ?? null,
+      metric.wallet_address ?? null,
+      metric.agent_name ?? null,
       metric.user_prompt,
       metric.assistant_response,
       metric.is_failure,
-      metric.failure_type || null,
-      metric.failure_reason || null,
-      metric.failure_summary || null,
-      metric.detected_tags || null,
-      metric.request_theme || null,
+      metric.failure_type ?? null,
+      metric.failure_reason ?? null,
+      metric.failure_summary ?? null,
+      metric.detected_tags ?? null,
+      metric.request_theme ?? null,
     ]);
 
     return result.rows[0];

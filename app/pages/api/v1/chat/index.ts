@@ -124,7 +124,7 @@ export default async function handler(
     // Track failure metrics asynchronously (fire and forget)
     const userPrompt = message;
     const assistantResponse = enhancedResponse.content || '';
-    const jobId = conversationId || '';
+    const jobId = enhancedChatRequest.conversationId || '';
     if (userPrompt && assistantResponse) {
       import('@/services/metrics/failure-tracking').then(({ failureTrackingService }) => {
         failureTrackingService.trackResponse({

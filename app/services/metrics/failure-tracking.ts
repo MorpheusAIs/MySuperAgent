@@ -5,7 +5,7 @@
  * This should be called after each assistant response is created.
  */
 
-import { FailureMetricsDB } from '../Database/db';
+import { FailureMetricsDB } from '../database/db';
 import { failureAnalysisService } from './failure-analysis';
 
 export interface TrackFailureParams {
@@ -49,11 +49,11 @@ export class FailureTrackingService {
         user_prompt: promptText,
         assistant_response: responseText,
         is_failure: analysis.isFailure,
-        failure_type: analysis.failureType || null,
-        failure_reason: analysis.failureReason || null,
-        failure_summary: analysis.failureSummary || null,
-        detected_tags: analysis.detectedTags || null,
-        request_theme: analysis.requestTheme || null,
+        failure_type: analysis.failureType || undefined,
+        failure_reason: analysis.failureReason || undefined,
+        failure_summary: analysis.failureSummary || undefined,
+        detected_tags: analysis.detectedTags || undefined,
+        request_theme: analysis.requestTheme || undefined,
       });
 
       if (analysis.isFailure) {

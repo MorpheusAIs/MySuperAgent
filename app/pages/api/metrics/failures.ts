@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { FailureMetricsDB } from '@/services/Database/db';
+import { FailureMetricsDB } from '@/services/database/db';
 
 export default async function handler(
   req: NextApiRequest,
