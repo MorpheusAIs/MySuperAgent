@@ -121,6 +121,24 @@ export default async function handler(
       enhancedChatRequest.similarPrompts || []
     );
 
+    // Track failure metrics asynchronously (fire and forget)
+    const userPrompt = message;
+    const assistantResponse = enhancedResponse.content || '';
+    const jobId = conversationId || '';
+    if (userPrompt && assistantResponse) {
+      import('@/services/metrics/failure-tracking').then(({ failureTrackingService }) => {
+        failureTrackingService.trackResponse({
+          jobId,
+          walletAddress,
+          agentName: currentAgent,
+          userPrompt,
+          assistantResponse,
+        }).catch((err) => {
+          console.error('[CHAT] Error tracking failure metrics:', err);
+        });
+      });
+    }
+
     return res.status(200).json({
       response: enhancedResponse,
       current_agent: currentAgent,

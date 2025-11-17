@@ -1,3 +1,7 @@
+import {
+  rateLimitErrorResponse,
+  withRateLimit,
+} from '@/middleware/rate-limiting';
 import { initializeAgents } from '@/services/agents/initialize';
 import { createOrchestrator } from '@/services/agents/orchestrator';
 import { ChatRequest } from '@/services/agents/types';
@@ -8,7 +12,6 @@ import {
 } from '@/services/utils/errors';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { v4 as uuidv4 } from 'uuid';
-import { withRateLimit, rateLimitErrorResponse } from '@/middleware/rate-limiting';
 
 // Timeout configuration
 const ORCHESTRATION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -16,14 +19,18 @@ const AGENT_SELECTION_TIMEOUT_MS = 30 * 1000; // 30 seconds
 const AGENT_EXECUTION_TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes
 
 // Timeout utility function
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operation: string
+): Promise<T> {
   return Promise.race([
     promise,
     new Promise<never>((_, reject) => {
       setTimeout(() => {
         reject(new Error(`${operation} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
-    })
+    }),
   ]);
 }
 
@@ -44,7 +51,7 @@ export default async function handler(
   const startTime = Date.now();
   let chatRequest: ChatRequest;
   let walletAddress: string | undefined;
-  
+
   try {
     // Wrap entire orchestration in timeout
     const result = await withTimeout(
@@ -52,29 +59,34 @@ export default async function handler(
       ORCHESTRATION_TIMEOUT_MS,
       'Orchestration'
     );
-    
+
     const processingTime = Date.now() - startTime;
-    console.log(`[ORCHESTRATION] Completed successfully in ${processingTime}ms`);
-    
+    console.log(
+      `[ORCHESTRATION] Completed successfully in ${processingTime}ms`
+    );
+
     return res.status(200).json({
       ...result,
       _meta: {
         processingTime,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     });
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    console.error(`[ORCHESTRATION ERROR] Failed after ${processingTime}ms:`, error);
-    
+    console.error(
+      `[ORCHESTRATION ERROR] Failed after ${processingTime}ms:`,
+      error
+    );
+
     const { error: errorMessage, statusCode } = createSafeErrorResponse(error);
-    return res.status(statusCode).json({ 
+    return res.status(statusCode).json({
       error: errorMessage,
       _meta: {
         processingTime,
         timestamp: new Date().toISOString(),
-        failed: true
-      }
+        failed: true,
+      },
     });
   }
 }
@@ -82,6 +94,12 @@ export default async function handler(
 async function executeOrchestration(req: NextApiRequest) {
   const chatRequest: ChatRequest = req.body;
   const walletAddress = req.body.walletAddress;
+
+  // Track failure metrics asynchronously (don't await to avoid blocking)
+  let userPrompt = '';
+  let assistantResponse = '';
+  let jobId = '';
+  let agentName = '';
 
   // Generate request ID if not provided
   if (!chatRequest.requestId) {
@@ -97,8 +115,7 @@ async function executeOrchestration(req: NextApiRequest) {
       throw new ValidationError('Missing prompt content');
     }
   } catch (error) {
-    const { error: errorMessage, statusCode } =
-      createSafeErrorResponse(error);
+    const { error: errorMessage, statusCode } = createSafeErrorResponse(error);
     throw new Error(errorMessage);
   }
 
@@ -129,12 +146,43 @@ async function executeOrchestration(req: NextApiRequest) {
       'Agent execution'
     );
 
+    // Store for failure tracking
+    userPrompt = chatRequest.prompt?.content || '';
+    assistantResponse = agentResponse.content || '';
+    jobId = chatRequest.conversationId || '';
+    agentName = currentAgent;
+
+    // Track failure metrics asynchronously (fire and forget)
+    if (userPrompt && assistantResponse) {
+      import('@/services/metrics/failure-tracking').then(
+        ({ failureTrackingService }) => {
+          failureTrackingService
+            .trackResponse({
+              jobId,
+              walletAddress,
+              agentName,
+              userPrompt,
+              assistantResponse,
+            })
+            .catch((err) => {
+              console.error(
+                '[ORCHESTRATION] Error tracking failure metrics:',
+                err
+              );
+            });
+        }
+      );
+    }
+
     return {
       response: agentResponse,
       current_agent: currentAgent,
     };
   } catch (error) {
-    console.error(`[ORCHESTRATION] Execution failed for request ${chatRequest.requestId}:`, error);
+    console.error(
+      `[ORCHESTRATION] Execution failed for request ${chatRequest.requestId}:`,
+      error
+    );
     throw error;
   }
 }

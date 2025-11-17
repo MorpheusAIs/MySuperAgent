@@ -2551,6 +2551,171 @@ export class ReferralDB {
   }
 }
 
+export interface FailureMetric {
+  id: number;
+  job_id: string;
+  message_id?: string;
+  user_id?: string;
+  wallet_address?: string;
+  agent_name?: string;
+  user_prompt: string;
+  assistant_response: string;
+  is_failure: boolean;
+  failure_type?: string;
+  failure_reason?: string;
+  failure_summary?: string;
+  detected_tags?: string[];
+  request_theme?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export class FailureMetricsDB {
+  static async createFailureMetric(
+    metric: Omit<FailureMetric, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<FailureMetric> {
+    const query = `
+      INSERT INTO failure_metrics (
+        job_id, message_id, user_id, wallet_address, agent_name,
+        user_prompt, assistant_response, is_failure, failure_type,
+        failure_reason, failure_summary, detected_tags, request_theme
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING *;
+    `;
+
+    const result = await pool.query(query, [
+      metric.job_id,
+      metric.message_id || null,
+      metric.user_id || null,
+      metric.wallet_address || null,
+      metric.agent_name || null,
+      metric.user_prompt,
+      metric.assistant_response,
+      metric.is_failure,
+      metric.failure_type || null,
+      metric.failure_reason || null,
+      metric.failure_summary || null,
+      metric.detected_tags || null,
+      metric.request_theme || null,
+    ]);
+
+    return result.rows[0];
+  }
+
+  static async getFailureMetrics(filters?: {
+    walletAddress?: string;
+    isFailure?: boolean;
+    failureType?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Promise<FailureMetric[]> {
+    let query = 'SELECT * FROM failure_metrics WHERE 1=1';
+    const values: any[] = [];
+    let paramCount = 0;
+
+    if (filters?.walletAddress) {
+      paramCount++;
+      query += ` AND wallet_address = $${paramCount}`;
+      values.push(filters.walletAddress);
+    }
+
+    if (filters?.isFailure !== undefined) {
+      paramCount++;
+      query += ` AND is_failure = $${paramCount}`;
+      values.push(filters.isFailure);
+    }
+
+    if (filters?.failureType) {
+      paramCount++;
+      query += ` AND failure_type = $${paramCount}`;
+      values.push(filters.failureType);
+    }
+
+    if (filters?.startDate) {
+      paramCount++;
+      query += ` AND created_at >= $${paramCount}`;
+      values.push(filters.startDate);
+    }
+
+    if (filters?.endDate) {
+      paramCount++;
+      query += ` AND created_at <= $${paramCount}`;
+      values.push(filters.endDate);
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    if (filters?.limit) {
+      paramCount++;
+      query += ` LIMIT $${paramCount}`;
+      values.push(filters.limit);
+    }
+
+    const result = await pool.query(query, values);
+    return result.rows;
+  }
+
+  static async getFailureStats(): Promise<{
+    totalFailures: number;
+    failuresByType: Array<{ type: string; count: number }>;
+    failuresByTheme: Array<{ theme: string; count: number }>;
+    topFailureReasons: Array<{ reason: string; count: number }>;
+  }> {
+    const totalQuery = `
+      SELECT COUNT(*) as count 
+      FROM failure_metrics 
+      WHERE is_failure = true;
+    `;
+    const totalResult = await pool.query(totalQuery);
+
+    const typeQuery = `
+      SELECT failure_type as type, COUNT(*) as count
+      FROM failure_metrics
+      WHERE is_failure = true AND failure_type IS NOT NULL
+      GROUP BY failure_type
+      ORDER BY count DESC;
+    `;
+    const typeResult = await pool.query(typeQuery);
+
+    const themeQuery = `
+      SELECT request_theme as theme, COUNT(*) as count
+      FROM failure_metrics
+      WHERE is_failure = true AND request_theme IS NOT NULL
+      GROUP BY request_theme
+      ORDER BY count DESC
+      LIMIT 20;
+    `;
+    const themeResult = await pool.query(themeQuery);
+
+    const reasonQuery = `
+      SELECT failure_reason as reason, COUNT(*) as count
+      FROM failure_metrics
+      WHERE is_failure = true AND failure_reason IS NOT NULL
+      GROUP BY failure_reason
+      ORDER BY count DESC
+      LIMIT 10;
+    `;
+    const reasonResult = await pool.query(reasonQuery);
+
+    return {
+      totalFailures: parseInt(totalResult.rows[0]?.count || '0'),
+      failuresByType: typeResult.rows.map((r) => ({
+        type: r.type,
+        count: parseInt(r.count),
+      })),
+      failuresByTheme: themeResult.rows.map((r) => ({
+        theme: r.theme,
+        count: parseInt(r.count),
+      })),
+      topFailureReasons: reasonResult.rows.map((r) => ({
+        reason: r.reason,
+        count: parseInt(r.count),
+      })),
+    };
+  }
+}
+
 // Export pool for direct database access
 export { pool };
 
@@ -2562,6 +2727,7 @@ export class Database {
   static UserDB = UserDB;
   static SharedJobDB = SharedJobDB;
   static ReferralDB = ReferralDB;
+  static FailureMetricsDB = FailureMetricsDB;
 }
 
 export default {
@@ -2579,4 +2745,5 @@ export default {
   UserMemoriesDB,
   SharedJobDB,
   ReferralDB,
+  FailureMetricsDB,
 };
