@@ -1,0 +1,8 @@
+# Metrics Page Whitelist Configuration
+# Only users with emails or walletIDs listed here can access the metrics page
+
+whitelist:
+  emails: []
+  walletIDs:
+    - "0x1EBf7d99e1e268636283cc42a9c4efF25092B4b5"
+

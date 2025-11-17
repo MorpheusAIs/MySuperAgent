@@ -73,6 +73,8 @@ export interface Job {
   run_count: number;
   max_runs?: number | null;
   timezone: string;
+  parent_job_id?: string | null;
+  metadata?: Record<string, any> | null;
 }
 
 export interface Message {
@@ -437,11 +439,18 @@ export class JobDB {
 
     const query = `
       INSERT INTO jobs (
-        wallet_address, name, description, initial_message, 
-        status, has_uploaded_file, is_scheduled, schedule_type, 
-        schedule_time, next_run_time, interval_days, is_active, 
-        last_run_at, run_count, max_runs, timezone
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        wallet_address, name, description, initial_message,
+        status, has_uploaded_file, is_scheduled, schedule_type,
+        schedule_time, next_run_time, interval_days, is_active,
+        last_run_at, run_count, max_runs, timezone,
+        parent_job_id
+      ) VALUES (
+        $1, $2, $3, $4,
+        $5, $6, $7, $8,
+        $9, $10, $11, $12,
+        $13, $14, $15, $16,
+        $17
+      )
       RETURNING *;
     `;
 
@@ -462,6 +471,8 @@ export class JobDB {
       job.run_count || 0,
       job.max_runs || null,
       job.timezone || 'UTC',
+      // Persist parent linkage if provided (threaded jobs)
+      (job as any).parent_job_id || null,
     ];
 
     const result = await pool.query(query, values);
@@ -479,7 +490,10 @@ export class JobDB {
     return result.rows;
   }
 
-  static async getJobsByWalletSince(walletAddress: string, since: Date): Promise<Job[]> {
+  static async getJobsByWalletSince(
+    walletAddress: string,
+    since: Date
+  ): Promise<Job[]> {
     const query = `
       SELECT * FROM jobs 
       WHERE wallet_address = $1 AND created_at >= $2 
@@ -490,7 +504,10 @@ export class JobDB {
     return result.rows;
   }
 
-  static async getMessageCountByWalletSince(walletAddress: string, since: Date): Promise<number> {
+  static async getMessageCountByWalletSince(
+    walletAddress: string,
+    since: Date
+  ): Promise<number> {
     const query = `
       SELECT COUNT(m.id) as count 
       FROM messages m 
@@ -611,6 +628,12 @@ export class JobDB {
     return parseInt(result.rows[0].total, 10);
   }
 
+  static async getTotalJobsCount(): Promise<number> {
+    const query = `SELECT COUNT(*) as total FROM jobs;`;
+    const result = await pool.query(query);
+    return parseInt(result.rows[0].total, 10);
+  }
+
   static async getRecurringJobsCount(): Promise<number> {
     const query = `SELECT COUNT(*) as total FROM jobs WHERE is_scheduled = true AND schedule_type IS NOT NULL;`;
     const result = await pool.query(query);
@@ -638,6 +661,93 @@ export class JobDB {
     // Assuming each job saves on average 30 minutes
     const totalCompleted = await this.getTotalCompletedJobsCount();
     return Math.round(totalCompleted * 0.5 * 100) / 100; // 0.5 hours per job, rounded to 2 decimals
+  }
+
+  /**
+   * Get daily job counts for the last N days
+   */
+  static async getDailyJobCounts(
+    days: number = 30
+  ): Promise<Array<{ date: string; count: number }>> {
+    const query = `
+      SELECT 
+        DATE(created_at) as date,
+        COUNT(*) as count
+      FROM jobs
+      WHERE created_at >= CURRENT_DATE - INTERVAL '${days} days'
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC;
+    `;
+
+    const result = await pool.query(query);
+    return result.rows.map((row) => ({
+      date: row.date.toISOString().split('T')[0],
+      count: parseInt(row.count, 10),
+    }));
+  }
+
+  /**
+   * Get job status distribution
+   */
+  static async getJobStatusDistribution(): Promise<
+    Array<{ status: string; count: number }>
+  > {
+    const query = `
+      SELECT status, COUNT(*) as count
+      FROM jobs
+      GROUP BY status
+      ORDER BY count DESC;
+    `;
+
+    const result = await pool.query(query);
+    return result.rows.map((row) => ({
+      status: row.status,
+      count: parseInt(row.count, 10),
+    }));
+  }
+
+  /**
+   * Get total jobs count by date range
+   */
+  static async getTotalJobsCountByDateRange(
+    startDate: Date,
+    endDate: Date
+  ): Promise<number> {
+    const query = `
+      SELECT COUNT(*) as total
+      FROM jobs
+      WHERE created_at >= $1 AND created_at <= $2;
+    `;
+
+    const result = await pool.query(query, [startDate, endDate]);
+    return parseInt(result.rows[0]?.total || '0', 10);
+  }
+
+  /**
+   * Get jobs created today
+   */
+  static async getJobsCreatedToday(): Promise<number> {
+    const query = `
+      SELECT COUNT(*) as total
+      FROM jobs
+      WHERE DATE(created_at) = CURRENT_DATE;
+    `;
+
+    const result = await pool.query(query);
+    return parseInt(result.rows[0]?.total || '0', 10);
+  }
+
+  /**
+   * Get unique users count
+   */
+  static async getUniqueUsersCount(): Promise<number> {
+    const query = `
+      SELECT COUNT(DISTINCT wallet_address) as total
+      FROM jobs;
+    `;
+
+    const result = await pool.query(query);
+    return parseInt(result.rows[0]?.total || '0', 10);
   }
 }
 
@@ -1006,6 +1116,103 @@ export class MessageDB {
         metadata,
       };
     });
+  }
+
+  /**
+   * Get MCP server usage statistics from message metadata
+   */
+  static async getMCPServerUsageStats(): Promise<
+    Array<{ server_name: string; usage_count: number }>
+  > {
+    const query = `
+      SELECT 
+        metadata->>'mcp_server' as server_name,
+        COUNT(*) as usage_count
+      FROM messages
+      WHERE metadata IS NOT NULL 
+        AND metadata::text != '{}'
+        AND metadata->>'mcp_server' IS NOT NULL
+      GROUP BY metadata->>'mcp_server'
+      ORDER BY usage_count DESC;
+    `;
+
+    const result = await pool.query(query);
+    return result.rows
+      .filter((row) => row.server_name)
+      .map((row) => ({
+        server_name: row.server_name,
+        usage_count: parseInt(row.usage_count, 10),
+      }));
+  }
+
+  /**
+   * Get MCP tool usage statistics from message metadata
+   */
+  static async getMCPToolUsageStats(): Promise<
+    Array<{ tool_name: string; usage_count: number }>
+  > {
+    const query = `
+      SELECT 
+        metadata->>'mcp_tool' as tool_name,
+        COUNT(*) as usage_count
+      FROM messages
+      WHERE metadata IS NOT NULL 
+        AND metadata::text != '{}'
+        AND metadata->>'mcp_tool' IS NOT NULL
+      GROUP BY metadata->>'mcp_tool'
+      ORDER BY usage_count DESC;
+    `;
+
+    const result = await pool.query(query);
+    return result.rows
+      .filter((row) => row.tool_name)
+      .map((row) => ({
+        tool_name: row.tool_name,
+        usage_count: parseInt(row.usage_count, 10),
+      }));
+  }
+
+  /**
+   * Get agent usage statistics from messages
+   */
+  static async getAgentUsageStats(): Promise<
+    Array<{ agent_name: string; usage_count: number }>
+  > {
+    const query = `
+      SELECT 
+        agent_name,
+        COUNT(*) as usage_count
+      FROM messages
+      WHERE agent_name IS NOT NULL
+      GROUP BY agent_name
+      ORDER BY usage_count DESC;
+    `;
+
+    const result = await pool.query(query);
+    return result.rows.map((row) => ({
+      agent_name: row.agent_name,
+      usage_count: parseInt(row.usage_count, 10),
+    }));
+  }
+
+  /**
+   * Get messages with MCP usage in date range
+   */
+  static async getMCPUsageByDateRange(
+    startDate: Date,
+    endDate: Date
+  ): Promise<number> {
+    const query = `
+      SELECT COUNT(*) as total
+      FROM messages
+      WHERE created_at >= $1 AND created_at <= $2
+        AND metadata IS NOT NULL 
+        AND metadata::text != '{}'
+        AND (metadata->>'mcp_server' IS NOT NULL OR metadata->>'mcp_tool' IS NOT NULL);
+    `;
+
+    const result = await pool.query(query, [startDate, endDate]);
+    return parseInt(result.rows[0]?.total || '0', 10);
   }
 }
 
@@ -1776,6 +1983,59 @@ export class UserAvailableToolDB {
 
     await pool.query(query, [walletAddress, mcpServerId]);
   }
+
+  /**
+   * Get MCP server adoption statistics (how many users have each server)
+   */
+  static async getMCPServerAdoptionStats(): Promise<
+    Array<{ server_name: string; user_count: number; tool_count: number }>
+  > {
+    const query = `
+      SELECT 
+        uat.mcp_server_id as server_name,
+        COUNT(DISTINCT uat.wallet_address) as user_count,
+        COUNT(uat.id) as tool_count
+      FROM user_available_tools uat
+      WHERE uat.is_available = TRUE
+      GROUP BY uat.mcp_server_id
+      ORDER BY user_count DESC, tool_count DESC;
+    `;
+
+    const result = await pool.query(query);
+    return result.rows.map((row) => ({
+      server_name: row.server_name,
+      user_count: parseInt(row.user_count, 10),
+      tool_count: parseInt(row.tool_count, 10),
+    }));
+  }
+
+  /**
+   * Get total MCP servers count
+   */
+  static async getTotalMCPServersCount(): Promise<number> {
+    const query = `
+      SELECT COUNT(DISTINCT mcp_server_id) as total
+      FROM user_available_tools
+      WHERE is_available = TRUE;
+    `;
+
+    const result = await pool.query(query);
+    return parseInt(result.rows[0]?.total || '0', 10);
+  }
+
+  /**
+   * Get total MCP tools count
+   */
+  static async getTotalMCPToolsCount(): Promise<number> {
+    const query = `
+      SELECT COUNT(*) as total
+      FROM user_available_tools
+      WHERE is_available = TRUE;
+    `;
+
+    const result = await pool.query(query);
+    return parseInt(result.rows[0]?.total || '0', 10);
+  }
 }
 
 export class UserRulesDB {
@@ -1971,7 +2231,9 @@ export interface ReferralDashboard {
 }
 
 export class ReferralDB {
-  static async getReferralDashboard(walletAddress: string): Promise<ReferralDashboard> {
+  static async getReferralDashboard(
+    walletAddress: string
+  ): Promise<ReferralDashboard> {
     const query = `
       SELECT * FROM referral_dashboard 
       WHERE wallet_address = $1;
@@ -1997,18 +2259,23 @@ export class ReferralDB {
     return result.rows[0];
   }
 
-  static async generateReferralCode(walletAddress: string, options: {
-    description?: string;
-    maxUses?: number;
-    expiresAt?: Date;
-  } = {}): Promise<ReferralCode> {
+  static async generateReferralCode(
+    walletAddress: string,
+    options: {
+      description?: string;
+      maxUses?: number;
+      expiresAt?: Date;
+    } = {}
+  ): Promise<ReferralCode> {
     const client = await pool.connect();
-    
+
     try {
       await client.query('BEGIN');
 
       // Generate unique code
-      const codeResult = await client.query('SELECT generate_referral_code() as code');
+      const codeResult = await client.query(
+        'SELECT generate_referral_code() as code'
+      );
       const code = codeResult.rows[0].code;
 
       // Insert referral code
@@ -2024,12 +2291,11 @@ export class ReferralDB {
         walletAddress,
         options.description || null,
         options.maxUses || null,
-        options.expiresAt || null
+        options.expiresAt || null,
       ]);
 
       await client.query('COMMIT');
       return result.rows[0];
-
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -2038,13 +2304,16 @@ export class ReferralDB {
     }
   }
 
-  static async useReferralCode(walletAddress: string, referralCode: string): Promise<{
+  static async useReferralCode(
+    walletAddress: string,
+    referralCode: string
+  ): Promise<{
     referrer: string;
     referrerJobsGranted: number;
     referredJobsGranted: number;
   }> {
     const client = await pool.connect();
-    
+
     try {
       await client.query('BEGIN');
 
@@ -2055,7 +2324,7 @@ export class ReferralDB {
         AND (expires_at IS NULL OR expires_at > NOW())
         AND (max_uses IS NULL OR current_uses < max_uses);
       `;
-      
+
       const codeResult = await client.query(codeQuery, [referralCode]);
       if (codeResult.rows.length === 0) {
         throw new Error('Referral code not found, expired, or inactive');
@@ -2072,15 +2341,17 @@ export class ReferralDB {
       const existingReferralQuery = `
         SELECT id FROM user_referrals WHERE referred_wallet_address = $1;
       `;
-      
-      const existingResult = await client.query(existingReferralQuery, [walletAddress]);
+
+      const existingResult = await client.query(existingReferralQuery, [
+        walletAddress,
+      ]);
       if (existingResult.rows.length > 0) {
         throw new Error('User has already been referred');
       }
 
       // Define reward amounts
       const REFERRER_BONUS = 10; // Jobs granted to referrer
-      const REFERRED_BONUS = 5;  // Jobs granted to referred user
+      const REFERRED_BONUS = 5; // Jobs granted to referred user
 
       // Create referral record
       const referralQuery = `
@@ -2096,52 +2367,66 @@ export class ReferralDB {
         code.referrer_wallet_address,
         referralCode,
         REFERRER_BONUS,
-        REFERRED_BONUS
+        REFERRED_BONUS,
       ]);
 
       const referralId = referralResult.rows[0].id;
 
       // Update referral code usage count
-      await client.query(`
+      await client.query(
+        `
         UPDATE referral_codes 
         SET current_uses = current_uses + 1 
         WHERE id = $1;
-      `, [code.id]);
+      `,
+        [code.id]
+      );
 
       // Grant bonus jobs to referrer
-      await client.query(`
+      await client.query(
+        `
         UPDATE users 
         SET bonus_jobs_from_referrals = COALESCE(bonus_jobs_from_referrals, 0) + $2
         WHERE wallet_address = $1;
-      `, [code.referrer_wallet_address, REFERRER_BONUS]);
+      `,
+        [code.referrer_wallet_address, REFERRER_BONUS]
+      );
 
       // Grant bonus jobs to referred user
-      await client.query(`
+      await client.query(
+        `
         UPDATE users 
         SET bonus_jobs_from_referrals = COALESCE(bonus_jobs_from_referrals, 0) + $2
         WHERE wallet_address = $1;
-      `, [walletAddress, REFERRED_BONUS]);
+      `,
+        [walletAddress, REFERRED_BONUS]
+      );
 
       // Create reward records
-      await client.query(`
+      await client.query(
+        `
         INSERT INTO referral_rewards (
           recipient_wallet_address, referral_id, reward_type, jobs_granted, reason
         ) VALUES 
         ($1, $2, 'referrer_bonus', $3, 'new_referral'),
         ($4, $2, 'referred_bonus', $5, 'new_referral');
-      `, [
-        code.referrer_wallet_address, referralId, REFERRER_BONUS,
-        walletAddress, REFERRED_BONUS
-      ]);
+      `,
+        [
+          code.referrer_wallet_address,
+          referralId,
+          REFERRER_BONUS,
+          walletAddress,
+          REFERRED_BONUS,
+        ]
+      );
 
       await client.query('COMMIT');
 
       return {
         referrer: code.referrer_wallet_address,
         referrerJobsGranted: REFERRER_BONUS,
-        referredJobsGranted: REFERRED_BONUS
+        referredJobsGranted: REFERRED_BONUS,
       };
-
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -2150,7 +2435,9 @@ export class ReferralDB {
     }
   }
 
-  static async getUserReferralCodes(walletAddress: string): Promise<ReferralCode[]> {
+  static async getUserReferralCodes(
+    walletAddress: string
+  ): Promise<ReferralCode[]> {
     const query = `
       SELECT * FROM referral_codes 
       WHERE referrer_wallet_address = $1 
@@ -2161,11 +2448,15 @@ export class ReferralDB {
     return result.rows;
   }
 
-  static async updateReferralCode(walletAddress: string, codeId: number, updates: {
-    isActive?: boolean;
-    description?: string;
-    maxUses?: number;
-  }): Promise<ReferralCode> {
+  static async updateReferralCode(
+    walletAddress: string,
+    codeId: number,
+    updates: {
+      isActive?: boolean;
+      description?: string;
+      maxUses?: number;
+    }
+  ): Promise<ReferralCode> {
     const setClause = [];
     const values: any[] = [codeId, walletAddress];
     let paramCount = 2;
@@ -2204,7 +2495,10 @@ export class ReferralDB {
     return result.rows[0];
   }
 
-  static async deleteReferralCode(walletAddress: string, codeId: number): Promise<void> {
+  static async deleteReferralCode(
+    walletAddress: string,
+    codeId: number
+  ): Promise<void> {
     const query = `
       DELETE FROM referral_codes 
       WHERE id = $1 AND referrer_wallet_address = $2;
@@ -2216,7 +2510,9 @@ export class ReferralDB {
     }
   }
 
-  static async getReferralStats(walletAddress: string): Promise<ReferralStats | null> {
+  static async getReferralStats(
+    walletAddress: string
+  ): Promise<ReferralStats | null> {
     const query = `
       SELECT * FROM user_referral_stats 
       WHERE wallet_address = $1;
@@ -2226,7 +2522,9 @@ export class ReferralDB {
     return result.rows[0] || null;
   }
 
-  static async getReferralHistory(walletAddress: string): Promise<UserReferral[]> {
+  static async getReferralHistory(
+    walletAddress: string
+  ): Promise<UserReferral[]> {
     const query = `
       SELECT * FROM user_referrals 
       WHERE referrer_wallet_address = $1 
@@ -2237,7 +2535,10 @@ export class ReferralDB {
     return result.rows;
   }
 
-  static async getRecentReferrals(walletAddress: string, limit: number = 10): Promise<UserReferral[]> {
+  static async getRecentReferrals(
+    walletAddress: string,
+    limit: number = 10
+  ): Promise<UserReferral[]> {
     const query = `
       SELECT * FROM user_referrals 
       WHERE referrer_wallet_address = $1 

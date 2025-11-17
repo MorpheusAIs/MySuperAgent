@@ -8,6 +8,7 @@ import { ReferralsButton } from '@/components/Referrals/Button';
 import { SettingsButton } from '@/components/Settings';
 import { TeamsButton } from '@/components/Teams/Button';
 import { usePrivyAuth } from '@/contexts/auth/PrivyAuthProvider';
+import { useMetricsWhitelist } from '@/hooks/useMetricsWhitelist';
 import { Box, Divider, Flex, Text, Tooltip } from '@chakra-ui/react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
@@ -17,6 +18,7 @@ import {
   IconQuestionMark,
   IconWorld,
 } from '@tabler/icons-react';
+import { useRouter } from 'next/router';
 import React, { FC } from 'react';
 import styles from './index.module.css';
 
@@ -29,20 +31,35 @@ export type LeftSidebarProps = {
 const MenuSection = ({
   title,
   children,
+  onClick,
+  isClickable,
 }: {
   title: string;
   children: React.ReactNode;
+  onClick?: () => void;
+  isClickable?: boolean;
 }) => (
   <Box mb={1}>
-    <Text
-      color="gray.400"
-      fontSize="xs"
-      px={3}
-      py={1}
-      textTransform="uppercase"
+    <Tooltip
+      label={isClickable ? 'Click to view metrics dashboard' : undefined}
+      placement="right"
+      isDisabled={!isClickable}
     >
-      {title}
-    </Text>
+      <Text
+        color={isClickable ? 'green.400' : 'gray.400'}
+        fontSize="xs"
+        px={3}
+        py={1}
+        textTransform="uppercase"
+        cursor={isClickable ? 'pointer' : 'default'}
+        onClick={isClickable ? onClick : undefined}
+        _hover={isClickable ? { color: 'green.300', opacity: 0.9 } : {}}
+        transition="all 0.2s"
+        fontWeight={isClickable ? 'semibold' : 'normal'}
+      >
+        {title}
+      </Text>
+    </Tooltip>
     {children}
   </Box>
 );
@@ -80,11 +97,7 @@ const ExternalLinkMenuItem = ({
     onClick={() => window.open(href, '_blank', 'noopener,noreferrer')}
   >
     <Flex align="center" gap={3}>
-      {letter ? (
-        <LetterIcon letter={letter} />
-      ) : (
-        Icon && <Icon size={20} />
-      )}
+      {letter ? <LetterIcon letter={letter} /> : Icon && <Icon size={20} />}
       <Text>{title}</Text>
     </Flex>
   </div>
@@ -97,9 +110,15 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
 }) => {
   const ToggleIcon = isSidebarOpen ? IconChevronLeft : IconChevronRight;
   const { isAuthenticated } = usePrivyAuth();
+  const { isWhitelisted } = useMetricsWhitelist();
+  const router = useRouter();
 
   // For wallet connection support alongside Privy, we can still check account but don't require it
-  const WalletConnectWrapper = ({ children }: { children: (account: any) => React.ReactNode }) => {
+  const WalletConnectWrapper = ({
+    children,
+  }: {
+    children: (account: any) => React.ReactNode;
+  }) => {
     return (
       <ConnectButton.Custom>
         {({ account }) => children(account)}
@@ -125,134 +144,142 @@ export const LeftSidebar: FC<LeftSidebarProps> = ({
             {(account) => {
               // Use Privy authentication OR wallet connection for access
               const hasAccess = isAuthenticated || !!account;
-              
+
               return (
-              <div className={styles.mainContent}>
-                <MenuSection title="General">
-                  <Tooltip
-                    isDisabled={hasAccess}
-                    label="Sign in to access dashboard features."
-                    placement="right"
-                  >
-                    <div className={styles.menuItem}>
-                      <Box
-                        pointerEvents={hasAccess ? 'auto' : 'none'}
-                        opacity={hasAccess ? 1 : 0.5}
-                      >
-                        <DashboardButton />
-                      </Box>
-                    </div>
-                  </Tooltip>
-                  <Tooltip
-                    isDisabled={hasAccess}
-                    label="Sign in to access referral system and earn bonus jobs."
-                    placement="right"
-                  >
-                    <div className={styles.menuItem}>
-                      <Box
-                        pointerEvents={hasAccess ? 'auto' : 'none'}
-                        opacity={hasAccess ? 1 : 0.5}
-                      >
-                        <ReferralsButton />
-                      </Box>
-                    </div>
-                  </Tooltip>
-                </MenuSection>
+                <div className={styles.mainContent}>
+                  <MenuSection title="General">
+                    <Tooltip
+                      isDisabled={hasAccess}
+                      label="Sign in to access dashboard features."
+                      placement="right"
+                    >
+                      <div className={styles.menuItem}>
+                        <Box
+                          pointerEvents={hasAccess ? 'auto' : 'none'}
+                          opacity={hasAccess ? 1 : 0.5}
+                        >
+                          <DashboardButton />
+                        </Box>
+                      </div>
+                    </Tooltip>
+                    <Tooltip
+                      isDisabled={hasAccess}
+                      label="Sign in to access referral system and earn bonus jobs."
+                      placement="right"
+                    >
+                      <div className={styles.menuItem}>
+                        <Box
+                          pointerEvents={hasAccess ? 'auto' : 'none'}
+                          opacity={hasAccess ? 1 : 0.5}
+                        >
+                          <ReferralsButton />
+                        </Box>
+                      </div>
+                    </Tooltip>
+                  </MenuSection>
 
-                <Divider my={0.5} borderColor="whiteAlpha.200" />
+                  <Divider my={0.5} borderColor="whiteAlpha.200" />
 
-                <MenuSection title="Preferences">
-                  <Tooltip
-                    isDisabled={hasAccess}
-                    label="Sign in to access personalized settings, scheduling preferences, and configurations."
-                    placement="right"
+                  <MenuSection
+                    title="Preferences"
+                    isClickable={hasAccess && isWhitelisted === true}
+                    onClick={() => {
+                      if (hasAccess && isWhitelisted === true) {
+                        router.push('/metrics');
+                      }
+                    }}
                   >
-                    <div className={styles.menuItem}>
-                      <Box
-                        pointerEvents={hasAccess ? 'auto' : 'none'}
-                        opacity={hasAccess ? 1 : 0.5}
-                      >
-                        <SettingsButton />
-                      </Box>
-                    </div>
-                  </Tooltip>
-                  <Box className={styles.modelSelection}>
-                    <ModelSelectionButton />
-                  </Box>
-                </MenuSection>
+                    <Tooltip
+                      isDisabled={hasAccess}
+                      label="Sign in to access personalized settings, scheduling preferences, and configurations."
+                      placement="right"
+                    >
+                      <div className={styles.menuItem}>
+                        <Box
+                          pointerEvents={hasAccess ? 'auto' : 'none'}
+                          opacity={hasAccess ? 1 : 0.5}
+                        >
+                          <SettingsButton />
+                        </Box>
+                      </div>
+                    </Tooltip>
+                    <Box className={styles.modelSelection}>
+                      <ModelSelectionButton />
+                    </Box>
+                  </MenuSection>
 
-                <Divider my={0.5} borderColor="whiteAlpha.200" />
+                  <Divider my={0.5} borderColor="whiteAlpha.200" />
 
-                <MenuSection title="Advanced">
-                  <Tooltip
-                    isDisabled={hasAccess}
-                    label="Sign in to access advanced features like workflows, API integrations, device sync, and CDP wallets."
-                    placement="right"
-                  >
-                    <div>
-                      <Box
-                        pointerEvents={hasAccess ? 'auto' : 'none'}
-                        opacity={hasAccess ? 1 : 0.5}
-                        pl={1}
-                      >
-                        <div className={styles.menuItem}>
-                          <AgentsButton />
-                        </div>
-                        <div className={styles.menuItem}>
-                          <TeamsButton />
-                        </div>
-                        <StyledTooltip
-                          label="Coinbase Developer Platform's managed wallets integration coming soon. This will enable secure key management and automated CDP interactions such as trading, borrowing, and more."
-                          placement="right"
+                  <MenuSection title="Advanced">
+                    <Tooltip
+                      isDisabled={hasAccess}
+                      label="Sign in to access advanced features like workflows, API integrations, device sync, and CDP wallets."
+                      placement="right"
+                    >
+                      <div>
+                        <Box
+                          pointerEvents={hasAccess ? 'auto' : 'none'}
+                          opacity={hasAccess ? 1 : 0.5}
+                          pl={1}
                         >
                           <div className={styles.menuItem}>
-                            <CdpWalletsButton />
+                            <AgentsButton />
                           </div>
-                        </StyledTooltip>
-                      </Box>
-                    </div>
-                  </Tooltip>
-                </MenuSection>
+                          <div className={styles.menuItem}>
+                            <TeamsButton />
+                          </div>
+                          <StyledTooltip
+                            label="Coinbase Developer Platform's managed wallets integration coming soon. This will enable secure key management and automated CDP interactions such as trading, borrowing, and more."
+                            placement="right"
+                          >
+                            <div className={styles.menuItem}>
+                              <CdpWalletsButton />
+                            </div>
+                          </StyledTooltip>
+                        </Box>
+                      </div>
+                    </Tooltip>
+                  </MenuSection>
 
-                <Divider my={0.5} borderColor="whiteAlpha.200" />
+                  <Divider my={0.5} borderColor="whiteAlpha.200" />
 
-                <MenuSection title="About">
-                  <ExternalLinkMenuItem
-                    icon={IconBrandDiscord}
-                    title="Join our Discord community!"
-                    href="https://discord.gg/Dc26EFb6JK"
-                  />
-                  <ExternalLinkMenuItem
-                    letter="T"
-                    title="Follow us on Twitter"
-                    href="https://twitter.com/MorpheusAIs"
-                  />
-                  <ExternalLinkMenuItem
-                    letter="G"
-                    title="Become a contributor"
-                    href="https://github.com/MorpheusAIs/Docs"
-                  />
-                  <ExternalLinkMenuItem
-                    icon={IconWorld}
-                    title="Learn about Morpheus"
-                    href="https://mor.org/"
-                  />
-                  <ExternalLinkMenuItem
-                    icon={IconQuestionMark}
-                    title="Help Center & FAQs"
-                    href="https://morpheusai.gitbook.io/morpheus/faqs"
-                  />
-                </MenuSection>
-              </div>
+                  <MenuSection title="About">
+                    <ExternalLinkMenuItem
+                      icon={IconBrandDiscord}
+                      title="Join our Discord community!"
+                      href="https://discord.gg/Dc26EFb6JK"
+                    />
+                    <ExternalLinkMenuItem
+                      letter="T"
+                      title="Follow us on Twitter"
+                      href="https://twitter.com/MorpheusAIs"
+                    />
+                    <ExternalLinkMenuItem
+                      letter="G"
+                      title="Become a contributor"
+                      href="https://github.com/MorpheusAIs/Docs"
+                    />
+                    <ExternalLinkMenuItem
+                      icon={IconWorld}
+                      title="Learn about Morpheus"
+                      href="https://mor.org/"
+                    />
+                    <ExternalLinkMenuItem
+                      icon={IconQuestionMark}
+                      title="Help Center & FAQs"
+                      href="https://morpheusai.gitbook.io/morpheus/faqs"
+                    />
+                  </MenuSection>
+                </div>
               );
             }}
           </WalletConnectWrapper>
 
           <div className={styles.footer}>
             <Box p={4}>
-              <Box 
-                bg="rgba(255, 255, 255, 0.02)" 
-                borderRadius="12px" 
+              <Box
+                bg="rgba(255, 255, 255, 0.02)"
+                borderRadius="12px"
                 border="1px solid rgba(255, 255, 255, 0.08)"
                 p={3}
               >
