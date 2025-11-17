@@ -1,6 +1,7 @@
 import { ChatInput } from '@/components/ChatInput';
 import PrefilledOptions from '@/components/ChatInput/PrefilledOptions';
 import { JobsList } from '@/components/JobsList';
+import { JobSuggestions } from '@/components/JobSuggestions';
 import { MessageList } from '@/components/MessageList';
 import { StatsCarousel } from '@/components/StatsCarousel';
 import { useChatContext } from '@/contexts/chat/useChatContext';
@@ -485,6 +486,11 @@ export const Chat: FC<{
               </Box>
             </Box>
 
+            {/* Mobile Job Suggestions */}
+            <Box mb={3}>
+              <JobSuggestions isVisible={true} />
+            </Box>
+
             <ChatInput
               onSubmit={handleSubmit}
               disabled={isSubmitting || showLoading}
@@ -654,6 +660,11 @@ export const Chat: FC<{
                 />
               </Box>
             )}
+
+            {/* Job Suggestions */}
+            <Box width="100%">
+              <JobSuggestions isVisible={true} />
+            </Box>
 
             {/* Jobs List - directly under input/options */}
             <Box width="100%">

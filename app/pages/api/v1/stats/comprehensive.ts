@@ -30,8 +30,8 @@ export default async function handler(
     // Query for jobs completed in the last hour to get a recent rate
     const query = `
       SELECT COUNT(*) as recent_jobs
-      FROM jobs 
-      WHERE status = 'completed' 
+      FROM jobs
+      WHERE status = 'completed'
       AND completed_at >= NOW() - INTERVAL '1 hour';
     `;
     const result = await pool.query(query);

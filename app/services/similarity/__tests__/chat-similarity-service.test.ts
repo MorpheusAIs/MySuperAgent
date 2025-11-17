@@ -106,12 +106,13 @@ describe('ChatSimilarityService', () => {
 
       // The result should be processed, but might not have similarPrompts if none found
       expect(result).toBeDefined();
+      // Note: excludeJobId is only passed when config.excludeCurrentJob is true
+      // Since the default config has excludeCurrentJob: false, it won't be in the options
       expect(MessageDB.getMessagesForSimilarity).toHaveBeenCalledWith(
         mockWalletAddress,
         expect.objectContaining({
           daysBack: 14,
           limit: 50,
-          excludeJobId: 'current-job',
         })
       );
     });

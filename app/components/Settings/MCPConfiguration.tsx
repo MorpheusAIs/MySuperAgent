@@ -23,7 +23,7 @@ import {
   Settings,
   XCircle,
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 
 interface MCPConfigurationProps {
@@ -70,24 +70,10 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({
     if (isAuthenticated && userAddress) {
       loadMCPData();
     }
-  }, [isAuthenticated, getAddress]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
-  const loadMCPData = async () => {
-    setGlobalLoading(true);
-    try {
-      await Promise.all([
-        loadAvailableServers(),
-        loadEnabledServers(),
-        loadUserCredentials(),
-      ]);
-    } catch (error) {
-      console.error('Failed to load MCP data:', error);
-    } finally {
-      setGlobalLoading(false);
-    }
-  };
-
-  const loadAvailableServers = async () => {
+  const loadAvailableServers = useCallback(async () => {
     try {
       const response = await fetch('/api/mcp/available');
       if (response.ok) {
@@ -97,9 +83,9 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({
     } catch (error) {
       console.error('Failed to load available MCP servers:', error);
     }
-  };
+  }, []);
 
-  const loadEnabledServers = async () => {
+  const loadEnabledServers = useCallback(async () => {
     const userAddress = getAddress();
     if (!userAddress) return;
 
@@ -114,9 +100,9 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({
     } catch (error) {
       console.error('Failed to load enabled MCP servers:', error);
     }
-  };
+  }, [getAddress]);
 
-  const loadUserCredentials = async () => {
+  const loadUserCredentials = useCallback(async () => {
     const userAddress = getAddress();
     if (!userAddress) return;
 
@@ -134,7 +120,22 @@ export const MCPConfiguration: React.FC<MCPConfigurationProps> = ({
     } catch (error) {
       console.error('Failed to load user credentials:', error);
     }
-  };
+  }, [getAddress]);
+
+  const loadMCPData = useCallback(async () => {
+    setGlobalLoading(true);
+    try {
+      await Promise.all([
+        loadAvailableServers(),
+        loadEnabledServers(),
+        loadUserCredentials(),
+      ]);
+    } catch (error) {
+      console.error('Failed to load MCP data:', error);
+    } finally {
+      setGlobalLoading(false);
+    }
+  }, [loadAvailableServers, loadEnabledServers, loadUserCredentials]);
 
   const handleToggleServer = async (serverName: string, enable: boolean) => {
     const userAddress = getAddress();

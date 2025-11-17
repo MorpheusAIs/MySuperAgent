@@ -46,7 +46,7 @@ import {
   Users,
   XCircle,
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 
 interface A2AManagementProps {
@@ -116,14 +116,7 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
   const [messageType, setMessageType] = useState<'text' | 'json'>('text');
   const [sendingMessage, setSendingMessage] = useState(false);
 
-  // Load data on mount
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadConnectedAgents();
-    }
-  }, [isAuthenticated]);
-
-  const loadConnectedAgents = async () => {
+  const loadConnectedAgents = useCallback(async () => {
     const userAddress = getAddress();
     if (!userAddress) return;
 
@@ -146,7 +139,14 @@ export const A2AManagement: React.FC<A2AManagementProps> = ({ onSave }) => {
     } finally {
       setGlobalLoading(false);
     }
-  };
+  }, [getAddress, toast]);
+
+  // Load data on mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadConnectedAgents();
+    }
+  }, [isAuthenticated, loadConnectedAgents]);
 
   const handleDiscoverAgents = async () => {
     const userAddress = getAddress();
