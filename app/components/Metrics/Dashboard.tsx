@@ -50,6 +50,24 @@ interface MetricsDashboardProps {
     agents: {
       usage: Array<{ agent_name: string; usage_count: number }>;
     };
+    failures?: {
+      stats: {
+        totalFailures: number;
+        failuresByType: Array<{ type: string; count: number }>;
+        failuresByTheme: Array<{ theme: string; count: number }>;
+        topFailureReasons: Array<{ reason: string; count: number }>;
+      };
+      recentFailures: Array<{
+        id: number;
+        user_prompt: string;
+        failure_type?: string;
+        failure_summary?: string;
+        request_theme?: string;
+        created_at: Date;
+      }>;
+      requestThemes: Array<{ theme: string; count: number }>;
+      tagDistribution: Array<{ tag: string; count: number }>;
+    };
     vercel?: {
       pageViews?: {
         total: number;
@@ -75,7 +93,7 @@ interface MetricsDashboardProps {
 }
 
 export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ data }) => {
-  const { jobs, users, mcp, agents } = data;
+  const { jobs, users, mcp, agents, failures } = data;
 
   // Prepare data for tables
   const topMCPTools = (mcp.toolUsage || []).slice(0, 10);
@@ -330,6 +348,230 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ data }) => {
             </Table>
           </TableContainer>
         </Box>
+
+        {/* Failure Metrics */}
+        {failures && (
+          <>
+            <Divider borderColor="rgba(255, 255, 255, 0.1)" />
+            <Box>
+              <Heading size="lg" color="white" mb={4}>
+                Failure Analysis
+              </Heading>
+              <SimpleGrid
+                columns={{ base: 1, md: 2, lg: 4 }}
+                spacing={4}
+                mb={6}
+              >
+                <Stat
+                  bg="rgba(255, 255, 255, 0.05)"
+                  p={4}
+                  borderRadius="lg"
+                  border="1px solid rgba(255, 255, 255, 0.1)"
+                >
+                  <StatLabel color="gray.400">Total Failures</StatLabel>
+                  <StatNumber color="red.400">
+                    {failures.stats.totalFailures.toLocaleString()}
+                  </StatNumber>
+                </Stat>
+              </SimpleGrid>
+
+              <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6} mb={6}>
+                {/* Failures by Type */}
+                <Box
+                  bg="rgba(255, 255, 255, 0.05)"
+                  p={6}
+                  borderRadius="lg"
+                  border="1px solid rgba(255, 255, 255, 0.1)"
+                >
+                  <Heading size="md" color="white" mb={4}>
+                    Failures by Type
+                  </Heading>
+                  <TableContainer>
+                    <Table variant="simple" colorScheme="whiteAlpha">
+                      <Thead>
+                        <Tr>
+                          <Th color="gray.300">Failure Type</Th>
+                          <Th color="gray.300" isNumeric>
+                            Count
+                          </Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {failures.stats.failuresByType.length > 0 ? (
+                          failures.stats.failuresByType.map((item) => (
+                            <Tr key={item.type}>
+                              <Td color="white">{item.type}</Td>
+                              <Td color="white" isNumeric>
+                                {item.count.toLocaleString()}
+                              </Td>
+                            </Tr>
+                          ))
+                        ) : (
+                          <Tr>
+                            <Td colSpan={2} color="gray.500" textAlign="center">
+                              No failure data available
+                            </Td>
+                          </Tr>
+                        )}
+                      </Tbody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+
+                {/* Request Themes */}
+                <Box
+                  bg="rgba(255, 255, 255, 0.05)"
+                  p={6}
+                  borderRadius="lg"
+                  border="1px solid rgba(255, 255, 255, 0.1)"
+                >
+                  <Heading size="md" color="white" mb={4}>
+                    Request Themes (What People Are Asking)
+                  </Heading>
+                  <TableContainer>
+                    <Table variant="simple" colorScheme="whiteAlpha">
+                      <Thead>
+                        <Tr>
+                          <Th color="gray.300">Theme</Th>
+                          <Th color="gray.300" isNumeric>
+                            Count
+                          </Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {failures.requestThemes.length > 0 ? (
+                          failures.requestThemes.slice(0, 10).map((item) => (
+                            <Tr key={item.theme}>
+                              <Td color="white">{item.theme}</Td>
+                              <Td color="white" isNumeric>
+                                {item.count.toLocaleString()}
+                              </Td>
+                            </Tr>
+                          ))
+                        ) : (
+                          <Tr>
+                            <Td colSpan={2} color="gray.500" textAlign="center">
+                              No theme data available
+                            </Td>
+                          </Tr>
+                        )}
+                      </Tbody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              </SimpleGrid>
+
+              {/* What Platform Can't Do */}
+              <Box
+                bg="rgba(255, 255, 255, 0.05)"
+                p={6}
+                borderRadius="lg"
+                border="1px solid rgba(255, 255, 255, 0.1)"
+                mb={6}
+              >
+                <Heading size="md" color="white" mb={4}>
+                  What Platform Cannot Accomplish
+                </Heading>
+                <TableContainer>
+                  <Table variant="simple" colorScheme="whiteAlpha">
+                    <Thead>
+                      <Tr>
+                        <Th color="gray.300">User Request</Th>
+                        <Th color="gray.300">Failure Type</Th>
+                        <Th color="gray.300">Summary</Th>
+                        <Th color="gray.300">Date</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {failures.recentFailures.length > 0 ? (
+                        failures.recentFailures.slice(0, 10).map((failure) => (
+                          <Tr key={failure.id}>
+                            <Td color="white" maxW="200px">
+                              <Text
+                                noOfLines={2}
+                                fontSize="sm"
+                                title={failure.user_prompt}
+                              >
+                                {failure.user_prompt.substring(0, 100)}
+                                {failure.user_prompt.length > 100 ? '...' : ''}
+                              </Text>
+                            </Td>
+                            <Td color="white">
+                              {failure.failure_type || 'Unknown'}
+                            </Td>
+                            <Td color="white" maxW="300px">
+                              <Text
+                                noOfLines={2}
+                                fontSize="sm"
+                                title={failure.failure_summary}
+                              >
+                                {failure.failure_summary
+                                  ? failure.failure_summary.substring(0, 150)
+                                  : 'N/A'}
+                                {failure.failure_summary &&
+                                failure.failure_summary.length > 150
+                                  ? '...'
+                                  : ''}
+                              </Text>
+                            </Td>
+                            <Td color="gray.400" fontSize="sm">
+                              {new Date(
+                                failure.created_at
+                              ).toLocaleDateString()}
+                            </Td>
+                          </Tr>
+                        ))
+                      ) : (
+                        <Tr>
+                          <Td colSpan={4} color="gray.500" textAlign="center">
+                            No failure data available
+                          </Td>
+                        </Tr>
+                      )}
+                    </Tbody>
+                  </Table>
+                </TableContainer>
+              </Box>
+
+              {/* Tag Distribution */}
+              {failures.tagDistribution.length > 0 && (
+                <Box
+                  bg="rgba(255, 255, 255, 0.05)"
+                  p={6}
+                  borderRadius="lg"
+                  border="1px solid rgba(255, 255, 255, 0.1)"
+                  mb={6}
+                >
+                  <Heading size="md" color="white" mb={4}>
+                    Request Tags Distribution
+                  </Heading>
+                  <TableContainer>
+                    <Table variant="simple" colorScheme="whiteAlpha">
+                      <Thead>
+                        <Tr>
+                          <Th color="gray.300">Tag</Th>
+                          <Th color="gray.300" isNumeric>
+                            Count
+                          </Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {failures.tagDistribution.slice(0, 15).map((item) => (
+                          <Tr key={item.tag}>
+                            <Td color="white">{item.tag}</Td>
+                            <Td color="white" isNumeric>
+                              {item.count.toLocaleString()}
+                            </Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              )}
+            </Box>
+          </>
+        )}
 
         {/* Vercel Metrics */}
         <Divider borderColor="rgba(255, 255, 255, 0.1)" />

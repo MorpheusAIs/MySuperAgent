@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { isUserWhitelisted } from '@/services/metrics/whitelist';
-import { JobDB, MessageDB, UserAvailableToolDB, UserMCPServerDB } from '@/services/database/db';
+import { JobDB, MessageDB, UserAvailableToolDB, UserMCPServerDB, FailureMetricsDB } from '@/services/database/db';
 
 export default async function handler(
   req: NextApiRequest,
@@ -61,6 +61,54 @@ export default async function handler(
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const mcpUsageLast30Days = await MessageDB.getMCPUsageByDateRange(thirtyDaysAgo, now);
 
+    // Fetch failure metrics (handle case where table doesn't exist yet)
+    let failureData = null;
+    try {
+      const failureStats = await FailureMetricsDB.getFailureStats();
+      const recentFailures = await FailureMetricsDB.getFailureMetrics({
+        isFailure: true,
+        limit: 50,
+      });
+
+      // Get request themes and tags
+      const allMetrics = await FailureMetricsDB.getFailureMetrics({
+        limit: 1000,
+      });
+
+      const themeCounts: Record<string, number> = {};
+      const tagCounts: Record<string, number> = {};
+      allMetrics.forEach((metric) => {
+        if (metric.request_theme) {
+          themeCounts[metric.request_theme] = (themeCounts[metric.request_theme] || 0) + 1;
+        }
+        if (metric.detected_tags && Array.isArray(metric.detected_tags)) {
+          metric.detected_tags.forEach((tag) => {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+          });
+        }
+      });
+
+      const requestThemes = Object.entries(themeCounts)
+        .map(([theme, count]) => ({ theme, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 20);
+
+      const tagDistribution = Object.entries(tagCounts)
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count);
+
+      failureData = {
+        stats: failureStats,
+        recentFailures: recentFailures.slice(0, 20),
+        requestThemes,
+        tagDistribution,
+      };
+    } catch (error) {
+      // Table might not exist yet - log but don't fail the whole request
+      console.warn('[Metrics] Failure metrics table may not exist yet:', error instanceof Error ? error.message : String(error));
+      failureData = null;
+    }
+
     // Fetch Vercel metrics if available
     let vercelMetrics = null;
     try {
@@ -102,6 +150,7 @@ export default async function handler(
       agents: {
         usage: agentUsage,
       },
+      failures: failureData,
       vercel: vercelMetrics,
       timestamp: new Date().toISOString(),
     });
